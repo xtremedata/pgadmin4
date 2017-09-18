@@ -94,8 +94,7 @@ define('pgadmin.node.trigger', [
         category: 'create', priority: 4, label: gettext('Trigger...'),
         icon: 'wcTabIcon icon-trigger', data: {action: 'create', check: true},
         enable: 'canCreate',
-      },
-      ]);
+      }]);
     },
     callbacks: {
       /* Enable trigger */
