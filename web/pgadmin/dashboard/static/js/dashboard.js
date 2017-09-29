@@ -158,6 +158,72 @@ define('pgadmin.dashboard', [
     },
   });
 
+  var terminateSessionCell = Backgrid.Extension.DeleteCell.extend({
+        render: function () {
+          this.$el.empty();
+          this.$el.html(
+            "<i class='fa fa-times-circle' data-toggle='tooltip' " +
+            "title='" + gettext('Terminate the session') +
+            "'></i>"
+          );
+          this.delegateEvents();
+          return this;
+        },
+        deleteRow: function(e) {
+          var self = this;
+          e.preventDefault();
+
+          var canDeleteRow = Backgrid.callByNeed(
+            self.column.get('canDeleteRow'), self.column, self.model
+          );
+          // If we are not allowed to cancel the query, return from here
+          if(!canDeleteRow)
+            return;
+
+          // This will refresh the grid
+          var refresh_grid = function() {
+            if(is_server_dashboard) {
+              $('#btn_server_activity_refresh').click();
+            } else if(is_database_dashboard) {
+              $('#btn_database_activity_refresh').click();
+            }
+          };
+
+          var title = gettext('Terminate Session?'),
+            txtConfirm = gettext('Are you sure you wish to terminate the session?');
+
+          alertify.confirm(
+            title,
+            txtConfirm,
+            function(evt) {
+              $.ajax({
+                url: terminate_session_url + self.model.get('pid'),
+                type:'DELETE',
+                success: function(res) {
+                  if (res == gettext('Success')) {
+                    alertify.success(gettext('Active query terminateed successfully.'));
+                    refresh_grid();
+                  } else {
+                    alertify.error(gettext('An error occurred whilst terminateing the active query.'));
+                  }
+                },
+                error: function(xhr, status, error) {
+                  try {
+                    var err = $.parseJSON(xhr.responseText);
+                    if (err.success == 0) {
+                      alertify.error(err.errormsg);
+                    }
+                  } catch (e) {}
+                }
+              });
+            },
+            function(evt) {
+              return true;
+            }
+          );
+        }
+  });
+
   // Subnode Cell, which will display subnode control
   var SessionDetailsCell = Backgrid.Extension.ObjectCell.extend({
     enterEditMode: function () {
