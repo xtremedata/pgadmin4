@@ -201,7 +201,7 @@ define('pgadmin.dashboard', [
                 type:'DELETE',
                 success: function(res) {
                   if (res == gettext('Success')) {
-                    alertify.success(gettext('Active query terminateed successfully.'));
+                    alertify.success(gettext('Session terminateed successfully.'));
                     refresh_grid();
                   } else {
                     alertify.error(gettext('An error occurred whilst terminateing the active query.'));
