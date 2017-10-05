@@ -196,6 +196,24 @@ class PgAdmin(Flask):
 
         return stylesheets
 
+    def get_external_javascripts_info(self):
+        """
+        Returns:
+            list: external javascript modules in the format of dictionary
+            (name: ..., url: ...)
+        """
+        scripts = []
+        script_names = []
+
+        # Remove duplicate javascripts from the list
+        for module in self.submodules:
+            external_scripts = module.get_external_javascripts_info()
+            for s in external_scripts:
+                if s['name'] not in script_names:
+                    scripts.append(s)
+                    script_names.append(s['name'])
+
+        return scripts
 
 def _find_blueprint():
     if request.blueprint:

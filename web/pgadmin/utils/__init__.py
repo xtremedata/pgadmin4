@@ -137,6 +137,30 @@ class PgAdminModule(Blueprint):
 
         return res
 
+    def get_external_javascripts_info(self):
+        """
+        Override the function to return the list of javascript modules used as
+        external javascript module, represented as array of dictionary
+        (having name, url) for the particular modules specified by '_for'.
+
+        Returns:
+            list: the javascript modules referenced externally from the webpack
+            modules.
+        """
+        res = []
+
+        for module in self.submodules:
+            try:
+                res += module.get_external_javascripts_info()
+            except Exception as ex:
+                current_app.logger.warning((
+                    "Failed to get the list of the external javascript modules"
+                    " - {0} with error message: {1}"
+                ).format(module, ex))
+                current_app.logger.exception(ex)
+
+        return res
+
     def get_addon_javascripts(self, _for):
         """
         Override the function to return the javascript module enteries as an
