@@ -6,7 +6,7 @@
 // This software is released under the PostgreSQL Licence
 //
 //////////////////////////////////////////////////////////////////////////
-import alertify from 'pgadmin.alertifyjs';
+import alertify from 'pgadmin.alertify';
 
 describe('alertify_wrapper', function () {
   describe('success', function () {

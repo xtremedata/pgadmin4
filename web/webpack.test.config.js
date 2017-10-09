@@ -68,7 +68,7 @@ module.exports = {
       'browser': path.resolve(__dirname, 'pgadmin/browser/static/js'),
       'pgadmin': sourcesDir + '/js/pgadmin',
       'pgadmin.sqlfoldcode': sourcesDir + '/js/codemirror/addon/fold/pgadmin-sqlfoldcode',
-      'pgadmin.alertifyjs': sourcesDir + '/js/alertify.pgadmin.defaults',
+      'pgadmin.alertify': sourcesDir + '/js/alertify.pgadmin.defaults',
       'pga_sqleditor': path.join(__dirname, 'pgadmin/tools/sqleditor/static'),
       'vendor': 'sources/generated/vendor',
       'slickgrid': 'sources/generated/slickgrid',

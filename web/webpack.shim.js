@@ -156,7 +156,7 @@ var webpackShimConfig = {
     'backgrid.filter': path.join(__dirname, './node_modules/backgrid-filter/backgrid-filter'),
     'backgrid.sizeable.columns': path.join(__dirname, './node_modules/backgrid-sizeable-columns/backgrid-sizeable-columns'),
     'backgrid.select.all': path.join(__dirname, './node_modules/backgrid-select-all/backgrid-select-all'),
-    'pgadmin.alertifyjs': path.join(__dirname, './pgadmin/static/js/alertify.pgadmin.defaults'),
+    'pgadmin.alertify': path.join(__dirname, './pgadmin/static/js/alertify.pgadmin.defaults'),
     'pgadmin.backform': path.join(__dirname, './pgadmin/static/js/backform.pgadmin'),
     'pgadmin.backgrid': path.join(__dirname, './pgadmin/static/js/backgrid.pgadmin'),
 
@@ -272,7 +272,7 @@ var webpackShimConfig = {
     'pgadmin.browser.frame', 'slick.pgadmin.editors', 'slick.pgadmin.formatters',
     'pgadmin.backform', 'pgadmin.backgrid', 'pgadmin.browser', 'pgadmin.file_manager',
     'pgadmin.file_utility', 'pgadmin.browser.node',
-    'pgadmin.alertifyjs', 'pgadmin.settings', 'pgadmin.preferences', 'pgadmin.sqlfoldcode',
+    'pgadmin.alertify', 'pgadmin.settings', 'pgadmin.preferences', 'pgadmin.sqlfoldcode',
   ],
   // Checks whether JS module is npm module or not
   isExternal: function(module) {

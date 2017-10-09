@@ -1,6 +1,6 @@
 define([
   'sources/gettext', 'sources/url_for', 'jquery', 'underscore',
-  'pgadmin.alertify', 'pgadmin.browser', 'pgadmin.backbone', 'pgadmin.backgrid',
+  'pgadmin.alertify', 'pgadmin.browser', 'backbone', 'pgadmin.backgrid',
 ], function(
   gettext, url_for, $, _, Alertify, pgBrowser, Backbone, Backgrid
 ) {

@@ -3,7 +3,7 @@ import * as pgAdmin from 'sources/pgadmin';
 import 'pgadmin.settings';
 import 'pgadmin.preferences';
 import * as pgBrowser from 'pgadmin.browser';
-import * as Alertify from 'pgadmin.alertifyjs';
+import * as Alertify from 'pgadmin.alertify';
 
 pgBrowser.init();
 
