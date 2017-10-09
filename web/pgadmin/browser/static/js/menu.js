@@ -8,14 +8,14 @@ function(_, S, pgAdmin, $) {
   // Individual menu-item class
   var MenuItem = pgAdmin.Browser.MenuItem = function(opts) {
     var menu_opts = [
-      'name', 'label', 'priority', 'module', 'callback', 'data', 'enable',
-      'category', 'target', 'url'/* Do not show icon in the menus, 'icon' */, 'node'
-    ],
-    defaults = {
-      url: '#',
-      target: '_self',
-      enable: true
-    };
+        'name', 'label', 'priority', 'module', 'callback', 'data', 'enable',
+        'category', 'target', 'url'/* Do not show icon in the menus, 'icon' */, 'node',
+      ],
+      defaults = {
+        url: '#',
+        target: '_self',
+        enable: true,
+      };
     _.extend(this, defaults, _.pick(opts, menu_opts));
   };
 
@@ -36,7 +36,7 @@ function(_, S, pgAdmin, $) {
         name: this.label,
         /* icon: this.icon || this.module && (this.module.type), */
         disabled: this.is_disabled,
-        callback: this.context_menu_callback.bind(this, item)
+        callback: this.context_menu_callback.bind(this, item),
       };
 
       return this.$el;
@@ -47,15 +47,15 @@ function(_, S, pgAdmin, $) {
      */
     create_el: function(node, item) {
       var url = $('<a></a>', {
-          'id': this.name,
-          'href': this.url,
-          'target': this.target,
-          'data-toggle': 'pg-menu'
-        }).data('pgMenu', {
-          module: this.module || pgAdmin.Browser,
-          cb: this.callback,
-          data: this.data, name: this.name
-        }).addClass('menu-link');
+        'id': this.name,
+        'href': this.url,
+        'target': this.target,
+        'data-toggle': 'pg-menu',
+      }).data('pgMenu', {
+        module: this.module || pgAdmin.Browser,
+        cb: this.callback,
+        data: this.data, name: this.name,
+      }).addClass('menu-link');
 
       this.is_disabled = this.disabled(node, item);
       if (this.icon) {
@@ -128,7 +128,7 @@ function(_, S, pgAdmin, $) {
         name: this.label,
         /* icon: this.icon || (this.module && this.module.type), */
         disabled: this.is_disabled,
-        callback: this.context_menu_callback.bind(this, item)
+        callback: this.context_menu_callback.bind(this, item),
       };
     },
 
@@ -156,7 +156,9 @@ function(_, S, pgAdmin, $) {
           try {
             console.warn('Callback for the menu does not found!');
             console.warn(JSON.stringify(o));
-          } catch(e) {}
+          } catch(e) {
+            console.warn(o);
+          }
         }
       }
     },
@@ -186,7 +188,7 @@ function(_, S, pgAdmin, $) {
       if (this.module && _.isFunction(this.module[this.enable])) return !(this.module[this.enable]).apply(this.module, [node, item, this.data]);
 
       return false;
-    }
+    },
   });
 
   /*
@@ -207,59 +209,59 @@ function(_, S, pgAdmin, $) {
 
   pgAdmin.Browser.MenuGroup = function(opts, items, prev, ctx) {
     var template = _.template([
-          '<% if (above) { %><hr><% } %>',
-          '<li class="menu-item dropdown dropdown-submenu">',
-          ' <a href="#" class="dropdown-toggle" data-toggle="dropdown">',
-          '  <% if (icon) { %><i class="<%= icon %>"></i><% } %>',
-          '  <span><%= label %></span>',
-          ' </a>',
-          ' <ul class="dropdown-menu navbar-inverse">',
-          ' </ul>',
-          '</li>',
-          '<% if (below) { %><hr><% } %>',].join('\n')),
-          data = {
-            'label': opts.label,
-            'icon': opts.icon,
-            'above': opts.above && !prev,
-            'below': opts.below,
-          }, m,
-          $el = $(template(data)),
-          $menu = $el.find('.dropdown-menu'),
-          submenus = {},
-          ctxId = 1;
+        '<% if (above) { %><hr><% } %>',
+        '<li class="menu-item dropdown dropdown-submenu">',
+        ' <a href="#" class="dropdown-toggle" data-toggle="dropdown">',
+        '  <% if (icon) { %><i class="<%= icon %>"></i><% } %>',
+        '  <span><%= label %></span>',
+        ' </a>',
+        ' <ul class="dropdown-menu navbar-inverse">',
+        ' </ul>',
+        '</li>',
+        '<% if (below) { %><hr><% } %>'].join('\n')),
+      data = {
+        'label': opts.label,
+        'icon': opts.icon,
+        'above': opts.above && !prev,
+        'below': opts.below,
+      }, m,
+      $el = $(template(data)),
+      $menu = $el.find('.dropdown-menu'),
+      submenus = {},
+      ctxId = 1;
 
-      ctx = _.uniqueId(ctx + '_sub_');
+    ctx = _.uniqueId(ctx + '_sub_');
 
       // Sort by alphanumeric ordered first
-      items.sort(function(a, b) {return a.label.localeCompare(b.label);});
+    items.sort(function(a, b) {return a.label.localeCompare(b.label);});
       // Sort by priority
-      items.sort(function(a, b) {return a.priority - b.priority;});
+    items.sort(function(a, b) {return a.priority - b.priority;});
 
-      for (var idx in items) {
-        m = items[idx];
-        $menu.append(m.$el);
-        if (!m.is_disabled) {
-          submenus[ctx + ctxId] = m.context;
-        }
-        ctxId++;
+    for (var idx in items) {
+      m = items[idx];
+      $menu.append(m.$el);
+      if (!m.is_disabled) {
+        submenus[ctx + ctxId] = m.context;
       }
+      ctxId++;
+    }
 
-      var is_disabled = (_.size(submenus) == 0);
+    var is_disabled = (_.size(submenus) == 0);
 
-      return {
-        $el: $el,
-        priority: opts.priority || 10,
-        label: opts.label,
-        above: data['above'],
-        below: opts.below,
-        is_disabled: is_disabled,
-        context: {
-          name: opts.label,
-          icon: opts.icon,
-          items: submenus,
-          disabled: is_disabled
-        }
-      };
+    return {
+      $el: $el,
+      priority: opts.priority || 10,
+      label: opts.label,
+      above: data['above'],
+      below: opts.below,
+      is_disabled: is_disabled,
+      context: {
+        name: opts.label,
+        icon: opts.icon,
+        items: submenus,
+        disabled: is_disabled,
+      },
+    };
   };
 
   /*
@@ -281,24 +283,24 @@ function(_, S, pgAdmin, $) {
    */
   pgAdmin.Browser.MenuCreator = function($mnu, menus, categories, d, item, menu_items) {
     var groups = {'common': []},
-        common, idx = 0, j, item,
-        ctxId = _.uniqueId('ctx_'),
-        update_menuitem = function(m) {
-          if (m instanceof MenuItem) {
-            if (m.$el) {
-              m.$el.remove();
-              delete m.$el;
-            }
-            m.generate(d, item);
-            var group = groups[m.category || 'common'] =
-              groups[m.category || 'common'] || [];
-            group.push(m);
-          } else {
-            for (var key in m) {
-              update_menuitem(m[key]);
-            }
+      common, idx = 0,
+      ctxId = _.uniqueId('ctx_'),
+      update_menuitem = function(m) {
+        if (m instanceof MenuItem) {
+          if (m.$el) {
+            m.$el.remove();
+            delete m.$el;
           }
-        }, ctxIdx = 1;
+          m.generate(d, item);
+          var group = groups[m.category || 'common'] =
+              groups[m.category || 'common'] || [];
+          group.push(m);
+        } else {
+          for (var key in m) {
+            update_menuitem(m[key]);
+          }
+        }
+      }, ctxIdx = 1;
 
     for (idx in menus) {
       update_menuitem(menus[idx]);
@@ -312,10 +314,10 @@ function(_, S, pgAdmin, $) {
 
     var prev = true;
 
-    for (name in groups) {
+    for (var name in groups) {
       var g = groups[name],
-          c = categories[name] || {'label': name, single: false},
-          menu_group = pgAdmin.Browser.MenuGroup(c, g, prev, ctxId);
+        c = categories[name] || {'label': name, single: false},
+        menu_group = pgAdmin.Browser.MenuGroup(c, g, prev, ctxId);
 
       if (g.length <= 1 && !c.single) {
         prev = false;
@@ -369,9 +371,9 @@ function(_, S, pgAdmin, $) {
     this.$element  = $(element);
     this.options   = $.extend({}, Menu.DEFAULTS, options);
     this.isLoading = false;
-  }
+  };
 
-  Menu.DEFAULTS = {}
+  Menu.DEFAULTS = {};
 
   Menu.prototype.toggle = function (ev) {
     var $parent = this.$element.closest('.menu-item');
@@ -392,7 +394,7 @@ function(_, S, pgAdmin, $) {
         }
       }
     }
-  }
+  };
 
 
   // BUTTON PLUGIN DEFINITION
@@ -407,7 +409,7 @@ function(_, S, pgAdmin, $) {
       if (!data) $this.data('pg.menu', (data = new Menu(this, options)));
 
       data.toggle(ev);
-    })
+    });
   }
 
   var old = $.fn.button;
@@ -422,7 +424,7 @@ function(_, S, pgAdmin, $) {
   $.fn.pgmenu.noConflict = function () {
     $.fn.pgmenu = old;
     return this;
-  }
+  };
 
   // MENU DATA-API
   // =============

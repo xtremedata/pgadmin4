@@ -1,22 +1,18 @@
 /* Create and Register Function Collection and Node. */
 define('pgadmin.node.edbfunc', [
-  'sources/gettext', 'sources/url_for', 'jquery', 'underscore',
-  'underscore.string', 'sources/pgadmin', 'pgadmin.browser', 'alertify',
-  'pgadmin.browser.collection', 'pgadmin.browser.server.privilege'
-], function(gettext, url_for, $, _, S, pgAdmin, pgBrowser, alertify) {
+  'sources/gettext', 'sources/url_for', 'pgadmin.backform', 'pgadmin.browser',
+  'pgadmin.browser.collection', 'pgadmin.browser.server.privilege',
+], function(gettext, url_for, Backform, pgBrowser) {
 
   if (!pgBrowser.Nodes['coll-edbfunc']) {
-    pgBrowser.Nodes['coll-edbfunc'] =
-      pgBrowser.Collection.extend({
-        node: 'edbfunc',
-        label: gettext('Functions'),
-        type: 'coll-edbfunc',
-        columns: ['name', 'funcowner', 'description']
-      });
-  };
+    pgBrowser.Nodes['coll-edbfunc'] = pgBrowser.Collection.extend({
+      node: 'edbfunc', label: gettext('Functions'), type: 'coll-edbfunc',
+      columns: ['name', 'funcowner', 'description'],
+    });
+  }
 
-  if (!pgBrowser.Nodes['edbfunc']) {
-    pgBrowser.Nodes['edbfunc'] = pgBrowser.Node.extend({
+  if (!pgBrowser.Nodes.edbfunc) {
+    pgBrowser.Nodes.edbfunc = pgBrowser.Node.extend({
       type: 'edbfunc',
       dialogHelp: url_for('help.static', {'filename': 'edbfunc_dialog.html'}),
       label: gettext('Function'),
@@ -26,16 +22,17 @@ define('pgadmin.node.edbfunc', [
       hasSQL: true,
       hasScriptTypes: [],
       parent_type: ['package'],
-      Init: function(args) {
-        /* Avoid multiple registration of menus */
-        if (this.initialized)
-            return;
-
-        this.initialized = true;
-
-      },
       canDrop: false,
       canDropCascade: false,
+      Init: function() {
+        /* Avoid multiple registration of menus */
+        if (this.func_initialized) {
+          return;
+        }
+
+        this.func_initialized = true;
+
+      },
       model: pgBrowser.Node.Model.extend({
         defaults: {
           name: undefined,
@@ -48,63 +45,52 @@ define('pgadmin.node.edbfunc', [
           lanname: 'sql', /* Language Name in which function is being written */
           prosrc: undefined,
           proacl: undefined,
-          visibility: 'Unknown'
+          visibility: 'Unknown',
         },
         schema: [{
           id: 'name', label: gettext('Name'), cell: 'string',
           type: 'text', mode: ['properties'],
-          disabled: true
+          disabled: true,
         },{
           id: 'oid', label: gettext('OID'), cell: 'string',
-          type: 'text' , mode: ['properties']
+          type: 'text' , mode: ['properties'],
         },{
           id: 'funcowner', label: gettext('Owner'), cell: 'string',
-          type: 'text', disabled: true
+          type: 'text', disabled: true,
         },{
           id: 'pronargs', label: gettext('Argument count'), cell: 'string',
-          type: 'text', group: gettext('Definition'), mode: ['properties']
+          type: 'text', group: gettext('Definition'), mode: ['properties'],
         },{
           id: 'proargs', label: gettext('Arguments'), cell: 'string',
           type: 'text', group: gettext('Definition'), mode: ['properties'],
-          disabled: true
+          disabled: true,
         },{
           id: 'proargtypenames', label: gettext('Signature arguments'), cell:
           'string', type: 'text', group: gettext('Definition'), mode: ['properties'],
-          disabled: true
+          disabled: true,
         },{
           id: 'prorettypename', label: gettext('Return type'), cell: 'string',
           type: 'text', group: gettext('Definition'), disabled: true,
-          mode: ['properties'], visible: 'isVisible'
+          mode: ['properties'], visible: 'isVisible',
         },{
           id: 'visibility', label: gettext('Visibility'), cell: 'string',
           type: 'text', mode: ['properties'],
-          disabled: true
+          disabled: true,
         },{
           id: 'lanname', label: gettext('Language'), cell: 'string',
-          type: 'text', group: gettext('Definition'), disabled: true
+          type: 'text', group: gettext('Definition'), disabled: true,
         },{
-          id: 'prosrc', label: gettext('Code'), cell: 'string',
-          type: 'text', mode: ['properties'],
-          group: gettext('Definition'),
+          id: 'prosrc', label: gettext('Code'), cell: 'string', type: 'text',
+          mode: ['properties'], group: gettext('Definition'), disabled: true,
           control: Backform.SqlFieldControl,
           extraClasses:['custom_height_css_class'],
-          visible: function(m) {
-            if (m.get('lanname') == 'c') {
-              return false;
-            }
-            return true;
-          }, disabled: true
+          visible: function(m) { return m.get('lanname') !== 'c'; },
+
         }],
-        validate: function()
-        {
-          return null;
-        },
-        isVisible: function(m){
-          if (this.name == 'sysproc') { return false; }
-          return true;
-        }
-      })
-  });
+        validate: function() { return null; },
+        isVisible: function() { return this.name !== 'sysproc'; },
+      }),
+    });
 
   }
 

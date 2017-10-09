@@ -1,4 +1,4 @@
-define(['sources/gettext', 'alertify'], function (gettext, alertify) {
+define(['sources/gettext', 'pgadmin.alertify'], function (gettext, Alertify) {
   var clipboard = {
     copyTextToClipboard: function (text) {
       var textArea = document.createElement('textarea');
@@ -67,9 +67,9 @@ define(['sources/gettext', 'alertify'], function (gettext, alertify) {
         // triggered on document and then we can set clipboardData.
         document.execCommand('copy');
       } catch (err) {
-        alertify.alert(
-          gettext('Error'),
-          gettext('Oops, unable to copy to clipboard'));
+        Alertify.alert(
+          gettext('Error'), gettext('Oops, unable to copy to clipboard')
+        );
       }
 
       document.body.removeChild(textArea);

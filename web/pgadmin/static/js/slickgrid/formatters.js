@@ -8,42 +8,42 @@
 (function ($) {
   // register namespace
   $.extend(true, window, {
-    "Slick": {
-      "Formatters": {
-        "JsonString": JsonFormatter,
-        "Numbers": NumbersFormatter,
-        "Checkmark": CheckmarkFormatter,
-        "Text": TextFormatter,
-        "Binary": BinaryFormatter,
-        "JsonStringArray": JsonArrayFormatter,
-        "NumbersArray": NumbersArrayFormatter,
-        "TextArray": TextArrayFormatter,
-      }
-    }
+    'Slick': {
+      'Formatters': {
+        'JsonString': JsonFormatter,
+        'Numbers': NumbersFormatter,
+        'Checkmark': CheckmarkFormatter,
+        'Text': TextFormatter,
+        'Binary': BinaryFormatter,
+        'JsonStringArray': JsonArrayFormatter,
+        'NumbersArray': NumbersArrayFormatter,
+        'TextArray': TextArrayFormatter,
+      },
+    },
   });
 
-  function NullAndDefaultFormatter(row, cell, value, columnDef, dataContext) {
+  function NullAndDefaultFormatter(row, cell, value, columnDef) {
     if (_.isUndefined(value) && columnDef.has_default_val) {
-        return "<span class='pull-left disabled_cell'>[default]</span>";
+      return '<span class=\'pull-left disabled_cell\'>[default]</span>';
     }
     else if (
       (_.isUndefined(value) && columnDef.not_null) ||
       (_.isUndefined(value) || value === null)
     ) {
-      return "<span class='pull-left disabled_cell'>[null]</span>";
+      return '<span class=\'pull-left disabled_cell\'>[null]</span>';
     }
     return null;
   }
 
-  function NullAndDefaultNumberFormatter(row, cell, value, columnDef, dataContext) {
+  function NullAndDefaultNumberFormatter(row, cell, value, columnDef) {
     if (_.isUndefined(value) && columnDef.has_default_val) {
-        return "<span class='pull-right disabled_cell'>[default]</span>";
+      return '<span class=\'pull-right disabled_cell\'>[default]</span>';
     }
     else if (
       (_.isUndefined(value) && columnDef.not_null) ||
       (_.isUndefined(value) || value === null)
     ) {
-      return "<span class='pull-right disabled_cell'>[null]</span>";
+      return '<span class=\'pull-right disabled_cell\'>[null]</span>';
     }
     return null;
   }
@@ -55,18 +55,18 @@
       return data;
     } else {
       // Stringify only if it's json object
-      if (typeof value === "object" && !Array.isArray(value)) {
+      if (typeof value === 'object' && !Array.isArray(value)) {
         return _.escape(JSON.stringify(value));
       } else if (Array.isArray(value)) {
         var temp = [];
         $.each(value, function(i, val) {
-          if (typeof val === "object") {
+          if (typeof val === 'object') {
             temp.push(JSON.stringify(val));
           } else {
-            temp.push(val)
+            temp.push(val);
           }
         });
-        return _.escape("[" + temp.join() + "]")
+        return _.escape('[' + temp.join() + ']');
       } else {
         return _.escape(value);
       }
@@ -79,22 +79,22 @@
     if (data) {
       return data;
     } else {
-      var data = [];
+      data = [];
       for (var k in value) {
         // Stringify only if it's json object
         var v = value[k];
-        if (typeof v === "object" && !Array.isArray(v)) {
+        if (typeof v === 'object' && !Array.isArray(v)) {
           return data.push(_.escape(JSON.stringify(v)));
         } else if (Array.isArray(v)) {
           var temp = [];
           $.each(v, function(i, val) {
-            if (typeof val === "object") {
+            if (typeof val === 'object') {
               temp.push(JSON.stringify(val));
             } else {
-              temp.push(val)
+              temp.push(val);
             }
           });
-          return data.push(_.escape("[" + temp.join() + "]"));
+          return data.push(_.escape('[' + temp.join() + ']'));
         } else {
           return data.push(_.escape(v));
         }
@@ -109,7 +109,7 @@
     if (data) {
       return data;
     } else {
-      return "<span style='float:right'>" + _.escape(value) + "</span>";
+      return '<span style=\'float:right\'>' + _.escape(value) + '</span>';
     }
   }
 
@@ -122,12 +122,12 @@
       data = [];
       for(var k in value) {
         if (value[k] == null) {
-          data.push("<span class='disabled_cell'>[null]</span>");
+          data.push('<span class=\'disabled_cell\'>[null]</span>');
         } else {
           data.push(_.escape(value[k]));
         }
       }
-      return "<span style='float:right'>{" + data.join() + "}</span>";
+      return '<span style=\'float:right\'>{' + data.join() + '}</span>';
     }
   }
 
@@ -141,7 +141,7 @@
     if (data) {
       return data;
     } else {
-      return value ? "true" : "false";
+      return value ? 'true' : 'false';
     }
   }
 
@@ -164,12 +164,12 @@
       data = [];
       for(var k in value) {
         if (value[k] === null) {
-          data.push("<span class='disabled_cell'>[null]</span>");
+          data.push('<span class=\'disabled_cell\'>[null]</span>');
         } else {
           data.push(_.escape(value[k]));
         }
       }
-      return "{" + data.join() + "}";
+      return '{' + data.join() + '}';
     }
   }
 
@@ -179,7 +179,7 @@
     if (data) {
       return data;
     } else {
-      return "<span class='pull-left disabled_cell'>[" + _.escape(value) + "]</span>";
+      return '<span class=\'pull-left disabled_cell\'>[' + _.escape(value) + ']</span>';
     }
   }
-})(jQuery);
+})(window.jQuery);

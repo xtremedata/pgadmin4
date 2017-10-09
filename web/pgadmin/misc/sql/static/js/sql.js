@@ -1,6 +1,6 @@
 define('misc.sql', [
   'sources/gettext', 'underscore', 'underscore.string', 'jquery',
-  'pgadmin.browser', 'pgadmin.alertifyjs', 'pgadmin.browser.tool'
+  'pgadmin.browser', 'pgadmin.alertify', 'pgadmin.browser.tool',
 ], function(gettext, _, S, $, pgBrowser, Alertify, pgTool) {
 
   if (pgBrowser.ShowNodeSQL)
@@ -47,7 +47,7 @@ define('misc.sql', [
               );
             }
           }.bind(this)
-          );
+        );
       }
       else {
         if ((sqlPanels[0].isVisible()) || sqlPanels.length != 1) {
@@ -69,11 +69,9 @@ define('misc.sql', [
         function() {
           var sql = '';
           if (node) {
-            sql = '-- ' + gettext("No SQL could be generated for the selected object.");
-            var self = this,
-                n_type = data._type,
-                n_value = -1,
-                treeHierarchy = node.getTreeNodeHierarchy(item);
+            sql = '-- ' + gettext('No SQL could be generated for the selected object.');
+            var n_type = data._type,
+              treeHierarchy = node.getTreeNodeHierarchy(item);
 
             // Avoid unnecessary reloads
             if (_.isEqual($(that.sqlPanels[0]).data('node-prop'), treeHierarchy)) {
@@ -86,24 +84,24 @@ define('misc.sql', [
 
               sql = '';
               var url = node.generate_url(item, 'sql', data, true),
-                  timer;
+                timer;
 
               $.ajax({
                 url: url,
                 type:'GET',
-                beforeSend: function(jqXHR, settings) {
+                beforeSend: function() {
                   // Generate a timer for the request
                   timer = setTimeout(function(){
-                  // notify user if request is taking longer than 1 second
+                    // notify user if request is taking longer than 1 second
 
-                  pgAdmin.Browser.editor.setValue(
-                    gettext("Retrieving data from the server...")
-                  );
+                    pgBrowser.editor.setValue(
+                      gettext('Retrieving data from the server...')
+                    );
                   }, 1000);
                 },
                 success: function(res) {
-                  if (pgAdmin.Browser.editor.getValue() != res) {
-                    pgAdmin.Browser.editor.setValue(res);
+                  if (pgBrowser.editor.getValue() != res) {
+                    pgBrowser.editor.setValue(res);
                   }
                   clearTimeout(timer);
                 },
@@ -114,35 +112,33 @@ define('misc.sql', [
                   );
                   if (
                     !Alertify.pgHandleItemError(xhr, error, message, {
-                      item: item, info: treeHierarchy
+                      item: item, info: treeHierarchy,
                     })
                   ) {
                     Alertify.pgNotifier(
                       error, xhr,
-                      S(gettext("Error retrieving the information - %s")).sprintf(
-                        message || _label
-                      ).value(),
-                      function() {
-                        console.log(arguments);
-                      }
+                      gettext('Error retrieving the information - %(label)s', {
+                        label: message || _label,
+                      }),
+                      function() { }
                     );
                   }
-                }
+                },
               });
             }
           }
 
           if (sql != '') {
-            pgAdmin.Browser.editor.setValue(sql);
+            pgBrowser.editor.setValue(sql);
           }
         }, 400);
     },
     sqlPanelVisibilityChanged: function(panel) {
       if (panel.isVisible()) {
         var t = pgBrowser.tree,
-            i = t.selected(),
-            d = i && t.itemData(i),
-            n = i && d && pgBrowser.Nodes[d._type];
+          i = t.selected(),
+          d = i && t.itemData(i),
+          n = i && d && pgBrowser.Nodes[d._type];
 
         pgBrowser.ShowNodeSQL.showSQL.apply(pgBrowser.ShowNodeSQL, [i, d, n]);
 
@@ -152,7 +148,7 @@ define('misc.sql', [
         // We don't need to listen the tree item selection event.
         pgBrowser.Events.off('pgadmin-browser:tree:selected', pgBrowser.ShowNodeSQL.showSQL);
       }
-    }
+    },
   });
 
   return pgBrowser.ShowNodeSQL;

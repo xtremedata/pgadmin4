@@ -1,5 +1,5 @@
 define('pgadmin.backgrid', [
-  'sources/gettext', 'underscore', 'jquery', 'backbone', 'backform', 'backgrid', 'alertify',
+  'sources/gettext', 'underscore', 'jquery', 'backbone', 'backform', 'backgrid', 'pgadmin.alertify',
   'moment', 'bignumber', 'bootstrap.datetimepicker', 'bootstrap.switch',
 ],
   function(gettext, _, $, Backbone, Backform, Backgrid, Alertify, moment, BigNumber) {

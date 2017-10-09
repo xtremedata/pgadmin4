@@ -9,7 +9,7 @@ var core = {
   dependencies: ['codemirror', 'slickgrid', 'vendor'],
   entry: [
     'pgadmin.backgrid', 'pgadmin.backform',
-    'pgadmin.alertifyjs', 'sources/gettext', 'sources/url_for',
+    'pgadmin.alertify', 'sources/gettext', 'sources/url_for',
     'sources/size_prettify', 'sources/sqleditor_utils',
     'sources/check_node_visibility', 'pgadmin.browser.datamodel',
     'pgadmin.file_manager', 'pgadmin.settings', 'pgadmin.preferences',
@@ -35,7 +35,7 @@ var core = {
     alias: {
       'pgadmin.browser': 'pgadmin/browser/static/js/browser',
       'pgadmin.browser.tool': 'pgadmin/browser/static/js/tools',
-      'pgadmin.alertifyjs': 'pgadmin/static/js/alertify.pgadmin.defaults',
+      'pgadmin.alertify': 'pgadmin/static/js/alertify.pgadmin.defaults',
       'pgadmin.backform': 'pgadmin/static/js/backform.pgadmin',
       'pgadmin.backgrid': 'pgadmin/static/js/backgrid.pgadmin',
       'sources': 'pgadmin/static/js',

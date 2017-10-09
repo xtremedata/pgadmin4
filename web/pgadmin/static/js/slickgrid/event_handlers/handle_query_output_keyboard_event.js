@@ -1,7 +1,6 @@
 define([
-  'sources/selection/copy_data',
-  'sources/selection/range_selection_helper'
-  ],
+  'sources/selection/copy_data', 'sources/selection/range_selection_helper',
+],
 function (copyData, RangeSelectionHelper) {
   return function handleQueryOutputKeyboardEvent(event, args) {
     var KEY_C = 67;
@@ -18,5 +17,5 @@ function (copyData, RangeSelectionHelper) {
     if (isModifierDown && modifiedKey == KEY_A) {
       RangeSelectionHelper.selectAll(self.slickgrid);
     }
-  }
+  };
 });

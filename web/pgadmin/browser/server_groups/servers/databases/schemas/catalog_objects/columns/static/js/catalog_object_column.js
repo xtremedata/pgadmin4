@@ -1,21 +1,19 @@
 define('pgadmin.node.catalog_object_column', [
-  'sources/gettext', 'jquery', 'underscore', 'underscore.string', 'sources/pgadmin',
-  'pgadmin.browser', 'alertify', 'pgadmin.browser.collection'
-], function(gettext, $, _, S, pgAdmin, pgBrowser, alertify) {
+  'sources/gettext', 'pgadmin.backform', 'pgadmin.browser',
+  'pgadmin.browser.collection',
+], function(gettext, pgBrowser) {
 
   if (!pgBrowser.Nodes['coll-catalog_object_column']) {
-    var databases = pgAdmin.Browser.Nodes['coll-catalog_object_column'] =
-      pgAdmin.Browser.Collection.extend({
-        node: 'catalog_object_column',
-        label: gettext('catalog_object_column'),
+    pgBrowser.Nodes['coll-catalog_object_column'] =
+      pgBrowser.Collection.extend({
+        node: 'catalog_object_column', label: gettext('catalog_object_column'),
         type: 'coll-catalog_object_column',
-        columns: ['attname', 'attnum', 'cltype', 'description']
+        columns: ['attname', 'attnum', 'cltype', 'description'],
       });
-  };
+  }
 
-  if (!pgBrowser.Nodes['catalog_object_column']) {
-    pgAdmin.Browser.Nodes['catalog_object_column'] =
-      pgAdmin.Browser.Node.extend({
+  if (!pgBrowser.Nodes.catalog_object_column) {
+    pgBrowser.Nodes.catalog_object_column = pgBrowser.Node.extend({
       parent_type: 'catalog_object',
       type: 'catalog_object_column',
       label: gettext('catalog_object_column'),
@@ -25,12 +23,12 @@ define('pgadmin.node.catalog_object_column', [
       Init: function() {
         /* Avoid mulitple registration of menus */
         if (this.initialized)
-            return;
+          return;
 
         this.initialized = true;
 
       },
-      model: pgAdmin.Browser.Node.Model.extend({
+      model: pgBrowser.Node.Model.extend({
         defaults: {
           attname: undefined,
           attowner: undefined,
@@ -39,31 +37,31 @@ define('pgadmin.node.catalog_object_column', [
           cltype: undefined,
           collspcname: undefined,
           attacl: undefined,
-          description: undefined
+          description: undefined,
         },
         schema: [{
           id: 'attname', label: gettext('Column'), cell: 'string',
-          type: 'text', disabled: true
+          type: 'text', disabled: true,
         },{
           id: 'attowner', label: gettext('Owner'), cell: 'string',
-          type: 'text', disabled: true
+          type: 'text', disabled: true,
         },{
           id: 'attnum', label: gettext('Position'), cell: 'string',
-          type: 'text', disabled: true
+          type: 'text', disabled: true,
         },{
           id: 'cltype', label: gettext('Data type'), cell: 'string',
-          group: gettext('Definition'), type: 'text', disabled: true
+          group: gettext('Definition'), type: 'text', disabled: true,
         },{
           id: 'collspcname', label: gettext('Collation'), cell: 'string',
-          group: gettext('Definition'), type: 'text', disabled: true
+          group: gettext('Definition'), type: 'text', disabled: true,
         },{
           id: 'attacl', label: gettext('Privileges'), cell: 'string',
-          group: gettext('Security'), type: 'text', disabled: true
+          group: gettext('Security'), type: 'text', disabled: true,
         },{
           id: 'description', label: gettext('Comment'), cell: 'string',
-          type: 'multiline', disabled: true
-        }]
-      })
+          type: 'multiline', disabled: true,
+        }],
+      }),
     });
   }
 

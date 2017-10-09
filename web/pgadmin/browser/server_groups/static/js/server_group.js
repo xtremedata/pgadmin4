@@ -1,14 +1,15 @@
 define('pgadmin.node.server_group', [
-  'sources/gettext', 'sources/url_for', 'jquery', 'underscore', 'sources/pgadmin',
-  'backbone', 'pgadmin.browser', 'pgadmin.browser.node',
-  'pgadmin.backform', 'pgadmin.backgrid'
-], function(gettext, url_for, $, _, pgAdmin, Backbone) {
+  'sources/gettext', 'sources/url_for', 'underscore', 'pgadmin.browser',
+  'pgadmin.browser.node',
+], function(gettext, url_for, _, pgBrowser) {
 
-  if (!pgAdmin.Browser.Nodes['server_group']) {
-    pgAdmin.Browser.Nodes['server_group'] = pgAdmin.Browser.Node.extend({
+  if (!pgBrowser.Nodes.server_group) {
+    pgBrowser.Nodes.server_group = pgBrowser.Node.extend({
       parent_type: null,
       type: 'server_group',
-      dialogHelp: url_for('help.static', {'filename': 'server_group_dialog.html'}),
+      dialogHelp: url_for(
+        'help.static', {'filename': 'server_group_dialog.html'}
+      ),
       label: gettext('Server Group'),
       width: '350px',
       height: '250px',
@@ -16,68 +17,65 @@ define('pgadmin.node.server_group', [
       Init: function() {
         /* Avoid multiple registration of menus */
         if (this.initialized)
-            return;
+          return;
 
         this.initialized = true;
 
-        pgAdmin.Browser.add_menus([{
+        pgBrowser.add_menus([{
           name: 'create_server_group', node: 'server_group', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 1, label: gettext('Server Group...'),
-          data: {'action': 'create'}, icon: 'wcTabIcon icon-server_group'
+          data: {'action': 'create'}, icon: 'wcTabIcon icon-server_group',
         }]);
       },
-      model: pgAdmin.Browser.Node.Model.extend({
+      model: pgBrowser.Node.Model.extend({
         defaults: {
           id: undefined,
-          name: null
+          name: null,
         },
         schema: [
           {
             id: 'id', label: gettext('ID'), type: 'int', group: null,
-            mode: ['properties']
+            mode: ['properties'],
           },{
             id: 'name', label: gettext('Name'), type: 'text', group: null,
-            mode: ['properties', 'edit', 'create']
-          }
+            mode: ['properties', 'edit', 'create'],
+          },
         ],
-        validate: function(attrs, options) {
-           var err = {},
-              errmsg = null;
-          this.errorModel.clear();
+        validate: function() {
+          var errmsg = null;
 
           if (!this.isNew() && 'id' in this.changed) {
             errmsg = gettext('The ID cannot be changed.');
             this.errorModel.set('id', errmsg);
             return errmsg;
           }
-          if (_.isUndefined(this.get('name')) ||
-            _.isNull(this.get('name')) ||
-            String(this.get('name')).replace(/^\s+|\s+$/g, '') == '') {
+          if (
+            _.isUndefined(this.get('name')) || _.isNull(this.get('name')) ||
+            String(this.get('name')).replace(/^\s+|\s+$/g, '') === ''
+          ) {
             errmsg = gettext('Name cannot be empty.');
             this.errorModel.set('name', errmsg);
             return errmsg;
           }
+          this.errorModel.unset('id');
+          this.errorModel.unset('name');
+
           return null;
-        }
+        },
       }),
-      canDrop: function(itemData, item, data) {
-        if(itemData.can_delete) {
-          return true;
-        }
-        return false;
-      },
+      canDrop: function(itemData) { return itemData.can_delete; },
       canDelete: function(i) {
-        var s = pgAdmin.Browser.tree.siblings(i, true);
+        var s = pgBrowser.tree.siblings(i, true);
 
         /* This is the only server group - we can't remove it*/
         if (!s || s.length == 0) {
           return false;
         }
         return true;
-      }
+      },
     });
   }
 
-  return pgAdmin.Browser.Nodes['server_group'];
+  return pgBrowser.Nodes.server_group;
 });

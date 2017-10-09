@@ -1,20 +1,16 @@
 define('pgadmin.node.catalog_object', [
-  'sources/gettext', 'jquery', 'underscore', 'underscore.string', 'sources/pgadmin',
-  'pgadmin.browser', 'alertify', 'pgadmin.browser.collection'
-], function(gettext, $, _, S, pgAdmin, pgBrowser, alertify) {
+  'sources/gettext', 'pgadmin.browser', 'pgadmin.browser.collection',
+], function(gettext, pgBrowser) {
 
   if (!pgBrowser.Nodes['coll-catalog_object']) {
-    var databases = pgAdmin.Browser.Nodes['coll-catalog_object'] =
-      pgAdmin.Browser.Collection.extend({
-        node: 'catalog_object',
-        label: gettext('Catalog Objects'),
-        type: 'coll-catalog_object',
-        columns: ['name', 'owner', 'description']
-      });
-  };
+    pgBrowser.Nodes['coll-catalog_object'] = pgBrowser.Collection.extend({
+      node: 'catalog_object', label: gettext('Catalog Objects'),
+      type: 'coll-catalog_object', columns: ['name', 'owner', 'description'],
+    });
+  }
 
-  if (!pgBrowser.Nodes['catalog_object']) {
-    pgAdmin.Browser.Nodes['catalog_object'] = pgAdmin.Browser.Node.extend({
+  if (!pgBrowser.Nodes.catalog_object) {
+    pgBrowser.Nodes.catalog_object = pgBrowser.Node.extend({
       parent_type: 'catalog',
       type: 'catalog_object',
       label: gettext('Catalog Object'),
@@ -24,12 +20,12 @@ define('pgadmin.node.catalog_object', [
       Init: function() {
         /* Avoid mulitple registration of menus */
         if (this.initialized)
-            return;
+          return;
 
         this.initialized = true;
 
       },
-      model: pgAdmin.Browser.Node.Model.extend({
+      model: pgBrowser.Node.Model.extend({
         defaults: {
           name: undefined,
           namespaceowner: undefined,
@@ -38,20 +34,20 @@ define('pgadmin.node.catalog_object', [
         },
         schema: [{
           id: 'name', label: gettext('Name'), cell: 'string',
-          type: 'text', disabled: true
+          type: 'text', disabled: true,
         },{
           id: 'oid', label: gettext('OID'), cell: 'string',
-          type: 'text', disabled: true
+          type: 'text', disabled: true,
         },{
           id: 'owner', label: gettext('Owner'), cell: 'string',
-          type: 'text', disabled: true
+          type: 'text', disabled: true,
         },{
           id: 'description', label: gettext('Comment'), cell: 'string',
-          type: 'multiline' ,  disabled: true
-        }
-        ]
-      })
-  });
+          type: 'multiline' ,  disabled: true,
+        },
+        ],
+      }),
+    });
 
   }
 

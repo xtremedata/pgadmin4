@@ -1,22 +1,18 @@
 /* Create and Register Function Collection and Node. */
 define('pgadmin.node.edbvar', [
-  'sources/gettext', 'sources/url_for', 'jquery', 'underscore',
-  'underscore.string', 'sources/pgadmin', 'pgadmin.browser', 'alertify',
-  'pgadmin.browser.collection', 'pgadmin.browser.server.privilege'
-], function(gettext, url_for, $, _, S, pgAdmin, pgBrowser, alertify) {
+  'sources/gettext', 'sources/url_for', 'pgadmin.browser',
+  'pgadmin.browser.collection', 'pgadmin.browser.server.privilege',
+], function(gettext, url_for, pgBrowser) {
 
   if (!pgBrowser.Nodes['coll-edbvar']) {
-    pgBrowser.Nodes['coll-edbvar'] =
-      pgBrowser.Collection.extend({
-        node: 'edbvar',
-        label: gettext('Variables'),
-        type: 'coll-edbvar',
-        columns: ['name', 'funcowner', 'description']
-      });
-  };
+    pgBrowser.Nodes['coll-edbvar'] = pgBrowser.Collection.extend({
+      node: 'edbvar', label: gettext('Variables'), type: 'coll-edbvar',
+      columns: ['name', 'funcowner', 'description'],
+    });
+  }
 
-  if (!pgBrowser.Nodes['edbvar']) {
-    pgBrowser.Nodes['edbvar'] = pgBrowser.Node.extend({
+  if (!pgBrowser.Nodes.edbvar) {
+    pgBrowser.Nodes.edbvar = pgBrowser.Node.extend({
       type: 'edbvar',
       dialogHelp: url_for('help.static', {'filename': 'edbvar_dialog.html'}),
       label: gettext('Function'),
@@ -25,10 +21,11 @@ define('pgadmin.node.edbvar', [
       hasSQL: true,
       hasScriptTypes: [],
       parent_type: ['package'],
-      Init: function(args) {
+      Init: function() {
         /* Avoid mulitple registration of menus */
-        if (this.initialized)
-            return;
+        if (this.initialized) {
+          return;
+        }
 
         this.initialized = true;
 
@@ -40,31 +37,31 @@ define('pgadmin.node.edbvar', [
           name: undefined,
           oid: undefined,
           datatype: undefined,
-          visibility: 'Unknown'
+          visibility: 'Unknown',
         },
         schema: [{
           id: 'name', label: gettext('Name'), cell: 'string',
           type: 'text', mode: ['properties'],
-          disabled: true
+          disabled: true,
         },{
           id: 'oid', label: gettext('OID'), cell: 'string',
-          type: 'text' , mode: ['properties']
+          type: 'text' , mode: ['properties'],
         },{
           id: 'datatype', label: gettext('Data type'), cell: 'string',
-          type: 'text', disabled: true
+          type: 'text', disabled: true,
         },{
           id: 'visibility', label: gettext('Visibility'), cell: 'string',
           type: 'text', mode: ['properties'],
-          disabled: true
+          disabled: true,
         }],
         validate: function()
         {
           return null;
-        }
-      })
-  });
+        },
+      }),
+    });
 
   }
 
-  return pgBrowser.Nodes['edbvar'];
+  return pgBrowser.Nodes.edbvar;
 });

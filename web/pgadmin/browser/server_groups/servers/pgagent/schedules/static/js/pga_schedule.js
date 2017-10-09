@@ -1,8 +1,8 @@
 define('pgadmin.node.pga_schedule', [
-    'sources/gettext', 'sources/url_for', 'jquery', 'underscore',
-    'underscore.string', 'sources/pgadmin', 'moment', 'pgadmin.browser', 'alertify',
-    'backform', 'pgadmin.backform'
-], function(gettext, url_for, $, _, S, pgAdmin, moment, pgBrowser, Alertify, Backform) {
+  'sources/gettext', 'sources/url_for', 'jquery', 'underscore',
+  'pgadmin.backgrid', 'pgadmin.backform', 'moment',
+  'pgadmin.browser',
+], function(gettext, url_for, $, _, Backgrid, Backform, moment, pgBrowser) {
 
   if (!pgBrowser.Nodes['coll-pga_schedule']) {
     pgBrowser.Nodes['coll-pga_schedule'] =
@@ -11,7 +11,7 @@ define('pgadmin.node.pga_schedule', [
         label: gettext('Schedules'),
         type: 'coll-pga_schedule',
         columns: ['jscid', 'jscname', 'jscenabled'],
-        hasStatistics: false
+        hasStatistics: false,
       });
   }
 
@@ -20,7 +20,7 @@ define('pgadmin.node.pga_schedule', [
     var weekdays = [
         gettext('Sunday'), gettext('Monday'), gettext('Tuesday'),
         gettext('Wednesday'), gettext('Thursday'), gettext('Friday'),
-        gettext('Saturday')
+        gettext('Saturday'),
       ],
       monthdays = [
         gettext('1st'), gettext('2nd'), gettext('3rd'),
@@ -33,13 +33,13 @@ define('pgadmin.node.pga_schedule', [
         gettext('22nd'), gettext('23rd'), gettext('24th'),
         gettext('25th'), gettext('26th'), gettext('27th'),
         gettext('28th'), gettext('29th'), gettext('30th'),
-        gettext('31st'), gettext('Last day')
+        gettext('31st'), gettext('Last day'),
       ],
       months = [
         gettext('January'), gettext('February'), gettext('March'),
         gettext('April'), gettext('May'), gettext('June'),
         gettext('July'), gettext('August'), gettext('September'),
-        gettext('October'), gettext('November'), gettext('December')
+        gettext('October'), gettext('November'), gettext('December'),
       ],
       hours = [
         gettext('00'), gettext('01'), gettext('02'), gettext('03'),
@@ -47,7 +47,7 @@ define('pgadmin.node.pga_schedule', [
         gettext('08'), gettext('09'), gettext('10'), gettext('11'),
         gettext('12'), gettext('13'), gettext('14'), gettext('15'),
         gettext('16'), gettext('17'), gettext('18'), gettext('19'),
-        gettext('20'), gettext('21'), gettext('22'), gettext('23')
+        gettext('20'), gettext('21'), gettext('22'), gettext('23'),
       ],
       minutes = [
         gettext('00'), gettext('01'), gettext('02'), gettext('03'),
@@ -64,18 +64,18 @@ define('pgadmin.node.pga_schedule', [
         gettext('44'), gettext('45'), gettext('46'), gettext('47'),
         gettext('48'), gettext('49'), gettext('50'), gettext('51'),
         gettext('52'), gettext('53'), gettext('54'), gettext('55'),
-        gettext('56'), gettext('57'), gettext('58'), gettext('59')
+        gettext('56'), gettext('57'), gettext('58'), gettext('59'),
       ],
       AnyDatetimeCell = Backgrid.Extension.MomentCell.extend({
         editor: Backgrid.Extension.DatetimePickerEditor,
         render: function() {
           this.$el.empty();
           var model = this.model;
-          this.$el.text(this.formatter.fromRaw(model.get(this.column.get("name")), model) || gettext('<any>'));
+          this.$el.text(this.formatter.fromRaw(model.get(this.column.get('name')), model) || gettext('<any>'));
           this.delegateEvents();
 
           return this;
-        }
+        },
       }),
       BooleanArrayFormatter = function(selector, indexes) {
         var self = this;
@@ -98,7 +98,7 @@ define('pgadmin.node.pga_schedule', [
           }
 
           return self.indexes ? resIdx : res.join(', ');
-        }
+        };
         this.toRaw = function(d) {
           if (!self.indexes)
             return d;
@@ -108,14 +108,14 @@ define('pgadmin.node.pga_schedule', [
             res.push(_.indexOf(d, String(i + 1)) != -1);
           }
           return res;
-        }
+        };
 
         return self;
       },
       BooleanArrayOptions = function(ctrl) {
         var selector = ctrl.field.get('selector'),
-            val = ctrl.model.get(ctrl.field.get('name')),
-            res = [];
+          val = ctrl.model.get(ctrl.field.get('name')),
+          res = [];
 
         if (selector) {
           res = _.map(
@@ -130,7 +130,7 @@ define('pgadmin.node.pga_schedule', [
         defaults: {
           jexid: undefined,
           jexdate: null,
-          jextime: null
+          jextime: null,
         },
         idAttribute: 'jexid',
         schema: [{
@@ -138,20 +138,20 @@ define('pgadmin.node.pga_schedule', [
           editable: true, placeholder: gettext('<any>'),
           cell: AnyDatetimeCell, options: {format: 'YYYY-MM-DD'},
           displayFormat: 'YYYY-MM-DD', modelFormat: 'YYYY-MM-DD',
-          cellHeaderClasses:'width_percent_50', allowEmpty: true
+          cellHeaderClasses:'width_percent_50', allowEmpty: true,
         },{
           id: 'jextime', type: 'text', placeholder: gettext('<any>'),
           label: gettext('Time'), editable: true, cell: AnyDatetimeCell,
           options: {format: 'HH:mm'}, displayFormat: 'HH:mm',
           modelFormat: 'HH:mm:ss', displayInUTC: false, allowEmpty: true,
-          cellHeaderClasses:'width_percent_50', modalInUTC: false
+          cellHeaderClasses:'width_percent_50', modalInUTC: false,
         }],
         validate: function() {
           var self = this, exceptions = this.collection,
-              dates = {}, errMsg, hasExceptionErr = false,
-              d = (this.get('jexdate') || '<any>'),
-              t = this.get('jextime') || '<any>',
-              id = this.get('jexid') || this.cid;
+            errMsg, hasExceptionErr = false,
+            d = (this.get('jexdate') || '<any>'),
+            t = this.get('jextime') || '<any>',
+            id = this.get('jexid') || this.cid;
 
           self.errorModel.unset('jscdate');
           if (d == t && d == '<any>') {
@@ -170,13 +170,13 @@ define('pgadmin.node.pga_schedule', [
             ) {
               errMsg = gettext('Please specify unique set of exceptions.');
               if (ex.errorModel.get('jscdate') != errMsg)
-                  self.errorModel.set('jscdate', errMsg);
+                self.errorModel.set('jscdate', errMsg);
               hasExceptionErr = true;
             }
           });
 
           return errMsg;
-        }
+        },
       });
 
     pgBrowser.Nodes['pga_schedule'] = pgBrowser.Node.extend({
@@ -186,15 +186,13 @@ define('pgadmin.node.pga_schedule', [
       hasSQL: true,
       hasDepends: false,
       hasStatistics: false,
-      canDrop: function(node) {
-        return true;
-      },
+      canDrop: function() { return true; },
       label: gettext('Schedule'),
       node_image: 'icon-pga_schedule',
       Init: function() {
         /* Avoid mulitple registration of menus */
         if (this.initialized)
-            return;
+          return;
 
         this.initialized = true;
 
@@ -202,17 +200,17 @@ define('pgadmin.node.pga_schedule', [
           name: 'create_pga_schedule_on_job', node: 'pga_job', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 4, label: gettext('Schedule...'),
-          icon: 'wcTabIcon icon-pga_schedule', data: {action: 'create'}
+          icon: 'wcTabIcon icon-pga_schedule', data: {action: 'create'},
         },{
           name: 'create_pga_schedule_on_coll', node: 'coll-pga_schedule', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 4, label: gettext('Schedule...'),
-          icon: 'wcTabIcon icon-pga_schedule', data: {action: 'create'}
+          icon: 'wcTabIcon icon-pga_schedule', data: {action: 'create'},
         },{
           name: 'create_pga_schedule', node: 'pga_schedule', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 4, label: gettext('Schedule...'),
-          icon: 'wcTabIcon icon-pga_schedule', data: {action: 'create'}
+          icon: 'wcTabIcon icon-pga_schedule', data: {action: 'create'},
         }]);
       },
       model: pgBrowser.Node.Model.extend({
@@ -229,7 +227,7 @@ define('pgadmin.node.pga_schedule', [
           jscmonths: _.map(months, function() { return false; }),
           jschours: _.map(hours, function() { return false; }),
           jscminutes: _.map(minutes, function() { return false; }),
-          jscexceptions: []
+          jscexceptions: [],
         },
         idAttribute: 'jscid',
         parse: function(d) {
@@ -240,7 +238,7 @@ define('pgadmin.node.pga_schedule', [
               d.jscexceptions.push({
                 'jexid': d.jexid[idx],
                 'jexdate': d.jexdate[idx],
-                'jextime': d.jextime[idx]
+                'jextime': d.jextime[idx],
               });
             }
           }
@@ -252,15 +250,15 @@ define('pgadmin.node.pga_schedule', [
         },
         schema: [{
           id: 'jscid', label: gettext('ID'), type: 'int',
-          cellHeaderClasses: 'width_percent_5', mode: ['properties']
+          cellHeaderClasses: 'width_percent_5', mode: ['properties'],
         },{
           id: 'jscname', label: gettext('Name'), type: 'text',
           cellHeaderClasses: 'width_percent_45',
-          disabled: function() { return false; }
+          disabled: function() { return false; },
         },{
           id: 'jscenabled', label: gettext('Enabled?'), type: 'switch',
           disabled: function() { return false; },
-          cellHeaderClasses: 'width_percent_5'
+          cellHeaderClasses: 'width_percent_5',
         },{
           id: 'jscstart', label: gettext('Start'), type: 'text',
           control: 'datetimepicker', cell: 'moment',
@@ -268,40 +266,40 @@ define('pgadmin.node.pga_schedule', [
           displayFormat: 'YYYY-MM-DD HH:mm:ss Z',
           modelFormat: 'YYYY-MM-DD HH:mm:ss Z', options: {
             format: 'YYYY-MM-DD HH:mm:ss Z',
-          }, cellHeaderClasses: 'width_percent_25'
+          }, cellHeaderClasses: 'width_percent_25',
         },{
           id: 'jscend', label: gettext('End'), type: 'text',
           control: 'datetimepicker', cell: 'moment',
           disabled: function() { return false; }, displayInUTC: false,
           displayFormat: 'YYYY-MM-DD HH:mm:ss Z', options: {
-            format: 'YYYY-MM-DD HH:mm:ss Z', useCurrent: false
+            format: 'YYYY-MM-DD HH:mm:ss Z', useCurrent: false,
           }, cellHeaderClasses: 'width_percent_25',
-          modelFormat: 'YYYY-MM-DD HH:mm:ss Z'
+          modelFormat: 'YYYY-MM-DD HH:mm:ss Z',
         },{
           id: 'jscweekdays', label: gettext('Week days'), type: 'text',
           control: Backform.Control.extend({
-            formatter: new BooleanArrayFormatter(weekdays, false)
-          }), mode: ['properties']
+            formatter: new BooleanArrayFormatter(weekdays, false),
+          }), mode: ['properties'],
         },{
           id: 'jscmonthdays', label: gettext('Month days'), type: 'text',
           control: Backform.Control.extend({
-            formatter: new BooleanArrayFormatter(monthdays, false)
-          }), mode: ['properties']
+            formatter: new BooleanArrayFormatter(monthdays, false),
+          }), mode: ['properties'],
         },{
           id: 'jscmonths', label: gettext('Months'), type: 'text',
           control: Backform.Control.extend({
-            formatter: new BooleanArrayFormatter(months, false)
-          }), mode: ['properties']
+            formatter: new BooleanArrayFormatter(months, false),
+          }), mode: ['properties'],
         },{
           id: 'jschours', label: gettext('Hours'), type: 'text',
           control: Backform.Control.extend({
-            formatter: new BooleanArrayFormatter(hours, false)
-          }), mode: ['properties']
+            formatter: new BooleanArrayFormatter(hours, false),
+          }), mode: ['properties'],
         },{
           id: 'jscminutes', label: gettext('Minutes'), type: 'text',
           control: Backform.Control.extend({
-            formatter: new BooleanArrayFormatter(minutes, false)
-          }), mode: ['properties']
+            formatter: new BooleanArrayFormatter(minutes, false),
+          }), mode: ['properties'],
         },{
           id: 'jscexceptions', label: gettext('Exceptions'), type: 'text',
           control: Backform.Control.extend({
@@ -316,17 +314,17 @@ define('pgadmin.node.pga_schedule', [
                 for (; idx < rawData.length; idx++) {
                   d = rawData[idx];
                   if (idx)
-                      res += ', ';
+                    res += ', ';
                   res += '[' + String((d.jexdate || '') + ' ' + (d.jextime || '')).replace(/^\s+|\s+$/g, '') + ']';
                 }
 
                 return res;
-              }
-              this.toRaw = function(data) { return data; }
+              };
+              this.toRaw = function(data) { return data; };
 
               return this;
-            }
-          }), mode: ['properties']
+            },
+          }), mode: ['properties'],
         },{
           type: 'nested', label: gettext('Days'), group: gettext('Repeat'),
           mode: ['create', 'edit'],
@@ -344,7 +342,7 @@ define('pgadmin.node.pga_schedule', [
               );
 
               return res;
-            }
+            },
           }),
           schema:[{
             id: 'jscweekdays', label: gettext('Week Days'), cell: 'select2',
@@ -357,11 +355,11 @@ define('pgadmin.node.pga_schedule', [
               width: 'style',
               dropdownAdapter: $.fn.select2.amd.require(
                 'select2/selectAllAdapter'
-              )
+              ),
             },
             selector: weekdays,
             formatter: new BooleanArrayFormatter(weekdays, true),
-            options: BooleanArrayOptions
+            options: BooleanArrayOptions,
           },{
             id: 'jscmonthdays', label: gettext('Month Days'), cell: 'select2',
             group: gettext('Days'), control: 'select2',
@@ -373,10 +371,10 @@ define('pgadmin.node.pga_schedule', [
               width: 'style',
               dropdownAdapter: $.fn.select2.amd.require(
                 'select2/selectAllAdapter'
-              )
+              ),
             },
             formatter: new BooleanArrayFormatter(monthdays, true),
-            selector: monthdays, options: BooleanArrayOptions
+            selector: monthdays, options: BooleanArrayOptions,
           },{
             id: 'jscmonths', label: gettext('Months'), cell: 'select2',
             group: gettext('Days'), control: 'select2',
@@ -388,11 +386,11 @@ define('pgadmin.node.pga_schedule', [
               width: 'style',
               dropdownAdapter: $.fn.select2.amd.require(
                 'select2/selectAllAdapter'
-              )
+              ),
             },
             formatter: new BooleanArrayFormatter(months, true),
-            selector: months, options: BooleanArrayOptions
-          }]
+            selector: months, options: BooleanArrayOptions,
+          }],
         },{
           type: 'nested', control: 'fieldset', label: gettext('Times'),
           group: gettext('Repeat'), mode: ['create', 'edit'],
@@ -407,10 +405,10 @@ define('pgadmin.node.pga_schedule', [
               width: 'style',
               dropdownAdapter: $.fn.select2.amd.require(
                 'select2/selectAllAdapter'
-              )
+              ),
             },
             formatter: new BooleanArrayFormatter(hours, true),
-            selector: hours, options: BooleanArrayOptions
+            selector: hours, options: BooleanArrayOptions,
           },{
             id: 'jscminutes', label: gettext('Minutes'), cell: 'select2',
             group: gettext('Times'), control: 'select2',
@@ -422,26 +420,26 @@ define('pgadmin.node.pga_schedule', [
               width: 'style',
               dropdownAdapter: $.fn.select2.amd.require(
                 'select2/selectAllAdapter'
-              )
+              ),
             },
             formatter: new BooleanArrayFormatter(minutes, true),
-            selector: minutes, options: BooleanArrayOptions
-          }]
+            selector: minutes, options: BooleanArrayOptions,
+          }],
         },{
           id: 'jscexceptions', type: 'collection', mode: ['edit', 'create'],
-          label: "", canEdit: false, model: ExceptionModel, canAdd: true,
+          label: '', canEdit: false, model: ExceptionModel, canAdd: true,
           group: gettext('Exceptions'), canDelete: true,
-          cols: ['jexdate', 'jextime'], control: 'sub-node-collection'
+          cols: ['jexdate', 'jextime'], control: 'sub-node-collection',
         },{
-          id: 'jscdesc', label: gettext('Comment'), type: 'multiline'
+          id: 'jscdesc', label: gettext('Comment'), type: 'multiline',
         }],
-        validate: function(keys) {
+        validate: function() {
           var val = this.get('jscname'),
-              errMsg = null;
+            errMsg = null, msg;
 
           if (_.isUndefined(val) || _.isNull(val) ||
             String(val).replace(/^\s+|\s+$/g, '') == '') {
-            var msg = gettext('Name cannot be empty.');
+            msg = gettext('Name cannot be empty.');
             this.errorModel.set('jscname', msg);
             errMsg = msg;
           } else {
@@ -449,9 +447,11 @@ define('pgadmin.node.pga_schedule', [
           }
 
           val = this.get('jscstart');
-          if (_.isUndefined(val) || _.isNull(val) ||
-            String(val).replace(/^\s+|\s+$/g, '') == '') {
-            var msg = gettext('Please enter the start time.');
+          if (
+            _.isUndefined(val) || _.isNull(val) ||
+              String(val).replace(/^\s+|\s+$/g, '') === ''
+          ) {
+            msg = gettext('Please enter the start time.');
             this.errorModel.set('jscstart', msg);
             errMsg = errMsg || msg;
           } else {
@@ -459,9 +459,11 @@ define('pgadmin.node.pga_schedule', [
           }
 
           val = this.get('jscend');
-          if (_.isUndefined(val) || _.isNull(val) ||
-            String(val).replace(/^\s+|\s+$/g, '') == '') {
-            var msg = gettext('Please enter the end time.');
+          if (
+            _.isUndefined(val) || _.isNull(val) ||
+            String(val).replace(/^\s+|\s+$/g, '') === ''
+          ) {
+            msg = gettext('Please enter the end time.');
             this.errorModel.set('jscend', msg);
             errMsg = errMsg || msg;
           } else {
@@ -469,8 +471,8 @@ define('pgadmin.node.pga_schedule', [
           }
 
           return errMsg;
-        }
-      })
+        },
+      }),
     });
   }
 

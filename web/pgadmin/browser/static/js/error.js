@@ -1,6 +1,6 @@
-define(
-    ['sources/gettext', 'underscore', 'alertify', 'sources/pgadmin'],
-function(gettext, _, alertify, pgAdmin) {
+define([
+  'sources/gettext', 'underscore', 'pgadmin.alertify', 'sources/pgadmin',
+], function(gettext, _, Alertify, pgAdmin) {
   pgAdmin.Browser = pgAdmin.Browser || {};
 
   _.extend(pgAdmin.Browser, {
@@ -10,7 +10,7 @@ function(gettext, _, alertify, pgAdmin) {
            <div class="panel-heading" role="tab" id="headingOne">\
            <h4 class="panel-title">\
            <a data-toggle="collapse" data-parent="#accordion" href="#collapseOne" aria-expanded="true" aria-controls="collapseOne">\
-           ' + gettext("Error message") + '</a>\
+           ' + gettext('Error message') + '</a>\
         </h4>\
         </div>\
         <div id="collapseOne" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="headingOne">\
@@ -23,21 +23,18 @@ function(gettext, _, alertify, pgAdmin) {
             <div class="panel-heading" role="tab" id="headingTwo">\
             <h4 class="panel-title">\
             <a class="collapsed" data-toggle="collapse" data-parent="#accordion" href="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">\
-            ' + gettext("Additional info") + '</a>\
+            ' + gettext('Additional info') + '</a>\
           </h4>\
           </div>\
           <div id="collapseTwo" class="panel-collapse collapse" role="tabpanel" aria-labelledby="headingTwo">\
           <div class="panel-body" style="overflow: auto;">' + unescape(info) + '</div>\
           </div>\
           </div>\
-          </div>'
+          </div>';
       }
 
       text += '</div>';
-      alertify.alert(
-        title,
-        text
-      )
+      Alertify.alert(title, text);
     },
   });
 

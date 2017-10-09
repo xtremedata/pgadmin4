@@ -1,11 +1,11 @@
-define(
-    ['underscore', 'backbone', 'sources/pgadmin', 'pgadmin.browser'],
-function(_, Backbone, pgAdmin, pgBrowser) {
+define([
+  'underscore', 'jquery', 'backbone', 'sources/pgadmin', 'pgadmin.browser',
+], function(_, $, Backbone, pgAdmin, pgBrowser) {
 
-  pgBrowser = pgBrowser || pgAdmin.Browser || {};
+  var wcDocker = window.wcDocker;
 
   /* Wizard individual Page Model */
-  var WizardPage = pgBrowser.WizardPage = Backbone.Model.extend({
+  pgBrowser.WizardPage = Backbone.Model.extend({
     defaults: {
       id: undefined, /* Id */
       page_title: undefined, /* Page Title */
@@ -29,11 +29,11 @@ function(_, Backbone, pgAdmin, pgBrowser) {
       /* Callback for before Previous */
       beforePrev: function() {
         return true;
-      }
-    }
+      },
+    },
   });
 
-  var Wizard = pgBrowser.Wizard = Backbone.View.extend({
+  pgBrowser.Wizard = Backbone.View.extend({
     options: {
       title: 'Wizard', /* Main Wizard Title */
       image: 'left_panel.png', /* TODO:: We can use default image here */
@@ -48,86 +48,86 @@ function(_, Backbone, pgAdmin, pgBrowser) {
       height: 400,
       width: 650,
       show_left_panel: true,
-      wizard_help: ''
+      wizard_help: '',
     },
     tmpl: _.template(
-       "    <div class='pgadmin-wizard' style='height: <%= this.options.height %>px;"
-       + "    width: <%= this.options.width %>px'>"
-       + "      <div class='wizard-header wizard-badge'>"
-       + "        <div class='row'>"
-       + "          <div class='col-sm-10'>"
-       + "              <h3><span id='main-title'><%= this.options.title %></span> -"
-       + "              <span id='step-title'><%= page_title %></span></h3>"
-       + "          </div>"
-       + "          <% if (this.options.show_header_cancel_btn) { %>"
-       + "            <div class='col-sm-2'>"
-       + "              <button class='ajs-close wizard-cancel-event pull-right'></button>"
-       + "              <% if (this.options.show_header_maximize_btn) { %>"
-       + "                <button class='ajs-maximize wizard-maximize-event pull-right'></button>"
-       + "              <% } %>"
-       + "            </div>"
-       + "          <% } %>"
-       + "        </div>"
-       + "      </div>"
-       + "      <div class='wizard-content col-sm-12'>"
-       + "        <% if (this.options.show_left_panel) { %>"
-       + "          <div class='col-sm-3 wizard-left-panel'>"
-       + "              <img src='<%= this.options.image %>'></div>"
-       + "        <% } %>"
-       + "        <div class='col-sm-<% if (this.options.show_left_panel) { %>9<% }"
-       + "          else { %>12<% } %> wizard-right-panel'>"
-       + "          <% if ( typeof show_description !=  'undefined'){ %>"
-       + "            <div class='wizard-description'>"
-       + "              <%= show_description %>"
-       + "            </div>"
-       + "          <% } %>"
-       + "          <div class='wizard-progress-bar'><% if (show_progress_bar) { %>"
-       + "            <p class='alert alert-info col-sm-12'><%= show_progress_bar %></p><% } %>"
-       + "          </div>"
-       + "          <div class='wizard-right-panel_content col-xs-12'>"
-       + "          </div>"
-       + "        </div>"
-       + "      </div>"
-       + "      <div class='col-sm-12 pg-prop-status-bar' style='visibility:hidden'>"
-       + "        <div class='media error-in-footer bg-red-1 border-red-2 font-red-3 text-14'>"
-       + "          <div class='media-body media-middle'>"
-       + "            <div class='alert-icon error-icon'>"
-       + "              <i class='fa fa-exclamation-triangle' aria-hidden='true'></i>"
-       + "            </div>"
-       + "            <div class='alert-text'>"
-       + "            </div>"
-       + "          </div>"
-       + "        </div>"
-       + "      </div>"
-       + "      <div class='footer col-sm-12'>"
-       + "        <div class='row'>"
-       + "          <div class='col-sm-4 wizard-buttons pull-left'>"
-       + "            <button title = 'Help for this dialog.' class='btn btn-default pull-left wizard-help' <%=this.options.wizard_help ? '' : 'disabled' %>>"
-       + "              <span class='fa fa-lg fa-question'></span></button>"
-       + "          </div>"
-       + "          <div class='col-sm-8'>"
-       + "            <div class='wizard-buttons'>"
-       + "              <button class='btn btn-primary wizard-back' <%=this.options.disable_prev ? 'disabled' : ''%>>"
-       + "                <i class='fa fa-backward'></i>Back</button>"
-       + "              <button class='btn btn-primary wizard-next' <%=this.options.disable_next ? 'disabled' : ''%>>Next"
-       + "                <i class='fa fa-forward'></i></button>"
-       + "              <button class='btn btn-danger wizard-cancel' <%=this.options.disable_cancel ? 'disabled' : ''%>>"
-       + "                <i class='fa fa-lg fa-close'></i>Cancel</button>"
-       + "              <button class='btn btn-primary wizard-finish' <%=this.options.disable_finish ? 'disabled' : ''%>>"
-       + "                Finish</button>"
-       + "            </div>"
-       + "          </div>"
-       + "        </div>"
-       + "      </div>"
-       + "    </div>"),
+       '    <div class=\'pgadmin-wizard\' style=\'height: <%= this.options.height %>px;'
+       + '    width: <%= this.options.width %>px\'>'
+       + '      <div class=\'wizard-header wizard-badge\'>'
+       + '        <div class=\'row\'>'
+       + '          <div class=\'col-sm-10\'>'
+       + '              <h3><span id=\'main-title\'><%= this.options.title %></span> -'
+       + '              <span id=\'step-title\'><%= page_title %></span></h3>'
+       + '          </div>'
+       + '          <% if (this.options.show_header_cancel_btn) { %>'
+       + '            <div class=\'col-sm-2\'>'
+       + '              <button class=\'ajs-close wizard-cancel-event pull-right\'></button>'
+       + '              <% if (this.options.show_header_maximize_btn) { %>'
+       + '                <button class=\'ajs-maximize wizard-maximize-event pull-right\'></button>'
+       + '              <% } %>'
+       + '            </div>'
+       + '          <% } %>'
+       + '        </div>'
+       + '      </div>'
+       + '      <div class=\'wizard-content col-sm-12\'>'
+       + '        <% if (this.options.show_left_panel) { %>'
+       + '          <div class=\'col-sm-3 wizard-left-panel\'>'
+       + '              <img src=\'<%= this.options.image %>\'></div>'
+       + '        <% } %>'
+       + '        <div class=\'col-sm-<% if (this.options.show_left_panel) { %>9<% }'
+       + '          else { %>12<% } %> wizard-right-panel\'>'
+       + '          <% if ( typeof show_description !=  \'undefined\'){ %>'
+       + '            <div class=\'wizard-description\'>'
+       + '              <%= show_description %>'
+       + '            </div>'
+       + '          <% } %>'
+       + '          <div class=\'wizard-progress-bar\'><% if (show_progress_bar) { %>'
+       + '            <p class=\'alert alert-info col-sm-12\'><%= show_progress_bar %></p><% } %>'
+       + '          </div>'
+       + '          <div class=\'wizard-right-panel_content col-xs-12\'>'
+       + '          </div>'
+       + '        </div>'
+       + '      </div>'
+       + '      <div class=\'col-sm-12 pg-prop-status-bar\' style=\'visibility:hidden\'>'
+       + '        <div class=\'media error-in-footer bg-red-1 border-red-2 font-red-3 text-14\'>'
+       + '          <div class=\'media-body media-middle\'>'
+       + '            <div class=\'alert-icon error-icon\'>'
+       + '              <i class=\'fa fa-exclamation-triangle\' aria-hidden=\'true\'></i>'
+       + '            </div>'
+       + '            <div class=\'alert-text\'>'
+       + '            </div>'
+       + '          </div>'
+       + '        </div>'
+       + '      </div>'
+       + '      <div class=\'footer col-sm-12\'>'
+       + '        <div class=\'row\'>'
+       + '          <div class=\'col-sm-4 wizard-buttons pull-left\'>'
+       + '            <button title = \'Help for this dialog.\' class=\'btn btn-default pull-left wizard-help\' <%=this.options.wizard_help ? \'\' : \'disabled\' %>>'
+       + '              <span class=\'fa fa-lg fa-question\'></span></button>'
+       + '          </div>'
+       + '          <div class=\'col-sm-8\'>'
+       + '            <div class=\'wizard-buttons\'>'
+       + '              <button class=\'btn btn-primary wizard-back\' <%=this.options.disable_prev ? \'disabled\' : \'\'%>>'
+       + '                <i class=\'fa fa-backward\'></i>Back</button>'
+       + '              <button class=\'btn btn-primary wizard-next\' <%=this.options.disable_next ? \'disabled\' : \'\'%>>Next'
+       + '                <i class=\'fa fa-forward\'></i></button>'
+       + '              <button class=\'btn btn-danger wizard-cancel\' <%=this.options.disable_cancel ? \'disabled\' : \'\'%>>'
+       + '                <i class=\'fa fa-lg fa-close\'></i>Cancel</button>'
+       + '              <button class=\'btn btn-primary wizard-finish\' <%=this.options.disable_finish ? \'disabled\' : \'\'%>>'
+       + '                Finish</button>'
+       + '            </div>'
+       + '          </div>'
+       + '        </div>'
+       + '      </div>'
+       + '    </div>'),
     events: {
-      "click button.wizard-next" : "nextPage",
-      "click button.wizard-back" : "prevPage",
-      "click button.wizard-cancel" : "onCancel",
-      "click button.wizard-cancel-event" : "onCancel",
-      "click button.wizard-maximize-event" : "onMaximize",
-      "click button.wizard-finish" : "finishWizard",
-      "click button.wizard-help" : "onDialogHelp",
+      'click button.wizard-next' : 'nextPage',
+      'click button.wizard-back' : 'prevPage',
+      'click button.wizard-cancel' : 'onCancel',
+      'click button.wizard-cancel-event' : 'onCancel',
+      'click button.wizard-maximize-event' : 'onMaximize',
+      'click button.wizard-finish' : 'finishWizard',
+      'click button.wizard-help' : 'onDialogHelp',
     },
     initialize: function(options) {
       this.options = _.extend({}, this.options, options.options);
@@ -141,15 +141,13 @@ function(_, Backbone, pgAdmin, pgBrowser) {
       this.options.disable_prev = (this.options.disable_prev ? true : this.evalASFunc(this.currPage.disable_prev));
       this.options.disable_cancel = (this.currPage.canCancel ? true : this.evalASFunc(this.currPage.disable_cancel));
 
-      var that = this;
-
       /* HTML Content */
       if (data.html) { data.content = data.html; }
       /* Backbone View */
       else if (data.view) { data.content = data.view.render().el;}
 
       $(this.el).html(this.tmpl(data));
-      $(this.el).find(".wizard-right-panel_content").html(data.content);
+      $(this.el).find('.wizard-right-panel_content').html(data.content);
 
       /* OnLoad Callback */
       this.onLoad();
@@ -203,26 +201,26 @@ function(_, Backbone, pgAdmin, pgBrowser) {
       return true;
     },
     enableDisableNext: function(disable) {
-        if (typeof(disable) != 'undefined') {
-          this.options.disable_next = disable;
-        }
-        else if (this.options.curr_page >= (this.collection.length-1)) {
-          this.options.disable_next = true;
-        }
-        else {
-          this.options.disable_next = false;
-        }
+      if (typeof(disable) != 'undefined') {
+        this.options.disable_next = disable;
+      }
+      else if (this.options.curr_page >= (this.collection.length-1)) {
+        this.options.disable_next = true;
+      }
+      else {
+        this.options.disable_next = false;
+      }
     },
     enableDisablePrev: function(disable) {
-        if (typeof(disable) != 'undefined') {
-          this.options.disable_prev = disable;
-        }
-        else if (this.options.curr_page <= 0) {
-          this.options.disable_prev = true;
-        }
-        else {
-          this.options.disable_prev = false;
-        }
+      if (typeof(disable) != 'undefined') {
+        this.options.disable_prev = disable;
+      }
+      else if (this.options.curr_page <= 0) {
+        this.options.disable_prev = true;
+      }
+      else {
+        this.options.disable_prev = false;
+      }
     },
     beforeNext: function(){
       return this.evalASFunc(this.currPage.beforeNext);
@@ -248,7 +246,7 @@ function(_, Backbone, pgAdmin, pgBrowser) {
     },
     onMaximize: function() {
       var dialog_api = this.options.dialog_api,
-      old_classes, _el = this.$el.find('.wizard-maximize-event');
+        _el = this.$el.find('.wizard-maximize-event');
 
       // If no dialog api found then return
       if(!dialog_api) return;
@@ -284,7 +282,7 @@ function(_, Backbone, pgAdmin, pgBrowser) {
 
       pnlDialogHelp.focus();
       iframe.openURL(this.options.wizard_help);
-    }
+    },
   });
 
   return pgBrowser;

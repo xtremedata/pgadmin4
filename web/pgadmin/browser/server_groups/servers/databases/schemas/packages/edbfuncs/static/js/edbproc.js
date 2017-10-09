@@ -1,27 +1,24 @@
 /* Create and Register Procedure Collection and Node. */
 define('pgadmin.node.edbproc', [
-  'sources/gettext', 'sources/url_for', 'jquery', 'underscore',
-  'underscore.string', 'sources/pgadmin', 'pgadmin.browser', 'alertify',
+  'sources/gettext', 'sources/url_for', 'underscore', 'pgadmin.browser',
   'pgadmin.node.edbfunc', 'pgadmin.browser.collection',
-  'pgadmin.browser.server.privilege'
-], function(
-  gettext, url_for, $, _, S, pgAdmin, pgBrowser, alertify, EdbFunction
-) {
+  'pgadmin.browser.server.privilege',
+], function(gettext, url_for, _, pgBrowser, EdbFunction) {
 
   if (!pgBrowser.Nodes['coll-edbproc']) {
-    pgAdmin.Browser.Nodes['coll-edbproc'] =
-      pgAdmin.Browser.Collection.extend({
+    pgBrowser.Nodes['coll-edbproc'] =
+      pgBrowser.Collection.extend({
         node: 'edbproc',
         label: gettext('Procedures'),
         type: 'coll-edbproc',
         columns: ['name', 'funcowner', 'description'],
-        hasStatistics: true
+        hasStatistics: true,
       });
-  };
+  }
 
   // Inherit Functions Node
-  if (!pgBrowser.Nodes['edbproc']) {
-    pgAdmin.Browser.Nodes['edbproc'] = pgBrowser.Node.extend({
+  if (!pgBrowser.Nodes.edbproc) {
+    pgBrowser.Nodes.edbproc = pgBrowser.Node.extend({
       type: 'edbproc',
       dialogHelp: url_for('help.static', {'filename': 'edbproc_dialog.html'}),
       label: gettext('Procedure'),
@@ -33,35 +30,30 @@ define('pgadmin.node.edbproc', [
       parent_type: ['package'],
       Init: function() {
         /* Avoid multiple registration of menus */
-        if (this.proc_initialized)
-            return;
+        if (this.proc_initialized) {
+          return;
+        }
 
         this.proc_initialized = true;
-
       },
       canDrop: false,
       canDropCascade: false,
       model: EdbFunction.model.extend({
-        defaults: _.extend({},
-          EdbFunction.model.prototype.defaults,
-          {
-            lanname: 'edbspl'
-          }
+        defaults: _.extend(
+          {}, EdbFunction.model.prototype.defaults, {lanname: 'edbspl'}
         ),
-        isVisible: function(m){
-          if (this.name == 'sysfunc') { return false; }
-          else if (this.name == 'sysproc') { return true; }
+        isVisible: function() {
+          if (this.name === 'sysfunc') { return false; }
+          if (this.name === 'sysproc') { return true; }
           return false;
         },
         validate: function()
         {
           return null;
-        }
-      }
-      )
-  });
-
+        },
+      }),
+    });
   }
 
-  return pgBrowser.Nodes['edbproc'];
+  return pgBrowser.Nodes.edbproc;
 });

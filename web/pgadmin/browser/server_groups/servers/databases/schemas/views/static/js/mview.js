@@ -1,42 +1,37 @@
 define('pgadmin.node.mview', [
   'sources/gettext', 'sources/url_for', 'jquery', 'underscore',
-  'underscore.string', 'sources/pgadmin', 'pgadmin.alertifyjs',
-  'pgadmin.browser', 'sources/generated/codemirror',
-  'pgadmin.browser.server.privilege'
-], function(gettext, url_for, $, _, S, pgAdmin, alertify, pgBrowser, codemirror) {
-
-  var CodeMirror = codemirror.default;
-
+  'pgadmin.alertify', 'pgadmin.backform', 'pgadmin.browser',
+  'pgadmin.browser.server.privilege',
+], function(gettext, url_for, $, _, alertify, Backform, pgBrowser) {
   /**
-    Create and add a view collection into nodes
-    @param {variable} label - Label for Node
-    @param {variable} type - Type of Node
-    @param {variable} columns - List of columns to
-      display under under properties.
-   */
+   * Create and add a materialized view collection into nodes
+   *
+   * @param {variable} label - Label for Node
+   * @param {variable} type - Type of Node
+   * @param {variable} columns - List of columns to
+   *
+   * display under under properties.
+   **/
   if (!pgBrowser.Nodes['coll-mview']) {
-    var mviews= pgBrowser.Nodes['coll-mview'] =
-      pgBrowser.Collection.extend({
-        node: 'mview',
-        label: gettext('Materialized Views'),
-        type: 'coll-mview',
-        columns: ['name', 'owner']
-      });
+    pgBrowser.Nodes['coll-mview'] = pgBrowser.Collection.extend({
+      node: 'mview', label: gettext('Materialized Views'), type: 'coll-mview',
+      columns: ['name', 'owner'],
+    });
   }
 
   /**
-    Create and Add a View Node into nodes
-    @param {variable} parent_type - The list of nodes
-    under which this node to display
-    @param {variable} type - Type of Node
-    @param {variable} hasSQL - To show SQL tab
-    @param {variable} canDrop - Adds drop view option
-    in the context menu
-    @param {variable} canDropCascade - Adds drop Cascade
-    view option in the context menu
-   */
-  if (!pgBrowser.Nodes['mview']) {
-    pgBrowser.Nodes['mview'] = pgBrowser.Node.extend({
+   * Create and Add a Materialized View Node into nodes
+   * @param {variable} parent_type - The list of nodes
+   * under which this node to display
+   * @param {variable} type - Type of Node
+   * @param {variable} hasSQL - To show SQL tab
+   * @param {variable} canDrop - Adds drop view option
+   * in the context menu
+   * @param {variable} canDropCascade - Adds drop Cascade
+   * view option in the context menu
+   **/
+  if (!pgBrowser.Nodes.mview) {
+    pgBrowser.Nodes.mview = pgBrowser.Node.extend({
       parent_type: ['schema', 'catalog'],
       type: 'mview',
       sqlAlterHelp: 'sql-altermaterializedview.html',
@@ -64,14 +59,14 @@ define('pgadmin.node.mview', [
           @property {data} - Allow create view option on schema node or
           system view nodes.
          */
-        pgAdmin.Browser.add_menu_category(
+        pgBrowser.add_menu_category(
           'refresh_mview', gettext('Refresh View'), 18, 'fa fa-recycle');
         pgBrowser.add_menus([{
           name: 'create_mview_on_coll', node: 'coll-mview', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 1, icon: 'wcTabIcon icon-mview',
           data: {action: 'create', check: true}, enable: 'canCreate',
-          label: gettext('Materialized View...')
+          label: gettext('Materialized View...'),
         },{
           name: 'create_mview', node: 'mview', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
@@ -83,32 +78,32 @@ define('pgadmin.node.mview', [
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 18, icon: 'wcTabIcon icon-mview',
           data: {action: 'create', check: false}, enable: 'canCreate',
-          label: gettext('Materialized View...')
+          label: gettext('Materialized View...'),
         },{
           name: 'refresh_mview_data', node: 'mview', module: this,
           priority: 1, callback: 'refresh_mview', category: 'refresh_mview',
           applies: ['object', 'context'], label: gettext('With data'),
-          data: {concurrent: false, with_data: true}, icon: 'fa fa-recycle'
+          data: {concurrent: false, with_data: true}, icon: 'fa fa-recycle',
         },{
           name: 'refresh_mview_nodata', node: 'mview',
           callback: 'refresh_mview', priority: 2, module: this,
           category: 'refresh_mview', applies: ['object', 'context'],
           label: gettext('With no data'), data: {
-            concurrent: false, with_data: false
-          }, icon: 'fa fa-refresh'
+            concurrent: false, with_data: false,
+          }, icon: 'fa fa-refresh',
         },{
           name: 'refresh_mview_concurrent', node: 'mview', module: this,
           category: 'refresh_mview', enable: 'is_version_supported',
           data: {concurrent: true, with_data: true}, priority: 3,
           applies: ['object', 'context'], callback: 'refresh_mview',
-          label: gettext('With data (concurrently)'), icon: 'fa fa-recycle'
+          label: gettext('With data (concurrently)'), icon: 'fa fa-recycle',
         },{
           name: 'refresh_mview_concurrent_nodata', node: 'mview', module: this,
           category: 'refresh_mview', enable: 'is_version_supported',
           data: {concurrent: true, with_data: false}, priority: 4,
           applies: ['object', 'context'], callback: 'refresh_mview',
           label: gettext('With no data (concurrently)'),
-          icon: 'fa fa-refresh'
+          icon: 'fa fa-refresh',
         }]);
       },
 
@@ -121,9 +116,9 @@ define('pgadmin.node.mview', [
           if (_.size(attrs) === 0) {
             // Set Selected Schema and Current User
             var schemaLabel = args.node_info.schema._label || 'public',
-                userInfo = pgBrowser.serverInfo[args.node_info.server._id].user;
+              userInfo = pgBrowser.serverInfo[args.node_info.server._id].user;
             this.set({
-              'schema': 'public', 'owner': userInfo.name
+              'schema': schemaLabel, 'owner': userInfo.name,
             }, {silent: true});
           }
           pgBrowser.Node.Model.prototype.initialize.apply(this, arguments);
@@ -131,36 +126,36 @@ define('pgadmin.node.mview', [
         defaults: {
           spcname: undefined,
           toast_autovacuum_enabled: false,
-          autovacuum_enabled: false
+          autovacuum_enabled: false,
         },
         schema: [{
           id: 'name', label: gettext('Name'), cell: 'string',
-          type: 'text', disabled: 'inSchema'
+          type: 'text', disabled: 'inSchema',
         },{
           id: 'oid', label: gettext('OID'), cell: 'string',
-          type: 'text', disabled: true, mode: ['properties']
+          type: 'text', disabled: true, mode: ['properties'],
         },{
           id: 'owner', label: gettext('Owner'), cell: 'string',
           control: 'node-list-by-name', select2: { allowClear: false },
-          node: 'role', disabled: 'inSchema'
+          node: 'role', disabled: 'inSchema',
         },{
           id: 'schema', label: gettext('Schema'), cell: 'string', first_empty: false,
           control: 'node-list-by-name', type: 'text', cache_level: 'database',
           node: 'schema', mode: ['create', 'edit'], cache_node: 'database',
-          disabled: 'inSchema', select2: { allowClear: false }
+          disabled: 'inSchema', select2: { allowClear: false },
         },{
           id: 'system_view', label: gettext('System view?'), cell: 'string',
           type: 'switch', disabled: true, mode: ['properties'],
         }, pgBrowser.SecurityGroupSchema, {
           id: 'acl', label: gettext('Privileges'),
-          mode: ['properties'], type: 'text', group: gettext('Security')
+          mode: ['properties'], type: 'text', group: gettext('Security'),
         },{
           id: 'comment', label: gettext('Comment'), cell: 'string',
-          type: 'multiline'
+          type: 'multiline',
         },{
           id: 'definition', label:'', cell: 'string',
           type: 'text', mode: ['create', 'edit'], group: gettext('Definition'),
-          control: Backform.SqlFieldControl, extraClasses:['sql_field_width_full']
+          control: Backform.SqlFieldControl, extraClasses:['sql_field_width_full'],
         },{
           id: 'with_data', label: gettext('With Data'),
           group: gettext('Storage'), mode: ['edit', 'create'],
@@ -170,33 +165,33 @@ define('pgadmin.node.mview', [
           type: 'text', group: gettext('Storage'), first_empty: false,
           control: 'node-list-by-name', node: 'tablespace', select2: { allowClear: false },
           filter: function(m) {
-            if (m.label == "pg_global") return false;
+            if (m.label == 'pg_global') return false;
             else return true;
-          }
+          },
         },{
           id: 'fillfactor', label: gettext('Fill Factor'),
           group: gettext('Storage'), mode: ['edit', 'create'],
-          type: 'int'
+          type: 'int',
         },{
           type: 'nested', control: 'tab', id: 'materialization',
           label: gettext('Parameter'), mode: ['edit', 'create'],
           group: gettext('Parameter'),
-          schema: Backform.VacuumSettingsSchema
+          schema: Backform.VacuumSettingsSchema,
         },{
           // Add Privilege Control
           id: 'datacl', label: gettext('Privileges'), type: 'collection',
           model: pgBrowser.Node.PrivilegeRoleModel.extend({
-            privileges: ['a', 'r', 'w', 'd', 'D', 'x', 't']
+            privileges: ['a', 'r', 'w', 'd', 'D', 'x', 't'],
           }), uniqueCol : ['grantee'], editable: false,
-          group: "security", canAdd: true, canDelete: true,
-          mode: ['edit', 'create'], control: 'unique-col-collection'
+          group: 'security', canAdd: true, canDelete: true,
+          mode: ['edit', 'create'], control: 'unique-col-collection',
         },{
         // Add Security Labels Control
           id: 'seclabels', label: gettext('Security Labels'),
           model: pgBrowser.SecLabelModel, editable: false, type: 'collection',
-          canEdit: false, group: "security", canDelete: true,
+          canEdit: false, group: 'security', canDelete: true,
           mode: ['edit', 'create'], canAdd: true,
-          control: 'unique-col-collection', uniqueCol : ['provider']
+          control: 'unique-col-collection', uniqueCol : ['provider'],
         }],
         validate: function(keys) {
 
@@ -207,7 +202,7 @@ define('pgadmin.node.mview', [
             field_def = this.get('definition');
           if (_.indexOf(keys, 'autovacuum_enabled') != -1 ||
               _.indexOf(keys, 'toast_autovacuum_enabled') != -1 )
-              return null;
+            return null;
 
           if (_.isUndefined(field_name) || _.isNull(field_name) ||
             String(field_name).replace(/^\s+|\s+$/g, '') == '') {
@@ -236,7 +231,7 @@ define('pgadmin.node.mview', [
             return true;
           }
           return false;
-        }
+        },
 
       }),
 
@@ -278,21 +273,21 @@ define('pgadmin.node.mview', [
         return true;
       },
       refresh_mview: function(args) {
-          var input = args || {},
-              obj = this,
-              t = pgBrowser.tree,
-              i = input.item || t.selected(),
-              d = i && i.length == 1 ? t.itemData(i) : undefined;
+        var input = args || {},
+          obj = this,
+          t = pgBrowser.tree,
+          i = input.item || t.selected(),
+          d = i && i.length == 1 ? t.itemData(i) : undefined;
 
-          if (!d)
-            return false;
+        if (!d)
+          return false;
 
         // Make ajax call to refresh mview data
         $.ajax({
           url: obj.generate_url(i, 'refresh_data' , d, true),
           type: 'PUT',
           data: {'concurrent': args.concurrent, 'with_data': args.with_data},
-          dataType: "json",
+          dataType: 'json',
           success: function(res) {
             if (res.success == 1) {
               alertify.success('View refreshed successfully');
@@ -307,23 +302,23 @@ define('pgadmin.node.mview', [
           error: function(e) {
             var errmsg = $.parseJSON(e.responseText);
             alertify.alert('Error refreshing view', errmsg.errormsg);
-          }
+          },
         });
 
       },
-      is_version_supported: function(data, item, args) {
-        var t = pgAdmin.Browser.tree,
-            i = item || t.selected(),
-            d = data || (i && i.length == 1 ? t.itemData(i): undefined),
-            node = this || (d && pgAdmin.Browser.Nodes[d._type]),
-            info = node.getTreeNodeHierarchy.apply(node, [i]),
-            version = info.server.version;
+      is_version_supported: function(data, item) {
+        var t = pgBrowser.tree,
+          i = item || t && t.selected(),
+          d = data || (i && i.length == 1 ? t.itemData(i): undefined),
+          node = this || (d && pgBrowser.Nodes[d._type]),
+          info = node.getTreeNodeHierarchy.apply(node, [i]),
+          version = info.server.version;
 
         // disable refresh concurrently if server version is 9.3
         return (version >= 90400);
-      }
+      },
     });
   }
 
-  return pgBrowser.Nodes['mview'];
+  return pgBrowser.Nodes.mview;
 });

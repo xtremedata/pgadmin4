@@ -7,50 +7,50 @@
 (function ($) {
   // register namespace
   $.extend(true, window, {
-    "Slick": {
-      "Editors": {
-        "pgText": pgTextEditor,
-        "JsonText": JsonTextEditor,
-        "CustomNumber": CustomNumberEditor,
+    'Slick': {
+      'Editors': {
+        'pgText': pgTextEditor,
+        'JsonText': JsonTextEditor,
+        'CustomNumber': CustomNumberEditor,
         // Below editor will read only editors, Just to display data
-        "ReadOnlyText": ReadOnlyTextEditor,
-        "ReadOnlyCheckbox": ReadOnlyCheckboxEditor,
-        "Checkbox": CheckboxEditor, // Override editor to implement checkbox with three states
-        "ReadOnlypgText": ReadOnlypgTextEditor,
-        "ReadOnlyJsonText": ReadOnlyJsonTextEditor
-      }
-    }
+        'ReadOnlyText': ReadOnlyTextEditor,
+        'ReadOnlyCheckbox': ReadOnlyCheckboxEditor,
+        'Checkbox': CheckboxEditor, // Override editor to implement checkbox with three states
+        'ReadOnlypgText': ReadOnlypgTextEditor,
+        'ReadOnlyJsonText': ReadOnlyJsonTextEditor,
+      },
+    },
   });
 
   // return wrapper element
   function getWrapper() {
-    return $("<div class='pg_text_editor' />");
+    return $('<div class=\'pg_text_editor\' />');
   }
 
   // return textarea element
   function getTextArea() {
-    return $("<textarea class='pg_textarea text-12' hidefocus rows=5'>");
+    return $('<textarea class=\'pg_textarea text-12\' hidefocus rows=5\'>');
   }
 
   // Generate and return editor buttons
   function getButtons(editable) {
-    var $buttons = $("<div class='pg_buttons' />"),
+    var $buttons = $('<div class=\'pg_buttons\' />'),
       label = editable ? 'Cancel': 'OK',
       button_type = editable ? 'btn-danger' : 'btn-primary';
 
     if (editable) {
-      var $save_button = $("<button class='btn btn-primary fa fa-lg fa-save long_text_editor pg-alertify-button'>Save</button>")
-          .appendTo($buttons);
+      $('<button class=\'btn btn-primary fa fa-lg fa-save long_text_editor pg-alertify-button\'>Save</button>')
+        .appendTo($buttons);
     }
 
-    var $cancel_button = $("<button class='btn " + button_type + " fa fa-lg fa-times long_text_editor pg-alertify-button'>"+ label +"</button>")
+    $('<button class=\'btn ' + button_type + ' fa fa-lg fa-times long_text_editor pg-alertify-button\'>'+ label +'</button>')
         .appendTo($buttons);
     return $buttons;
   }
 
   function is_valid_array(val) {
-    val = $.trim(val)
-    return !(val != "" && (val.charAt(0) != '{' || val.charAt(val.length - 1) != '}'));
+    val = $.trim(val);
+    return !(val != '' && (val.charAt(0) != '{' || val.charAt(val.length - 1) != '}'));
   }
   /*
    * This function handles the [default] and [null] values for cells
@@ -74,11 +74,12 @@
       }
 
       var active_cell = grid.getActiveCell(),
-          row = active_cell['row'],
-          cell = active_cell['cell'],
-          last_value = item[args.column.pos],
-          last_value = (column_type === 'number') ?
-                        (_.isEmpty(last_value) || last_value) : last_value;
+        row = active_cell['row'],
+        cell = active_cell['cell'],
+        last_value = item[args.column.pos];
+
+      last_value = (column_type === 'number') ?
+        (_.isEmpty(last_value) || last_value) : last_value;
 
       item[args.column.field] = state;
       if (last_value && _.isNull(state) &&
@@ -128,15 +129,15 @@
     var scope = this;
 
     this.init = function () {
-      var $container = $("body");
+      var $container = $('body');
 
       $wrapper = getWrapper().appendTo($container);
       $input = getTextArea().appendTo($wrapper);
       $buttons = getButtons(true).appendTo($wrapper);
 
-      $buttons.find("button:first").on("click", this.save);
-      $buttons.find("button:last").on("click", this.cancel);
-      $input.bind("keydown", this.handleKeyDown);
+      $buttons.find('button:first').on('click', this.save);
+      $buttons.find('button:last').on('click', this.cancel);
+      $input.bind('keydown', this.handleKeyDown);
 
       scope.position(args.position);
       $input.focus().select();
@@ -177,9 +178,9 @@
     this.position = function (position) {
       calculateEditorPosition(position, $wrapper);
       $wrapper
-        .css("top", position.top)
-        .css("left", position.left)
-    }
+        .css('top', position.top)
+        .css('left', position.left);
+    };
 
     this.destroy = function () {
       $wrapper.remove();
@@ -191,18 +192,19 @@
 
     // When text editor opens
     this.loadValue = function (item) {
-      var col = args.column;
-
-      if (_.isUndefined(item[args.column.field]) || _.isNull(item[args.column.field])) {
-          $input.val(defaultValue = "");
-          return;
+      if (
+        _.isUndefined(item[args.column.field]) ||
+          _.isNull(item[args.column.field])
+      ) {
+        $input.val(defaultValue = '');
+        return;
       }
 
       if (!args.column.is_array) {
-        if (item[args.column.field] === "") {
-          $input.val(defaultValue = "''");
-        } else if (item[args.column.field] === "''") {
-          $input.val(defaultValue = "\\'\\'");
+        if (item[args.column.field] === '') {
+          $input.val(defaultValue = '\'\'');
+        } else if (item[args.column.field] === '\'\'') {
+          $input.val(defaultValue = '\\\'\\\'');
         } else if (item[args.column.field] === '""') {
           $input.val(defaultValue = '\\"\\"');
         } else {
@@ -214,10 +216,10 @@
         for (var k in item[args.column.field]) {
           if (_.isUndefined(item[args.column.field][k]) || _.isNull(item[args.column.field][k])) {
             data.push('');
-          } else if (item[args.column.field][k] === "") {
-            data.push("''");
-          } else if (item[args.column.field][k] === "''") {
-            data.push("\\'\\'");
+          } else if (item[args.column.field][k] === '') {
+            data.push('\'\'');
+          } else if (item[args.column.field][k] === '\'\'') {
+            data.push('\\\'\\\'');
           } else if (item[args.column.field][k] === '""') {
             data.push('\\"\\"');
           } else {
@@ -234,15 +236,15 @@
     this.serializeValue = function () {
       var value = $input.val();
       // If empty return null
-      if (value === "") {
+      if (value === '') {
         return null;
       }
 
       if (!args.column.is_array) {
-        if (value === "''" || value === '""') {
+        if (value === '\'\'' || value === '""') {
           return '';
-        } else if (value === "\\'\\'") {
-          return "''";
+        } else if (value === '\\\'\\\'') {
+          return '\'\'';
         } else if (value === '\\"\\"') {
           return '""';
         } else {
@@ -252,7 +254,7 @@
 
         // Remove leading { and trailing }.
         // Also remove leading and trailing whitespaces.
-        var value = $.trim(value.slice(1, -1));
+        value = $.trim(value.slice(1, -1));
 
         if(value == '') {
           return [];
@@ -261,12 +263,12 @@
         var data = [];
         value = value.split(',');
         for (var k in value) {
-          if (value[k] == "") {
+          if (value[k] == '') {
             data.push(null);  //empty string from editor is null value.
-          } else if (value[k] === "''" || value[k] === '""') {
+          } else if (value[k] === '\'\'' || value[k] === '""') {
             data.push('');    // double quote from editor is blank string;
-          } else if (value[k] === "\\'\\'") {
-            data.push("''");
+          } else if (value[k] === '\\\'\\\'') {
+            data.push('\'\'');
           } else if (value[k] === '\\"\\"') {
             data.push('""');
           } else {
@@ -284,10 +286,10 @@
     this.isValueChanged = function () {
       // Use _.isNull(value) for comparison for null instead of
       // defaultValue == null, because it returns true for undefined value.
-      if ($input.val() == "" && _.isUndefined(defaultValue)) {
+      if ($input.val() == '' && _.isUndefined(defaultValue)) {
         return false;
       } else {
-        return (!($input.val() == "" && _.isNull(defaultValue))) &&
+        return (!($input.val() == '' && _.isNull(defaultValue))) &&
                ($input.val() !== defaultValue);
       }
     };
@@ -303,13 +305,13 @@
       if (args.column.is_array && !is_valid_array($input.val())) {
         return {
           valid: false,
-          msg: "Array must start with '{' and end with '}'"
+          msg: 'Array must start with \'{\' and end with \'}\'',
         };
       }
 
       return {
         valid: true,
-        msg: null
+        msg: null,
       };
     };
 
@@ -323,15 +325,15 @@
     var scope = this;
 
     this.init = function () {
-      var $container = $("body");
+      var $container = $('body');
 
       $wrapper = getWrapper().appendTo($container);
       $input = getTextArea().appendTo($wrapper);
       $buttons = getButtons(true).appendTo($wrapper);
 
-      $buttons.find("button:first").on("click", this.save);
-      $buttons.find("button:last").on("click", this.cancel);
-      $input.bind("keydown", this.handleKeyDown);
+      $buttons.find('button:first').on('click', this.save);
+      $buttons.find('button:last').on('click', this.cancel);
+      $input.bind('keydown', this.handleKeyDown);
 
       scope.position(args.position);
       $input.focus().select();
@@ -372,9 +374,9 @@
     this.position = function (position) {
       calculateEditorPosition(position, $wrapper);
       $wrapper
-        .css("top", position.top)
-        .css("left", position.left)
-    }
+        .css('top', position.top)
+        .css('left', position.left);
+    };
 
     this.destroy = function () {
       $wrapper.remove();
@@ -386,25 +388,25 @@
 
     this.loadValue = function (item) {
       var data = defaultValue = item[args.column.field];
-      if (data && typeof data === "object" && !Array.isArray(data)) {
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
         data = JSON.stringify(data);
       } else if (Array.isArray(data)) {
         var temp = [];
         $.each(data, function(i, val) {
-          if (typeof val === "object") {
+          if (typeof val === 'object') {
             temp.push(JSON.stringify(val));
           } else {
-            temp.push(val)
+            temp.push(val);
           }
         });
-        data = "[" + temp.join() + "]";
+        data = '[' + temp.join() + ']';
       }
       $input.val(data);
       $input.select();
     };
 
     this.serializeValue = function () {
-      if ($input.val() === "") {
+      if ($input.val() === '') {
         return null;
       }
       return $input.val();
@@ -415,10 +417,10 @@
     };
 
     this.isValueChanged = function () {
-      if ($input.val() == "" && _.isUndefined(defaultValue)) {
+      if ($input.val() == '' && _.isUndefined(defaultValue)) {
         return false;
       } else {
-        return (!($input.val() == "" && _.isNull(defaultValue))) && ($input.val() != defaultValue);
+        return (!($input.val() == '' && _.isNull(defaultValue))) && ($input.val() != defaultValue);
       }
     };
 
@@ -432,7 +434,7 @@
 
       return {
         valid: true,
-        msg: null
+        msg: null,
       };
     };
 
@@ -446,14 +448,14 @@
     var scope = this;
 
     this.init = function () {
-      var $container = $("body");
+      var $container = $('body');
 
       $wrapper = getWrapper().appendTo($container);
       $input = getTextArea().appendTo($wrapper);
       $buttons = getButtons(false).appendTo($wrapper);
 
-      $buttons.find("button:first").on("click", this.cancel);
-      $input.bind("keydown", this.handleKeyDown);
+      $buttons.find('button:first').on('click', this.cancel);
+      $input.bind('keydown', this.handleKeyDown);
 
       scope.position(args.position);
       $input.focus().select();
@@ -492,9 +494,9 @@
     this.position = function (position) {
       calculateEditorPosition(position, $wrapper);
       $wrapper
-        .css("top", position.top)
-        .css("left", position.left)
-    }
+        .css('top', position.top)
+        .css('left', position.left);
+    };
 
     this.destroy = function () {
       $wrapper.remove();
@@ -518,7 +520,7 @@
     };
 
     this.isValueChanged = function () {
-      return (!($input.val() == "" && defaultValue == null)) && ($input.val() != defaultValue);
+      return (!($input.val() == '' && defaultValue == null)) && ($input.val() != defaultValue);
     };
 
     this.validate = function () {
@@ -531,7 +533,7 @@
 
       return {
         valid: true,
-        msg: null
+        msg: null,
       };
     };
 
@@ -546,15 +548,14 @@
   function CheckboxEditor(args) {
     var $select, el;
     var defaultValue;
-    var scope = this;
 
     this.init = function () {
-      $select = $("<input type=checkbox class='editor-checkbox' hideFocus>");
+      $select = $('<input type=checkbox class=\'editor-checkbox\' hideFocus>');
       $select.appendTo(args.container);
       $select.focus();
 
       // The following code is taken from https://css-tricks.com/indeterminate-checkboxes/
-      $select.bind("click", function (e) {
+      $select.bind('click', function () {
         el = $(this);
         el.prop('indeterminate', false);
 
@@ -565,21 +566,21 @@
         }
         switch(checkbox_status) {
           // unchecked, going indeterminate
-          case 0:
-            el.prop('indeterminate', true);
-            el.data('checked', 2); // determines next checkbox status
-            break;
+        case 0:
+          el.prop('indeterminate', true);
+          el.data('checked', 2); // determines next checkbox status
+          break;
 
           // indeterminate, going checked
-          case 1:
-            el.prop('checked', true);
-            el.data('checked', 0);
-            break;
+        case 1:
+          el.prop('checked', true);
+          el.data('checked', 0);
+          break;
 
           // checked, going unchecked
-          default:
-            el.prop('checked', false);
-            el.data('checked', 1);
+        default:
+          el.prop('checked', false);
+          el.data('checked', 1);
         }
       });
     };
@@ -637,7 +638,7 @@
       }
       return {
         valid: true,
-        msg: null
+        msg: null,
       };
     };
 
@@ -651,14 +652,14 @@
     var scope = this;
 
     this.init = function () {
-      var $container = $("body");
+      var $container = $('body');
 
       $wrapper = getWrapper().appendTo($container);
       $input = getTextArea().appendTo($wrapper);
       $buttons = getButtons(false).appendTo($wrapper);
 
-      $buttons.find("button:first").on("click", this.cancel);
-      $input.bind("keydown", this.handleKeyDown);
+      $buttons.find('button:first').on('click', this.cancel);
+      $input.bind('keydown', this.handleKeyDown);
 
       scope.position(args.position);
       $input.focus().select();
@@ -697,9 +698,9 @@
     this.position = function (position) {
       calculateEditorPosition(position, $wrapper);
       $wrapper
-        .css("top", position.top)
-        .css("left", position.left)
-    }
+        .css('top', position.top)
+        .css('left', position.left);
+    };
 
     this.destroy = function () {
       $wrapper.remove();
@@ -711,18 +712,18 @@
 
     this.loadValue = function (item) {
       var data = defaultValue = item[args.column.field];
-      if (typeof data === "object" && !Array.isArray(data)) {
+      if (typeof data === 'object' && !Array.isArray(data)) {
         data = JSON.stringify(data);
       } else if (Array.isArray(data)) {
         var temp = [];
         $.each(data, function(i, val) {
-          if (typeof val === "object") {
+          if (typeof val === 'object') {
             temp.push(JSON.stringify(val));
           } else {
-            temp.push(val)
+            temp.push(val);
           }
         });
-        data = "[" + temp.join() + "]";
+        data = '[' + temp.join() + ']';
       }
       $input.val(data);
       $input.select();
@@ -737,7 +738,7 @@
     };
 
     this.isValueChanged = function () {
-      return (!($input.val() == "" && defaultValue == null)) && ($input.val() != defaultValue);
+      return (!($input.val() == '' && defaultValue == null)) && ($input.val() != defaultValue);
     };
 
     this.validate = function () {
@@ -750,7 +751,7 @@
 
       return {
         valid: true,
-        msg: null
+        msg: null,
       };
     };
 
@@ -760,12 +761,11 @@
   function ReadOnlyTextEditor(args) {
     var $input;
     var defaultValue;
-    var scope = this;
 
     this.init = function () {
-      $input = $("<INPUT type=text class='editor-text' readonly/>")
+      $input = $('<INPUT type=text class=\'editor-text\' readonly/>')
           .appendTo(args.container)
-          .bind("keydown.nav", function (e) {
+          .bind('keydown.nav', function (e) {
             if (e.keyCode === $.ui.keyCode.LEFT || e.keyCode === $.ui.keyCode.RIGHT) {
               e.stopImmediatePropagation();
             }
@@ -790,8 +790,8 @@
       var value = item[args.column.field];
 
       // Check if value is null or undefined
-      if (value === undefined && typeof value === "undefined") {
-        value = ""
+      if (value === undefined && typeof value === 'undefined') {
+        value = '';
       }
       defaultValue = value;
       $input.val(defaultValue);
@@ -808,7 +808,7 @@
     };
 
     this.isValueChanged = function () {
-      return (!($input.val() == "" && defaultValue == null)) && ($input.val() != defaultValue);
+      return (!($input.val() == '' && defaultValue == null)) && ($input.val() != defaultValue);
     };
 
     this.validate = function () {
@@ -821,7 +821,7 @@
 
       return {
         valid: true,
-        msg: null
+        msg: null,
       };
     };
 
@@ -829,12 +829,11 @@
   }
 
   function ReadOnlyCheckboxEditor(args) {
-    var $select, el;
+    var $select;
     var defaultValue;
-    var scope = this;
 
     this.init = function () {
-      $select = $("<INPUT type=checkbox value='true' class='editor-checkbox' hideFocus disabled>");
+      $select = $('<INPUT type=checkbox value=\'true\' class=\'editor-checkbox\' hideFocus disabled>');
       $select.appendTo(args.container);
       $select.focus();
     };
@@ -886,7 +885,7 @@
     this.validate = function () {
       return {
         valid: true,
-        msg: null
+        msg: null,
       };
     };
 
@@ -896,12 +895,11 @@
   function CustomNumberEditor(args) {
     var $input;
     var defaultValue;
-    var scope = this;
 
     this.init = function () {
-      $input = $("<INPUT type=text class='editor-text' />");
+      $input = $('<INPUT type=text class=\'editor-text\' />');
 
-      $input.bind("keydown.nav", function (e) {
+      $input.bind('keydown.nav', function (e) {
         if (e.keyCode === $.ui.keyCode.LEFT || e.keyCode === $.ui.keyCode.RIGHT) {
           e.stopImmediatePropagation();
         }
@@ -933,7 +931,7 @@
     };
 
     this.serializeValue = function () {
-      if ($input.val() === "") {
+      if ($input.val() === '') {
         return null;
       }
 
@@ -947,7 +945,7 @@
         }
         val = val.split(',');
         for (var k in val) {
-          if (val[k] == "") {
+          if (val[k] == '') {
             val[k] = null;  //empty string from editor is null value.
           }
         }
@@ -962,12 +960,12 @@
     };
 
     this.isValueChanged = function () {
-      if ($input.val() == "" && _.isUndefined(defaultValue)) {
+      if ($input.val() == '' && _.isUndefined(defaultValue)) {
         return false;
-      } else if ($input.val() == "" && defaultValue == "") {
+      } else if ($input.val() == '' && defaultValue == '') {
         return true;
       } else {
-        return (!($input.val() == "" && _.isNull(defaultValue ))) &&
+        return (!($input.val() == '' && _.isNull(defaultValue ))) &&
         ($input.val() != defaultValue);
       }
     };
@@ -977,7 +975,7 @@
       if (!args.column.is_array && isNaN(value)) {
         return {
           valid: false,
-          msg: "Please enter a valid number"
+          msg: 'Please enter a valid number',
         };
       }
       if (args.column.validator) {
@@ -991,24 +989,24 @@
         if (!is_valid_array(value)) {
           return {
             valid: false,
-            msg: "Array must start with '{' and end with '}'"
+            msg: 'Array must start with \'{\' and end with \'}\'',
           };
         }
 
         var val = $.trim(value.slice(1, -1)),
-            arr;
+          arr;
 
         if(val == '') {
           arr = [];
         } else {
-          var arr = val.split(',');
+          arr = val.split(',');
         }
 
         for (var k in arr) {
           if (isNaN(arr[k])) {
             return {
               valid: false,
-              msg: "Please enter a valid numbers"
+              msg: 'Please enter a valid numbers',
             };
           }
         }
@@ -1016,11 +1014,11 @@
 
       return {
         valid: true,
-        msg: null
+        msg: null,
       };
     };
 
     this.init();
   }
 
-})(jQuery);
+})(window.jQuery);

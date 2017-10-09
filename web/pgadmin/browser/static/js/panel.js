@@ -1,18 +1,23 @@
 define(
-    ['underscore', 'sources/pgadmin', 'wcdocker'],
-function(_, pgAdmin) {
+    ['underscore', 'sources/pgadmin', 'jquery', 'wcdocker'],
+function(_, pgAdmin, $) {
 
-  var pgBrowser = pgAdmin.Browser = pgAdmin.Browser || {},
-      wcDocker = window.wcDocker;
+  var pgBrowser = pgAdmin.Browser,
+    wcDocker = window.wcDocker;
 
-  pgAdmin.Browser.Panel = function(options) {
+  if (!pgBrowser) {
+    pgBrowser = {};
+    pgAdmin.Browser = pgBrowser;
+  }
+
+  pgBrowser.Panel = function(options) {
     var defaults = [
       'name', 'title', 'width', 'height', 'showTitle', 'isCloseable',
       'isPrivate', 'content', 'icon', 'events', 'onCreate', 'elContainer',
-      'canHide', 'limit'
+      'canHide', 'limit',
     ];
     _.extend(this, _.pick(options, defaults));
-  }
+  };
 
   _.extend(pgAdmin.Browser.Panel.prototype, {
     name:'',
@@ -44,11 +49,11 @@ function(_, pgAdmin) {
             else {
               myPanel.title(title || that.title);
               if (that.icon != '')
-                myPanel.icon(that.icon)
+                myPanel.icon(that.icon);
             }
 
             var $container = $('<div>', {
-              'class': 'pg-panel-content'
+              'class': 'pg-panel-content',
             }).append($(that.content));
 
             myPanel.closeable(!!that.isCloseable);
@@ -62,17 +67,17 @@ function(_, pgAdmin) {
               });
             }
             _.each([
-                wcDocker.EVENT.UPDATED, wcDocker.EVENT.VISIBILITY_CHANGED,
-                wcDocker.EVENT.BEGIN_DOCK, wcDocker.EVENT.END_DOCK,
-                wcDocker.EVENT.GAIN_FOCUS, wcDocker.EVENT.LOST_FOCUS,
-                wcDocker.EVENT.CLOSED, wcDocker.EVENT.BUTTON,
-                wcDocker.EVENT.ATTACHED, wcDocker.EVENT.DETACHED,
-                wcDocker.EVENT.MOVE_STARTED, wcDocker.EVENT.MOVE_ENDED,
-                wcDocker.EVENT.MOVED, wcDocker.EVENT.RESIZE_STARTED,
-                wcDocker.EVENT.RESIZE_ENDED, wcDocker.EVENT.RESIZED,
-                wcDocker.EVENT.SCROLLED], function(ev) {
-                  myPanel.on(ev, that.eventFunc.bind(myPanel, ev));
-                });
+              wcDocker.EVENT.UPDATED, wcDocker.EVENT.VISIBILITY_CHANGED,
+              wcDocker.EVENT.BEGIN_DOCK, wcDocker.EVENT.END_DOCK,
+              wcDocker.EVENT.GAIN_FOCUS, wcDocker.EVENT.LOST_FOCUS,
+              wcDocker.EVENT.CLOSED, wcDocker.EVENT.BUTTON,
+              wcDocker.EVENT.ATTACHED, wcDocker.EVENT.DETACHED,
+              wcDocker.EVENT.MOVE_STARTED, wcDocker.EVENT.MOVE_ENDED,
+              wcDocker.EVENT.MOVED, wcDocker.EVENT.RESIZE_STARTED,
+              wcDocker.EVENT.RESIZE_ENDED, wcDocker.EVENT.RESIZED,
+              wcDocker.EVENT.SCROLLED], function(ev) {
+              myPanel.on(ev, that.eventFunc.bind(myPanel, ev));
+            });
 
             if (that.onCreate && _.isFunction(that.onCreate)) {
               that.onCreate.apply(that, [myPanel, $container]);
@@ -83,7 +88,7 @@ function(_, pgAdmin) {
               $container.addClass('pg-el-container');
               _.each([
                 wcDocker.EVENT.RESIZED, wcDocker.EVENT.ATTACHED,
-                wcDocker.EVENT.DETACHED, wcDocker.EVENT.VISIBILITY_CHANGED
+                wcDocker.EVENT.DETACHED, wcDocker.EVENT.VISIBILITY_CHANGED,
               ], function(ev) {
                 myPanel.on(ev, that.resizedContainer.bind(myPanel));
               });
@@ -97,7 +102,7 @@ function(_, pgAdmin) {
                   myPanel.on(ev, that.handleVisibility.bind(myPanel, ev));
                 });
             }
-          }
+          },
         });
       }
     },
@@ -113,7 +118,7 @@ function(_, pgAdmin) {
           pgBrowser.Events.trigger('pgadmin-browser:panel-' + name + ':' + eventName, this, arguments);
         }
       } catch (e) {
-        console.log(e);
+        e.stack && console.warn && console.warn(e.stack);
       }
     },
     resizedContainer: function() {
@@ -170,7 +175,7 @@ function(_, pgAdmin) {
           pgBrowser.tree.itemData(selectedNode), pgBrowser.Node);
         }
       }
-    }
+    },
 
   });
 

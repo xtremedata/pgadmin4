@@ -1,12 +1,12 @@
 (function(mod) {
-  if (typeof exports == "object" && typeof module == "object") // CommonJS
-    mod(require("codemirror"));
-  else if (typeof define == "function" && define.amd) // AMD
-    define(["codemirror"], mod);
+  if (typeof exports == 'object' && typeof module == 'object') // CommonJS
+    mod(require('codemirror'));
+  else if (typeof define == 'function' && define.amd) // AMD
+    define(['codemirror'], mod);
   else // Plain browser env
-    mod(CodeMirror);
+    mod(window.CodeMirror);
 })(function(CodeMirror) {
-  "use strict";
+  'use strict';
 
   CodeMirror.pgadminKeywordRangeFinder = function(cm, start, startTkn, endTkn) {
     var line = start.line, lineText = cm.getLine(line);
@@ -16,10 +16,10 @@
       var startToken = startTkn;
       var endToken = endTkn;
       if (found < start.ch) {
-        var found = lineText.lastIndexOf("[", at);
+        found = lineText.lastIndexOf('[', at);
         if (found < start.ch) break;
-        var startToken = '[';
-        var endToken = ']';
+        startToken = '[';
+        endToken = ']';
       }
 
       tokenType = cm.getTokenAt(CodeMirror.Pos(line, found + 1)).type;
@@ -49,7 +49,7 @@
     }
     if (end == null || end == line + 1) return;
     return {from: CodeMirror.Pos(line, startChar + startTkn.length),
-          to: CodeMirror.Pos(end, endCh)};
+      to: CodeMirror.Pos(end, endCh)};
   };
 
   CodeMirror.pgadminBeginRangeFinder = function(cm, start) {

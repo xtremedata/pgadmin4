@@ -1,27 +1,22 @@
 /* Create and Register Procedure Collection and Node. */
 define('pgadmin.node.procedure', [
-  'sources/gettext', 'sources/url_for', 'jquery', 'underscore',
-  'underscore.string', 'sources/pgadmin', 'pgadmin.browser', 'alertify',
+  'sources/gettext', 'sources/url_for', 'underscore', 'pgadmin.browser',
   'pgadmin.node.function', 'pgadmin.browser.collection',
-  'pgadmin.browser.server.privilege'
-], function(gettext, url_for, $, _, S, pgAdmin, pgBrowser, alertify, Function) {
+  'pgadmin.browser.server.privilege',
+], function(gettext, url_for, _, pgBrowser, Function) {
 
   if (!pgBrowser.Nodes['coll-procedure']) {
-    var procedures = pgAdmin.Browser.Nodes['coll-procedure'] =
-      pgAdmin.Browser.Collection.extend({
-        node: 'procedure',
-        label: gettext('Procedures'),
-        type: 'coll-procedure',
-        columns: ['name', 'funcowner', 'description'],
-        hasStatistics: true
-      });
-  };
+    pgBrowser.Nodes['coll-procedure'] = pgBrowser.Collection.extend({
+      node: 'procedure', label: gettext('Procedures'), type: 'coll-procedure',
+      columns: ['name', 'funcowner', 'description'], hasStatistics: true,
+    });
+  }
 
   var pgSchemaNode = pgBrowser.Nodes['schema'];
 
   // Inherit Functions Node
-  if (!pgBrowser.Nodes['procedure']) {
-    pgAdmin.Browser.Nodes['procedure'] = pgBrowser.Node.extend({
+  if (!pgBrowser.Nodes.procedure) {
+    pgBrowser.Nodes.procedure = pgBrowser.Node.extend({
       type: 'procedure',
       sqlAlterHelp: 'sql-alterprocedure.html',
       sqlCreateHelp: 'sql-createprocedure.html',
@@ -36,7 +31,7 @@ define('pgadmin.node.procedure', [
       Init: function() {
         /* Avoid mulitple registration of menus */
         if (this.proc_initialized)
-            return;
+          return;
 
         this.proc_initialized = true;
 
@@ -46,25 +41,25 @@ define('pgadmin.node.procedure', [
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 4, label: gettext('Procedure...'),
           icon: 'wcTabIcon icon-procedure', data: {action: 'create', check:
-          false}, enable: 'canCreateProc'
+          false}, enable: 'canCreateProc',
         },{
           name: 'create_procedure', node: 'procedure', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 4, label: gettext('Procedure...'),
           icon: 'wcTabIcon icon-procedure', data: {action: 'create', check:
-          true}, enable: 'canCreateProc'
+          true}, enable: 'canCreateProc',
         },{
           name: 'create_procedure', node: 'schema', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 4, label: gettext('Procedure...'),
           icon: 'wcTabIcon icon-procedure', data: {action: 'create', check:
-          true}, enable: 'canCreateProc'
-        }
+          true}, enable: 'canCreateProc',
+        },
         ]);
       },
       canDrop: pgSchemaNode.canChildDrop,
       canDropCascade: false,
-      canCreateProc: function(itemData, item, data) {
+      canCreateProc: function(itemData, item) {
         var node_hierarchy = this.getTreeNodeHierarchy.apply(this, [item]);
 
         // Do not provide Create option in catalog
@@ -72,28 +67,19 @@ define('pgadmin.node.procedure', [
           return false;
 
         // Procedures supported only in PPAS
-        if ('server' in node_hierarchy && node_hierarchy['server'].server_type == "ppas")
+        if ('server' in node_hierarchy && node_hierarchy['server'].server_type == 'ppas')
           return true;
 
         return false;
       },
       model: Function.model.extend({
-        defaults: _.extend({},
-          Function.model.prototype.defaults,
-          {
-            lanname: 'edbspl'
-          }
+        defaults: _.extend(
+          {}, Function.model.prototype.defaults, {lanname: 'edbspl'}
         ),
-        canVarAdd: function(m){
-          var server = this.node_info.server;
-            if (server.version < 90500) {
-              return false;
-           }
-           else {
-             return true;
-           }
+        canVarAdd: function() {
+          return this.node_info.server >= 90500;
         },
-        isVisible: function(m){
+        isVisible: function() {
           if (this.name == 'sysfunc') { return false; }
           else if (this.name == 'sysproc') { return true; }
           return false;
@@ -102,46 +88,30 @@ define('pgadmin.node.procedure', [
           if(this.node_info &&  'catalog' in this.node_info) {
             return true;
           }
-          name = this.name;
-          switch(name){
-            case 'provolatility':
-            case 'proisstrict':
-            case 'prosecdef':
-            case 'procost':
-            case 'proleakproof':
-            case 'variables':
-               var server = this.node_info.server;
-               if (server.version < 90500) {
-                 return true;
-               }
-               else {
-                 return false;
-               }
-               break;
-            case 'prorows':
-              var server = this.node_info.server;
-              if(server.version >= 90500 && m.get('proretset') == true) {
-                return false;
-              }
-              else {
-                return true;
-              }
-              break;
-            case 'funcowner':
-            case 'lanname':
-            case 'proargs':
-              return true;
-            default:
-              return false;
-              break;
+          switch(this.name){
+          case 'provolatility':
+          case 'proisstrict':
+          case 'prosecdef':
+          case 'procost':
+          case 'proleakproof':
+          case 'variables':
+            return this.node_info.server < 90500;
+          case 'prorows':
+            return this.node_info.server.version < 90500 ||
+                !m.get('proretset');
+          case 'funcowner':
+          case 'lanname':
+          case 'proargs':
+            return true;
+          default:
+            return false;
           }
-          return false;
-       },
-       validate: function()
+        },
+        validate: function()
         {
           var err = {},
-              errmsg,
-              seclabels = this.get('seclabels');
+            errmsg,
+            seclabels = this.get('seclabels');
 
           if (_.isUndefined(this.get('name')) || String(this.get('name')).replace(/^\s+|\s+$/g, '') == '') {
             err['name'] = gettext('Name cannot be empty.');
@@ -179,10 +149,9 @@ define('pgadmin.node.procedure', [
 
           return null;
         },
-      })
-  });
-
+      }),
+    });
   }
 
-  return pgBrowser.Nodes['procedure'];
+  return pgBrowser.Nodes.procedure;
 });

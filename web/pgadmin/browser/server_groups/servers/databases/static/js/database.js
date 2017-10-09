@@ -1,24 +1,20 @@
 define('pgadmin.node.database', [
   'sources/gettext', 'sources/url_for', 'jquery', 'underscore',
-  'pgadmin.alertifyjs', 'sources/pgadmin', 'pgadmin.browser',
+  'pgadmin.alertify', 'pgadmin.backform', 'pgadmin.browser',
   'pgadmin.browser.collection', 'pgadmin.browser.server.privilege',
-  'pgadmin.browser.server.variable'
-], function(gettext, url_for, $, _, Alertify, pgAdmin, pgBrowser) {
+  'pgadmin.browser.server.variable',
+], function(gettext, url_for, $, _, Alertify, Backform, pgBrowser) {
 
   if (!pgBrowser.Nodes['coll-database']) {
-    var databases = pgBrowser.Nodes['coll-database'] =
-      pgBrowser.Collection.extend({
-        node: 'database',
-        label: gettext('Databases'),
-        type: 'coll-database',
-        columns: ['name', 'datowner', 'comments'],
-        hasStatistics: true,
-        statsPrettifyFields: ['Size', 'Size of temporary files']
-      });
-  };
+    pgBrowser.Nodes['coll-database'] = pgBrowser.Collection.extend({
+      node: 'database', label: gettext('Databases'), type: 'coll-database',
+      columns: ['name', 'datowner', 'comments'], hasStatistics: true,
+      statsPrettifyFields: ['Size', 'Size of temporary files'],
+    });
+  }
 
-  if (!pgBrowser.Nodes['database']) {
-    pgBrowser.Nodes['database'] = pgBrowser.Node.extend({
+  if (!pgBrowser.Nodes.database) {
+    pgBrowser.Nodes.database = pgBrowser.Node.extend({
       parent_type: 'server',
       type: 'database',
       sqlAlterHelp: 'sql-alterdatabase.html',
@@ -38,7 +34,7 @@ define('pgadmin.node.database', [
       Init: function() {
         /* Avoid mulitple registration of menus */
         if (this.initialized)
-            return;
+          return;
 
         this.initialized = true;
 
@@ -47,29 +43,29 @@ define('pgadmin.node.database', [
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 4, label: gettext('Database...'),
           icon: 'wcTabIcon pg-icon-database', data: {action: 'create'},
-          enable: 'can_create_database'
+          enable: 'can_create_database',
         },{
           name: 'create_database_on_coll', node: 'coll-database', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 4, label: gettext('Database...'),
           icon: 'wcTabIcon pg-icon-database', data: {action: 'create'},
-          enable: 'can_create_database'
+          enable: 'can_create_database',
         },{
           name: 'create_database', node: 'database', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 4, label: gettext('Database...'),
           icon: 'wcTabIcon pg-icon-database', data: {action: 'create'},
-          enable: 'can_create_database'
+          enable: 'can_create_database',
         },{
           name: 'connect_database', node: 'database', module: this,
           applies: ['object', 'context'], callback: 'connect_database',
           category: 'connect', priority: 4, label: gettext('Connect Database...'),
-          icon: 'fa fa-link', enable : 'is_not_connected'
+          icon: 'fa fa-link', enable : 'is_not_connected',
         },{
           name: 'disconnect_database', node: 'database', module: this,
           applies: ['object', 'context'], callback: 'disconnect_database',
           category: 'drop', priority: 5, label: gettext('Disconnect Database...'),
-          icon: 'fa fa-chain-broken', enable : 'is_connected'
+          icon: 'fa fa-chain-broken', enable : 'is_connected',
         }]);
 
         _.bindAll(this, 'connection_lost');
@@ -79,7 +75,7 @@ define('pgadmin.node.database', [
       },
       can_create_database: function(node, item) {
         var treeData = this.getTreeNodeHierarchy(item),
-            server = treeData['server'];
+          server = treeData['server'];
 
         return server.connected && server.user.can_create_db;
       },
@@ -90,16 +86,13 @@ define('pgadmin.node.database', [
         return (node && node.connected == true && node.canDisconn == true);
       },
       is_conn_allow: function(node) {
-        return (node && node.allowConn == true)
+        return (node && node.allowConn == true);
       },
       connection_lost: function(i, resp, server_connected) {
         if (pgBrowser.tree) {
           var t = pgBrowser.tree,
-              info = i && this.getTreeNodeHierarchy(i),
-              s = null,
-              d = i && t.itemData(i),
-              self = this,
-              _i = i;
+            d = i && t.itemData(i),
+            self = this;
 
           while (d && d._type != 'database') {
             i = t.parent(i);
@@ -112,21 +105,21 @@ define('pgadmin.node.database', [
               d.is_connecting = true;
 
               var disconnect = function(_i, _d) {
-                    if (_d._id == this._id) {
-                      d.is_connecting = false;
-                      pgBrowser.Events.off(
+                if (_d._id == this._id) {
+                  d.is_connecting = false;
+                  pgBrowser.Events.off(
                         'pgadmin:database:connect:cancelled', disconnect
                       );
-                      _i = _i && t.parent(_i);
-                      _d = _i && t.itemData(_i);
-                      if (_i && _d) {
-                        pgBrowser.Events.trigger(
+                  _i = _i && t.parent(_i);
+                  _d = _i && t.itemData(_i);
+                  if (_i && _d) {
+                    pgBrowser.Events.trigger(
                           'pgadmin:server:disconnect',
                           {item: _i, data: _d}, false
                         );
-                      }
-                    }
-                  };
+                  }
+                }
+              };
 
               pgBrowser.Events.on(
                 'pgadmin:database:connect:cancelled', disconnect
@@ -157,13 +150,13 @@ define('pgadmin.node.database', [
       callbacks: {
         /* Connect the database */
         connect_database: function(args){
-          var input = args || {};
-          obj = this,
-          t = pgBrowser.tree,
-          i = input.item || t.selected(),
-          d = i && i.length == 1 ? t.itemData(i) : undefined;
+          var input = args || {},
+            obj = this,
+            t = pgBrowser.tree,
+            i = input.item || (t && t.selected()),
+            d = i && i.length == 1 ? (t && t.itemData(i)) : undefined;
 
-          if (!d || d.label == "template0")
+          if (!d || d.label == 'template0')
             return false;
 
           connect_to_database(obj, d, t, i, true);
@@ -183,7 +176,7 @@ define('pgadmin.node.database', [
           Alertify.confirm(
             gettext('Disconnect the database'),
             gettext('Are you sure you want to disconnect the database - %(database)s?', {'database': d.label}),
-            function(evt) {
+            function() {
               var data = d;
               $.ajax({
                 url: obj.generate_url(i, 'connect', d, true),
@@ -199,38 +192,42 @@ define('pgadmin.node.database', [
                     t.unload(i);
                     t.setInode(i);
                     setTimeout(function() {
-                        t.select(prv_i);
+                      t.select(prv_i);
                     }, 10);
 
                   }
                   else {
                     try {
                       Alertify.error(res.errormsg);
-                    } catch (e) {}
+                    } catch (e) {
+                      e.stack && console.warn && console.warn(e.stack);
+                    }
                     t.unload(i);
                   }
                 },
-                error: function(xhr, status, error) {
+                error: function(xhr) {
                   try {
                     var err = $.parseJSON(xhr.responseText);
                     if (err.success == 0) {
                       Alertify.error(err.errormsg);
                     }
-                  } catch (e) {}
+                  } catch (e) {
+                    e.stack && console.warn && console.warn(e.stack);
+                  }
                   t.unload(i);
-                }
+                },
               });
-          },
-          function(evt) {
-              return true;
-          });
+            },
+            function() { return true; }
+          );
+
 
           return false;
         },
 
         /* Connect the database (if not connected), before opening this node */
         beforeopen: function(item, data) {
-          if(!data || data._type != 'database' || data.label == "template0") {
+          if(!data || data._type != 'database' || data.label == 'template0') {
             return false;
           }
 
@@ -257,14 +254,13 @@ define('pgadmin.node.database', [
         },
 
         refresh: function(cmd, i) {
-          var self = this,
-              t = pgBrowser.tree,
-              item = i || t.selected(),
-              d = t.itemData(item);
+          var t = pgBrowser.tree,
+            item = i || (t && t.selected()),
+            d = t.itemData(item);
 
           if (!d.allowConn) return;
           pgBrowser.Node.callbacks.refresh.apply(this, arguments);
-        }
+        },
       },
       model: pgBrowser.Node.Model.extend({
         defaults: {
@@ -286,7 +282,7 @@ define('pgadmin.node.database', [
           deffuncacl: [],
           defseqacl: [],
           is_template: false,
-          deftypeacl: []
+          deftypeacl: [],
         },
 
         // Default values!
@@ -302,37 +298,37 @@ define('pgadmin.node.database', [
 
         schema: [{
           id: 'name', label: gettext('Database'), cell: 'string',
-          editable: false, type: 'text'
+          editable: false, type: 'text',
         },{
           id: 'did', label: gettext('OID'), cell: 'string', mode: ['properties'],
-          editable: false, type: 'text'
+          editable: false, type: 'text',
         },{
           id: 'datowner', label: gettext('Owner'),
           editable: false, type: 'text', node: 'role',
-          control: Backform.NodeListByNameControl, select2: { allowClear: false }
+          control: Backform.NodeListByNameControl, select2: { allowClear: false },
         },{
           id: 'acl', label: gettext('Privileges'), type: 'text',
-          group: gettext('Security'), mode: ['properties'], disabled: true
+          group: gettext('Security'), mode: ['properties'], disabled: true,
         },{
           id: 'tblacl', label: gettext('Default TABLE privileges'), type: 'text',
-          group: gettext('Security'), mode: ['properties'], disabled: true
+          group: gettext('Security'), mode: ['properties'], disabled: true,
         },{
           id: 'seqacl', label: gettext('Default SEQUENCE privileges'), type: 'text',
-          group: gettext('Security'), mode: ['properties'], disabled: true
+          group: gettext('Security'), mode: ['properties'], disabled: true,
         },{
           id: 'funcacl', label: gettext('Default FUNCTION privileges'), type: 'text',
-          group: gettext('Security'), mode: ['properties'], disabled: true
+          group: gettext('Security'), mode: ['properties'], disabled: true,
         },{
           id: 'typeacl', label: gettext('Default TYPE privileges'), type: 'text',
-          group: gettext('Security'), mode: ['properties'], disabled: true, min_version: 90200
+          group: gettext('Security'), mode: ['properties'], disabled: true, min_version: 90200,
         },{
           id: 'comments', label: gettext('Comment'),
-          editable: false, type: 'multiline'
+          editable: false, type: 'multiline',
         },{
           id: 'encoding', label: gettext('Encoding'),
           editable: false, type: 'text', group: gettext('Definition'),
           disabled: function(m) { return !m.isNew(); }, url: 'get_encodings',
-          control: 'node-ajax-options', cache_level: 'server'
+          control: 'node-ajax-options', cache_level: 'server',
         },{
           id: 'template', label: gettext('Template'),
           editable: false, type: 'text', group: gettext('Definition'),
@@ -341,8 +337,8 @@ define('pgadmin.node.database', [
           select2: { allowClear: false }, mode: ['create'],
           transform: function(data, cell) {
             var res = [],
-                control = cell || this,
-                label = control.model.get('name');
+              control = cell || this,
+              label = control.model.get('name');
 
             if (!control.model.isNew()) {
               res.push({label: label, value: label});
@@ -351,34 +347,34 @@ define('pgadmin.node.database', [
               if (data && _.isArray(data)) {
                 _.each(data, function(d) {
                   res.push({label: d.label, value: d.label,
-                            image: 'pg-icon-database'});
-                })
+                    image: 'pg-icon-database'});
+                });
               }
             }
             return res;
-          }
+          },
         },{
           id: 'spcname', label: gettext('Tablespace'),
           editable: false, type: 'text', group: gettext('Definition'),
           control: 'node-list-by-name', node: 'tablespace',
           select2: { allowClear: false },
           filter: function(m) {
-            if (m.label == "pg_global") return false;
+            if (m.label == 'pg_global') return false;
             else return true;
-          }
+          },
         },{
           id: 'datcollate', label: gettext('Collation'),
           editable: false, type: 'text', group: gettext('Definition'),
           disabled: function(m) { return !m.isNew(); }, url: 'get_ctypes',
-          control: 'node-ajax-options', cache_level: 'server'
+          control: 'node-ajax-options', cache_level: 'server',
         },{
           id: 'datctype', label: gettext('Character type'),
           editable: false, type: 'text', group: gettext('Definition'),
           disabled: function(m) { return !m.isNew(); }, url: 'get_ctypes',
-          control: 'node-ajax-options', cache_level: 'server'
+          control: 'node-ajax-options', cache_level: 'server',
         },{
           id: 'datconnlimit', label: gettext('Connection limit'),
-          editable: false, type: 'int', group: gettext('Definition'), min: -1
+          editable: false, type: 'int', group: gettext('Definition'), min: -1,
         },{
           id: 'is_template', label: gettext('Template?'),
           editable: false, type: 'switch', group: gettext('Definition'),
@@ -386,8 +382,8 @@ define('pgadmin.node.database', [
           options: {
             'onText': gettext('Yes'), 'offText': gettext('No'),
             'onColor': 'success', 'offColor': 'primary',
-            'size': 'small'
-          }
+            'size': 'small',
+          },
         },{
           id: 'datallowconn', label: gettext('Allow connections?'),
           editable: false, type: 'switch', group: gettext('Definition'),
@@ -395,12 +391,12 @@ define('pgadmin.node.database', [
           options: {
             'onText': 'Yes', 'offText': 'No',
             'onColor': 'success', 'offColor': 'primary',
-            'size': 'small'
-          }
+            'size': 'small',
+          },
         },{
           id: 'datacl', label: gettext('Privileges'), type: 'collection',
           model: pgBrowser.Node.PrivilegeRoleModel.extend({
-            privileges: ['C', 'T', 'c']
+            privileges: ['C', 'T', 'c'],
           }), uniqueCol : ['grantee', 'grantor'], editable: false,
           group: gettext('Security'), mode: ['edit', 'create'],
           canAdd: true, canDelete: true, control: 'unique-col-collection',
@@ -409,7 +405,7 @@ define('pgadmin.node.database', [
           model: pgBrowser.Node.VariableModel.extend({keys:['name', 'role']}), editable: false,
           group: gettext('Parameters'), mode: ['edit', 'create'],
           canAdd: true, canEdit: false, canDelete: true, hasRole: true,
-          control: Backform.VariableCollectionControl, node: 'role'
+          control: Backform.VariableCollectionControl, node: 'role',
         },{
           id: 'seclabels', label: gettext('Security Labels'),
           model: pgBrowser.SecLabelModel,
@@ -417,43 +413,41 @@ define('pgadmin.node.database', [
           group: gettext('Security'), canDelete: true,
           mode: ['edit', 'create'], canAdd: true,
           control: 'unique-col-collection', uniqueCol : ['provider'],
-          min_version: 90200
+          min_version: 90200,
         },{
           type: 'nested', control: 'tab', group: gettext('Default Privileges'),
           mode: ['edit'],
           schema:[{
-              id: 'deftblacl', model: pgBrowser.Node.PrivilegeRoleModel.extend(
+            id: 'deftblacl', model: pgBrowser.Node.PrivilegeRoleModel.extend(
               {privileges: ['a', 'r', 'w', 'd', 'D', 'x', 't']}), label: gettext('Default Privileges: Tables'),
-              editable: false, type: 'collection', group: gettext('Tables'),
-              mode: ['edit', 'create'], control: 'unique-col-collection',
-              canAdd: true, canDelete: true, uniqueCol : ['grantee', 'grantor']
-            },{
-              id: 'defseqacl', model: pgBrowser.Node.PrivilegeRoleModel.extend(
+            editable: false, type: 'collection', group: gettext('Tables'),
+            mode: ['edit', 'create'], control: 'unique-col-collection',
+            canAdd: true, canDelete: true, uniqueCol : ['grantee', 'grantor'],
+          },{
+            id: 'defseqacl', model: pgBrowser.Node.PrivilegeRoleModel.extend(
               {privileges: ['r', 'w', 'U']}), label: gettext('Default Privileges: Sequences'),
-              editable: false, type: 'collection', group: gettext('Sequences'),
-              mode: ['edit', 'create'], control: 'unique-col-collection',
-              canAdd: true, canDelete: true, uniqueCol : ['grantee', 'grantor']
-            },{
-              id: 'deffuncacl', model: pgBrowser.Node.PrivilegeRoleModel.extend(
+            editable: false, type: 'collection', group: gettext('Sequences'),
+            mode: ['edit', 'create'], control: 'unique-col-collection',
+            canAdd: true, canDelete: true, uniqueCol : ['grantee', 'grantor'],
+          },{
+            id: 'deffuncacl', model: pgBrowser.Node.PrivilegeRoleModel.extend(
               {privileges: ['X']}), label: gettext('Default Privileges: Functions'),
-              editable: false, type: 'collection', group: gettext('Functions'),
-              mode: ['edit', 'create'], control: 'unique-col-collection',
-              canAdd: true, canDelete: true, uniqueCol : ['grantee', 'grantor']
-            },{
-              id: 'deftypeacl', model: pgBrowser.Node.PrivilegeRoleModel.extend(
+            editable: false, type: 'collection', group: gettext('Functions'),
+            mode: ['edit', 'create'], control: 'unique-col-collection',
+            canAdd: true, canDelete: true, uniqueCol : ['grantee', 'grantor'],
+          },{
+            id: 'deftypeacl', model: pgBrowser.Node.PrivilegeRoleModel.extend(
               {privileges: ['U']}),  label: gettext('Default Privileges: Types'),
-              editable: false, type: 'collection', group: 'deftypesacl_group',
-              mode: ['edit', 'create'], control: 'unique-col-collection',
-              canAdd: true, canDelete: true, uniqueCol : ['grantee', 'grantor'],
-              min_version: 90200
-            },{
-              id: 'deftypesacl_group', type: 'group', label: gettext('Types'),
-              mode: ['edit', 'create'], min_version: 90200
-            }
-          ]
-        }
-        ],
-        validate: function(keys) {
+            editable: false, type: 'collection', group: 'deftypesacl_group',
+            mode: ['edit', 'create'], control: 'unique-col-collection',
+            canAdd: true, canDelete: true, uniqueCol : ['grantee', 'grantor'],
+            min_version: 90200,
+          },{
+            id: 'deftypesacl_group', type: 'group', label: gettext('Types'),
+            mode: ['edit', 'create'], min_version: 90200,
+          }],
+        }],
+        validate: function() {
           var name = this.get('name');
           if (_.isUndefined(name) || _.isNull(name) ||
             String(name).replace(/^\s+|\s+$/g, '') == '') {
@@ -464,8 +458,8 @@ define('pgadmin.node.database', [
             this.errorModel.unset('name');
           }
           return null;
-        }
-      })
+        },
+      }),
     });
 
     pgBrowser.SecurityGroupSchema = {
@@ -479,82 +473,82 @@ define('pgadmin.node.database', [
           return 'catalog' in node_info ? false : true;
         }
         return true;
-      }
+      },
     };
 
-    function connect_to_database(obj, data, tree, item, interactive) {
-        connect(obj, data, tree, item)
-    }
+    var connect_to_database = function (obj, data, tree, item) {
+      connect(obj, data, tree, item);
+    };
 
-    function connect(obj, data, tree, item, _wasConnected) {
+    var connect = function (obj, data, tree, item, _wasConnected) {
       var wasConnected = _wasConnected || data.connected,
-          onFailure = function(
+        onFailure = function(
             xhr, status, error, _model, _data, _tree, _item, _status
           ) {
-            if (!_status) {
-              tree.setInode(_item);
-              tree.addIcon(_item, {icon: 'icon-database-not-connected'});
-            }
+          if (!_status) {
+            tree.setInode(_item);
+            tree.addIcon(_item, {icon: 'icon-database-not-connected'});
+          }
 
-            Alertify.pgNotifier('error', xhr, error, function(msg) {
-              setTimeout(function() {
-                Alertify.dlgServerPass(
+          Alertify.pgNotifier('error', xhr, error, function(msg) {
+            setTimeout(function() {
+              Alertify.dlgServerPass(
                   gettext('Connect to database'),
                   msg, _model, _data, _tree, _item, _status,
                   onSuccess, onFailure, onCancel
                 ).resizeTo();
-              }, 100);
-            });
-          },
-          onSuccess = function(
+            }, 100);
+          });
+        },
+        onSuccess = function(
             res, model, data, tree, item, connected
           ) {
-            data.is_connecting = false;
-            if (!connected) {
-              tree.deselect(item);
-              tree.setInode(item);
+          data.is_connecting = false;
+          if (!connected) {
+            tree.deselect(item);
+            tree.setInode(item);
+          }
+
+          if (res && res.data) {
+            if(typeof res.data.connected == 'boolean') {
+              data.connected = res.data.connected;
+            }
+            if (typeof res.data.icon == 'string') {
+              tree.removeIcon(item);
+              data.icon = res.data.icon;
+              tree.addIcon(item, {icon: data.icon});
             }
 
-            if (res && res.data) {
-              if(typeof res.data.connected == 'boolean') {
-                data.connected = res.data.connected;
-              }
-              if (typeof res.data.icon == 'string') {
-                tree.removeIcon(item);
-                data.icon = res.data.icon;
-                tree.addIcon(item, {icon: data.icon});
-              }
-
-              Alertify.success(res.info);
-              obj.trigger('connected', obj, item, data);
-              pgBrowser.Events.trigger(
+            Alertify.success(res.info);
+            obj.trigger('connected', obj, item, data);
+            pgBrowser.Events.trigger(
                 'pgadmin:database:connected', item, data
               );
 
-              if (!connected) {
-                setTimeout(function() {
-                  tree.select(item);
-                  tree.open(item);
-                }, 10);
-              }
+            if (!connected) {
+              setTimeout(function() {
+                tree.select(item);
+                tree.open(item);
+              }, 10);
             }
-          },
-          onCancel = function(_tree, _item, _data, _status) {
-            _data.is_connecting = false;
-            var server = _tree.parent(_item);
-            _tree.unload(_item);
-            _tree.setInode(_item);
-            _tree.removeIcon(_item);
-            _tree.addIcon(_item, {icon: 'icon-database-not-connected'});
-            obj.trigger('connect:cancelled', obj, _item, _data);
-            pgBrowser.Events.trigger(
+          }
+        },
+        onCancel = function(_tree, _item, _data) {
+          _data.is_connecting = false;
+          var server = _tree.parent(_item);
+          _tree.unload(_item);
+          _tree.setInode(_item);
+          _tree.removeIcon(_item);
+          _tree.addIcon(_item, {icon: 'icon-database-not-connected'});
+          obj.trigger('connect:cancelled', obj, _item, _data);
+          pgBrowser.Events.trigger(
               'pgadmin:database:connect:cancelled', _item, _data, obj
             );
-            _tree.select(server);
-          };
+          _tree.select(server);
+        };
 
       $.post(
-        obj.generate_url(item, "connect", data, true)
+        obj.generate_url(item, 'connect', data, true)
       ).done(function(res) {
         if (res.success == 1) {
           return onSuccess(res, obj, data, tree, item, wasConnected);
@@ -564,8 +558,8 @@ define('pgadmin.node.database', [
           xhr, status, error, obj, data, tree, item, wasConnected
         );
       });
-    }
+    };
   }
 
-  return pgBrowser.Nodes['coll-database'];
+  return pgBrowser.Nodes.database;
 });

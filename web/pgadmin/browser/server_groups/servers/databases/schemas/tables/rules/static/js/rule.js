@@ -1,31 +1,25 @@
 define('pgadmin.node.rule', [
   'sources/gettext', 'sources/url_for', 'jquery', 'underscore',
-  'underscore.string', 'sources/pgadmin', 'pgadmin.browser',
-  'sources/generated/codemirror'
-], function(gettext, url_for, $, _, S, pgAdmin, pgBrowser, codemirror) {
-
-  var CodeMirror = codemirror.default;
+  'pgadmin.backform', 'pgadmin.browser', 'pgadmin.node.schema',
+], function(gettext, url_for, $, _, Backform, pgBrowser) {
 
   /**
-    Create and add a rule collection into nodes
-    @param {variable} label - Label for Node
-    @param {variable} type - Type of Node
-    @param {variable} columns - List of columns to
-      display under under properties.
-   */
+   * Create and add a rule collection into nodes.
+   *
+   * @param {variable} label - Label for Node
+   * @param {variable} type - Type of Node
+   * @param {variable} columns - List of columns to display under under
+   *   properties.
+   **/
   if (!pgBrowser.Nodes['coll-rule']) {
-    var rules = pgAdmin.Browser.Nodes['coll-rule'] =
-      pgAdmin.Browser.Collection.extend({
-        node: 'rule',
-        label: gettext('Rules'),
-        type: 'coll-rule',
-        getTreeNodeHierarchy: pgBrowser.tableChildTreeNodeHierarchy,
-        columns: ["name", "owner", "comment"]
-      });
+    pgBrowser.Nodes['coll-rule'] = pgBrowser.Collection.extend({
+      node: 'rule', label: gettext('Rules'), type: 'coll-rule',
+      getTreeNodeHierarchy: pgBrowser.tableChildTreeNodeHierarchy,
+      columns: ['name', 'owner', 'comment'],
+    });
   }
 
-
-  /**
+    /**
     Create and Add an Rule Node into nodes
     @param {variable} parent_type - The list of nodes
     under which this node to display
@@ -35,9 +29,9 @@ define('pgadmin.node.rule', [
     in the context menu
     @param {variable} canDropCascade - Adds drop Cascade
     rule option in the context menu
-   */
-  if (!pgBrowser.Nodes['rule']) {
-    pgAdmin.Browser.Nodes['rule'] = pgBrowser.Node.extend({
+    */
+  if (!pgBrowser.Nodes.rule) {
+    pgBrowser.Nodes.rule = pgBrowser.Node.extend({
       getTreeNodeHierarchy: pgBrowser.tableChildTreeNodeHierarchy,
       parent_type: ['table','view', 'partition'],
       type: 'rule',
@@ -49,7 +43,9 @@ define('pgadmin.node.rule', [
       hasSQL:  true,
       hasDepends: true,
       canDrop: function(itemData, item, data){
-        pgBrowser.Nodes['schema'].canChildDrop.apply(this, [itemData, item, data]);
+        pgBrowser.Nodes.schema.canChildDrop.apply(
+          this, [itemData, item, data]
+        );
         if(_.has(itemData, 'label') && itemData.label === '_RETURN')
           return false;
         else {
@@ -68,61 +64,61 @@ define('pgadmin.node.rule', [
 
         /* Avoid mulitple registration of menus */
         if (this.initialized)
-            return;
+          return;
 
         this.initialized = true;
 
-        /**
+          /**
           Add "create rule" menu option into context and object menu
           for the following nodes:
           coll-rule, rule and view and table.
           @property {data} - Allow create rule option on schema node or
           system rules node.
-         */
+          */
         pgBrowser.add_menus([{
           name: 'create_rule_on_coll', node: 'coll-rule', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 1, label: gettext('Rule...'),
           icon: 'wcTabIcon icon-rule', data: {action: 'create', check: true},
-          enable: 'canCreate'
+          enable: 'canCreate',
         },{
           name: 'create_rule_onView', node: 'view', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 5, label: gettext('Rule...'),
           icon: 'wcTabIcon icon-rule', data: {action: 'create', check: true},
-          enable: 'canCreate'
+          enable: 'canCreate',
         },{
           name: 'create_rule', node: 'rule', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 1, label: gettext('Rule...'),
           icon: 'wcTabIcon icon-rule', data: {action: 'create', check: true},
-          enable: 'canCreate'
+          enable: 'canCreate',
         },{
           name: 'create_rule', node: 'table', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 4, label: gettext('Rule...'),
           icon: 'wcTabIcon icon-rule', data: {action: 'create', check: true},
-          enable: 'canCreate'
+          enable: 'canCreate',
         },{
           name: 'create_rule', node: 'partition', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 4, label: gettext('Rule...'),
           icon: 'wcTabIcon icon-rule', data: {action: 'create', check: true},
-          enable: 'canCreate'
-        }
+          enable: 'canCreate',
+        },
         ]);
       },
 
       /**
         Define model for the rule node and specify the node
         properties of the model in schema.
-       */
-      model: pgAdmin.Browser.Node.Model.extend({
+        */
+      model: pgBrowser.Node.Model.extend({
         schema: [{
           id: 'name', label: gettext('Name'),
           type: 'text', disabled: function(m) {
             // disable name field it it is system rule
-            if (m && m.get('name') == "_RETURN") {
+            if (m && m.get('name') == '_RETURN') {
               return true;
             }
             if (m.isNew()) {
@@ -131,66 +127,66 @@ define('pgadmin.node.rule', [
               return false;
             }
             return true;
-          }
+          },
         },
         {
           id: 'oid', label: gettext('OID'),
-          type: 'text', disabled: true, mode: ['properties']
+          type: 'text', disabled: true, mode: ['properties'],
         },
         {
           id: 'schema', label:'',
           type: 'text', visible: false, disabled: function(m) {
-            // It is used while generating sql
+              // It is used while generating sql
             m.set('schema', m.node_info.schema.label);
-          }
+          },
         },
         {
           id: 'view', label:'',
           type: 'text', visible: false, disabled: function(m){
 
-            // It is used while generating sql
+              // It is used while generating sql
             m.set('view', this.node_data.label);
-          }
+          },
         },
         {
           id: 'event', label: gettext('Event'), control: 'select2',
           group: gettext('Definition'), type: 'text',
           select2: {
             width: '100%',
-            allowClear: false
+            allowClear: false,
           },
           options:[
-            {label: 'Select', value: 'Select'},
-            {label: 'Insert', value: 'Insert'},
-            {label: 'Update', value: 'Update'},
-            {label: 'Delete', value: 'Delete'}
-          ]
+              {label: 'Select', value: 'Select'},
+              {label: 'Insert', value: 'Insert'},
+              {label: 'Update', value: 'Update'},
+              {label: 'Delete', value: 'Delete'},
+          ],
         },
         {
           id: 'do_instead', label: gettext('Do Instead'), group: gettext('Definition'),
-          type: 'switch'
+          type: 'switch',
         },
         {
           id: 'condition', label: gettext('Condition'),
           type: 'text', group: gettext('Definition'),
-          control: Backform.SqlFieldControl
+          control: Backform.SqlFieldControl,
         },
         {
           id: 'statements', label: gettext('Commands'),
           type: 'text', group: gettext('Definition'),
-          control: Backform.SqlFieldControl
+          control: Backform.SqlFieldControl,
         },
         {
           id: 'system_rule', label: gettext('System rule?'),
-          type: 'switch', mode: ['properties']
+          type: 'switch', mode: ['properties'],
         },
         {
           id: 'enabled', label: gettext('Enabled?'),
-          type: 'switch', mode: ['properties']
+          type: 'switch', mode: ['properties'],
         },
         {
-          id: 'comment', label: gettext('Comment'), cell: 'string', type: 'multiline'
-        }
+          id: 'comment', label: gettext('Comment'), cell: 'string', type: 'multiline',
+        },
         ],
         validate: function() {
 
@@ -211,7 +207,7 @@ define('pgadmin.node.rule', [
             this.errorModel.unset('name');
           }
           return null;
-        }
+        },
       }),
 
       // Show or hide create rule menu option on parent node
@@ -221,7 +217,8 @@ define('pgadmin.node.rule', [
         if (data && data.check === false)
           return true;
 
-        var t = pgBrowser.tree, i = item, d = itemData;
+        var t = pgBrowser.tree, i = item, d = itemData,
+          prev_i, prev_j, prev_e, prev_k, prev_f;
 
         // To iterate over tree to check parent node
         while (i) {
@@ -233,26 +230,23 @@ define('pgadmin.node.rule', [
           if ('coll-rule' == d._type) {
 
             //Check if we are not child of rule
-            var prev_i = t.hasParent(i) ? t.parent(i) : null,
-              prev_d = prev_i ? t.itemData(prev_i) : null,
-              prev_j = t.hasParent(prev_i) ? t.parent(prev_i) : null,
-              prev_e = prev_j ? t.itemData(prev_j) : null,
-              prev_k = t.hasParent(prev_j) ? t.parent(prev_j) : null,
-              prev_f = prev_k ? t.itemData(prev_k) : null;
+            prev_i = t.hasParent(i) ? t.parent(i) : null;
+            prev_j = t.hasParent(prev_i) ? t.parent(prev_i) : null;
+            prev_e = prev_j ? t.itemData(prev_j) : null;
+            prev_k = t.hasParent(prev_j) ? t.parent(prev_j) : null;
+            prev_f = prev_k ? t.itemData(prev_k) : null;
             if( prev_f._type == 'catalog') {
               return false;
             } else {
               return true;
             }
-          }
+          } else if('view' == d._type || 'table' == d._type) {
 
-          /**
-            Check if it is view and its parent node is schema
-            then allow to create Rule
-           */
-          else if('view' == d._type || 'table' == d._type){
+              /*
+               * Check if it is view and its parent node is schema then allow to
+               * create Rule
+               */
             prev_i = t.hasParent(i) ? t.parent(i) : null;
-            prev_d = prev_i ? t.itemData(prev_i) : null;
             prev_j = t.hasParent(prev_i) ? t.parent(prev_i) : null;
             prev_e = prev_j ? t.itemData(prev_j) : null;
             if(prev_e._type == 'schema') {
@@ -268,10 +262,10 @@ define('pgadmin.node.rule', [
         // By default we do not want to allow create menu
         return true;
 
-      }
+      },
 
-  });
+    });
   }
 
-  return pgBrowser.Nodes['coll-rule'];
+  return pgBrowser.Nodes.rule;
 });

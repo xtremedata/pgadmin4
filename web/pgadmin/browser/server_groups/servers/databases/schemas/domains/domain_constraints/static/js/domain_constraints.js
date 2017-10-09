@@ -1,28 +1,25 @@
-// Domain Constraint Module: Collection and Node
 define('pgadmin.node.domain_constraints', [
-  'sources/gettext', 'sources/url_for', 'jquery', 'underscore',
-  'underscore.string', 'sources/pgadmin', 'pgadmin.browser', 'alertify',
-  'pgadmin.browser.collection'
-], function(gettext, url_for, $, _, S, pgAdmin, pgBrowser, alertify) {
-
-  // Define Domain Constraint Collection Node
+  'sources/gettext', 'sources/url_for', 'underscore', 'pgadmin.browser',
+  'pgadmin.browser.collection', 'pgadmin.node.schema',
+], function(gettext, url_for, _, pgBrowser) {
+  // Domain Constraint Module: Collection and Node
   if (!pgBrowser.Nodes['coll-domain_constraints']) {
-    var domain_constraints = pgAdmin.Browser.Nodes['coll-domain_constraints'] =
-      pgAdmin.Browser.Collection.extend({
-        node: 'domain_constraints',
-        label: gettext('Domain Constraints'),
-        type: 'coll-domain_constraints',
-        columns: ['name', 'description']
-      });
-  };
+    pgBrowser.Nodes['coll-domain_constraints'] = pgBrowser.Collection.extend({
+      node: 'domain_constraints', label: gettext('Domain Constraints'),
+      type: 'coll-domain_constraints',
+      columns: ['name', 'description'],
+    });
+  }
 
   // Domain Constraint Node
-  if (!pgBrowser.Nodes['domain_constraints']) {
-    pgAdmin.Browser.Nodes['domain_constraints'] = pgBrowser.Node.extend({
+  if (!pgBrowser.Nodes.domain_constraints) {
+    pgBrowser.Nodes.domain_constraints = pgBrowser.Node.extend({
       type: 'domain_constraints',
       sqlAlterHelp: 'sql-alterdomain.html',
       sqlCreateHelp: 'sql-alterdomain.html',
-      dialogHelp: url_for('help.static', {'filename': 'domain_constraint_dialog.html'}),
+      dialogHelp: url_for(
+        'help.static', {'filename': 'domain_constraint_dialog.html'}
+      ),
       label: gettext('Domain Constraints'),
       collection_type: 'coll-domain_constraints',
       hasSQL: true,
@@ -30,8 +27,9 @@ define('pgadmin.node.domain_constraints', [
       parent_type: ['domain'],
       Init: function() {
         // Avoid mulitple registration of menus
-        if (this.initialized)
-            return;
+        if (this.initialized) {
+          return;
+        }
 
         this.initialized = true;
 
@@ -40,107 +38,90 @@ define('pgadmin.node.domain_constraints', [
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 5, label: gettext('Domain Constraint...'),
           icon: 'wcTabIcon icon-domain_constraints', data: {action: 'create', check: true},
-          enable: 'canCreate'
+          enable: 'canCreate',
         },{
           name: 'create_domain_constraints', node: 'domain_constraints', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 5, label: gettext('Domain Constraint...'),
           icon: 'wcTabIcon icon-domain_constraints', data: {action: 'create', check: true},
-          enable: 'canCreate'
+          enable: 'canCreate',
         },{
           name: 'create_domain_constraints', node: 'domain', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
           category: 'create', priority: 5, label: gettext('Domain Constraint...'),
           icon: 'wcTabIcon icon-domain_constraints', data: {action: 'create', check: false},
-          enable: 'canCreate'
-        }
-        ]);
-
+          enable: 'canCreate',
+        }]);
       },
-      canDrop: pgBrowser.Nodes['schema'].canChildDrop,
-      model: pgAdmin.Browser.Node.Model.extend({
+      canDrop: pgBrowser.Nodes.schema.canChildDrop,
+      model: pgBrowser.Node.Model.extend({
         defaults: {
           name: undefined,
           oid: undefined,
           description: undefined,
           consrc: undefined,
           connoinherit: undefined,
-          convalidated: true
+          convalidated: true,
         },
         // Domain Constraint Schema
         schema: [{
           id: 'name', label: gettext('Name'), type:'text', cell:'string',
-          disabled: 'isDisabled'
+          disabled: 'isDisabled',
         },{
           id: 'oid', label: gettext('OID'), cell: 'string',
-          type: 'text' , mode: ['properties']
+          type: 'text' , mode: ['properties'],
         },{
           id: 'description', label: gettext('Comment'), type: 'multiline', cell:
-          'string', mode: ['properties', 'create', 'edit'], min_version: 90500,
+            'string', mode: ['properties', 'create', 'edit'], min_version: 90500,
         },{
           id: 'consrc', label: gettext('Check'), type: 'multiline', cel:
-          'string', group: gettext('Definition'), mode: ['properties',
-          'create', 'edit'], disabled: function(m) { return !m.isNew(); }
+            'string', group: gettext('Definition'), mode: ['properties',
+              'create', 'edit'], disabled: function(m) { return !m.isNew(); },
         },{
           id: 'connoinherit', label: gettext('No inherit'), type:
-          'switch', cell: 'boolean', group: gettext('Definition'), mode:
-          ['properties', 'create', 'edit'], disabled: 'isDisabled',
-          visible: false
+            'switch', cell: 'boolean', group: gettext('Definition'), mode:
+            ['properties', 'create', 'edit'], disabled: 'isDisabled',
+          visible: false,
         },{
-          id: 'convalidated', label: gettext("Validate?"), type: 'switch', cell:
-          'boolean', group: gettext('Definition'), min_version: 90200,
-          disabled: function(m) {
-          if (!m.isNew()) {
-            var server = this.node_info.server;
-            if (server.version < 90200) { return true;
-            }
-            else if(m.get('convalidated')) {
-                return true;
-            }
-            return false;
-          }
-          return false;
+          id: 'convalidated', label: gettext('Validate?'), type: 'switch', cell:
+            'boolean', group: gettext('Definition'), min_version: 90200,
+          mode: ['properties', 'create', 'edit'], disabled: function(m) {
+            return !m.isNew() && (
+              this.node_info.server.version < 90200 || m.get('convalidated')
+            );
           },
-          mode: ['properties', 'create', 'edit']
         }],
         // Client Side Validation
         validate: function() {
           var err = {},
-              errmsg;
+            errmsg;
 
-          if (_.isUndefined(this.get('name')) || String(this.get('name')).replace(/^\s+|\s+$/g, '') == '') {
-            err['name'] = gettext('Name cannot be empty.');
-            errmsg = errmsg || err['name'];
+          if (
+            _.isUndefined(this.get('name')) ||
+              String(this.get('name')).replace(/^\s+|\s+$/g, '') === ''
+          ) {
+            err.name = gettext('Name cannot be empty.');
+            errmsg = errmsg || err.name;
           }
 
-          if (_.isUndefined(this.get('consrc')) || String(this.get('consrc')).replace(/^\s+|\s+$/g, '') == '') {
-            err['consrc'] = gettext('Check cannot be empty.');
-            errmsg = errmsg || err['consrc'];
+          if (
+            _.isUndefined(this.get('consrc')) ||
+              String(this.get('consrc')).replace(/^\s+|\s+$/g, '') === ''
+          ) {
+            err.consrc = gettext('Check cannot be empty.');
+            errmsg = errmsg || err.consrc;
           }
 
           this.errorModel.clear().set(err);
 
-          if (_.size(err)) {
-            this.trigger('on-status', {msg: errmsg});
-            return errmsg;
-          }
-
-          return null;
-
+          return errmsg;
         },
         isDisabled: function(m){
-          if (!m.isNew()) {
-            var server = this.node_info.server;
-            if (server.version < 90200)
-            {
-              return true;
-            }
-          }
-          return false;
-        }
+          return !m.isNew() && this.node_info.server.version < 90200;
+        },
       }),
     });
   }
 
-  return pgBrowser.Nodes['domain'];
+  return pgBrowser.Nodes.domain_constraints;
 });

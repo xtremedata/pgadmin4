@@ -1,18 +1,17 @@
-define(
-  'pgadmin.browser.node', [
-    'sources/gettext', 'jquery', 'underscore', 'underscore.string',
-    'sources/pgadmin', 'sources/browser/generate_url', 'backbone',
-    'pgadmin.backform', 'pgadmin.alertifyjs', 'pgadmin.browser.menu',
-    'pgadmin.browser.datamodel'
+define('pgadmin.browser.node', [
+  'sources/gettext', 'jquery', 'underscore', 'underscore.string',
+  'sources/pgadmin', 'sources/browser/generate_url', 'backbone',
+  'pgadmin.backform', 'pgadmin.alertify', 'pgadmin.browser.menu',
+  'pgadmin.browser.datamodel',
 ], function(
-  gettext, $, _, S, pgAdmin, generateUrl, Backbone, Backform, Alertify, Menu
+  gettext, $, _, S, pgAdmin, generateUrl, Backbone, Backform, Alertify
 ) {
 
   var wcDocker = window.wcDocker,
     keyCode = {
       ENTER: 13,
       ESCAPE: 27,
-      F1: 112
+      F1: 112,
     };
 
   var pgBrowser = pgAdmin.Browser = pgAdmin.Browser || {},
@@ -66,11 +65,11 @@ define(
     child.callbacks = _.extend({}, parent.callbacks, props.callbacks);
 
     var bindToChild = function(cb) {
-          if (typeof(child.callbacks[cb]) === 'function') {
-            child.callbacks[cb] = child.callbacks[cb].bind(child);
-          }
-        },
-        callbacks = _.keys(child.callbacks);
+        if (typeof(child.callbacks[cb]) === 'function') {
+          child.callbacks[cb] = child.callbacks[cb].bind(child);
+        }
+      },
+      callbacks = _.keys(child.callbacks);
     for(; idx < callbacks.length; idx++) bindToChild(callbacks[idx]);
 
     // Registering the node with the browser entry.
@@ -110,16 +109,16 @@ define(
         name: 'refresh', node: self.type, module: self,
         applies: ['object', 'context'], callback: 'refresh',
         priority: 1, label: gettext('Refresh...'),
-        icon: 'fa fa-refresh'
+        icon: 'fa fa-refresh',
       }]);
 
       if (self.canEdit) {
         pgAdmin.Browser.add_menus([{
-        name: 'show_obj_properties', node: self.type, module: self,
-        applies: ['object', 'context'], callback: 'show_obj_properties',
-        priority: 999, label: gettext('Properties...'),
-        data: {'action': 'edit'}, icon: 'fa fa-pencil-square-o'
-      }]);
+          name: 'show_obj_properties', node: self.type, module: self,
+          applies: ['object', 'context'], callback: 'show_obj_properties',
+          priority: 999, label: gettext('Properties...'),
+          data: {'action': 'edit'}, icon: 'fa fa-pencil-square-o',
+        }]);
       }
 
       if (self.canDrop) {
@@ -131,7 +130,7 @@ define(
           enable: _.isFunction(self.canDrop) ?
             function() {
               return !!(self.canDrop.apply(self, arguments));
-            } : (!!self.canDrop)
+            } : (!!self.canDrop),
         }]);
         if (self.canDropCascade) {
           pgAdmin.Browser.add_menus([{
@@ -140,51 +139,47 @@ define(
             priority: 3, label: gettext('Drop Cascade'),
             data: {'url': 'delete'}, icon: 'fa fa-trash',
             enable: _.isFunction(self.canDropCascade) ?
-              function() { return self.canDropCascade.apply(self, arguments); } : (!!self.canDropCascade)
+              function() { return self.canDropCascade.apply(self, arguments); } : (!!self.canDropCascade),
           }]);
         }
       }
 
       // show query tool only in context menu of supported nodes.
-      if (true) {
-        if (_.indexOf(pgAdmin.unsupported_nodes, self.type) == -1) {
-          pgAdmin.Browser.add_menus([{
-            name: 'show_query_tool', node: self.type, module: self,
-            applies: ['context'], callback: 'show_query_tool',
-            priority: 998, label: gettext('Query Tool...'),
-            icon: 'fa fa-bolt',
-            enable: function(itemData, item, data) {
-              if (itemData._type == 'database' && itemData.allowConn)
-                return true;
-              else if(itemData._type != 'database')
-                return true;
-              else
-                return false;
-            }
-          }]);
-        }
+      if (_.indexOf(pgAdmin.unsupported_nodes, self.type) === -1) {
+        pgAdmin.Browser.add_menus([{
+          name: 'show_query_tool', node: self.type, module: self,
+          applies: ['context'], callback: 'show_query_tool',
+          priority: 998, label: gettext('Query Tool...'),
+          icon: 'fa fa-bolt',
+          enable: function(itemData) {
+            return (itemData._type === 'database' && itemData.allowConn) ||
+              (itemData._type !== 'database');
+          },
+        }]);
       }
 
       // This will add options of scripts eg:'CREATE Script'
-      if (self.hasScriptTypes && _.isArray(self.hasScriptTypes)
-        &&  self.hasScriptTypes.length > 0) {
-          // For each script type create menu
-          _.each(self.hasScriptTypes, function(stype) {
+      if (
+        self.hasScriptTypes && _.isArray(self.hasScriptTypes) &&
+          self.hasScriptTypes.length > 0
+      ) {
+        // For each script type create menu
+        _.each(self.hasScriptTypes, function(stype) {
 
-            var type_label = S(
-                gettext("%s Script")
-                ).sprintf(stype.toUpperCase()).value(),
-              stype = stype.toLowerCase();
+          var type_label = S(
+            gettext('%(command)s Script', {command: stype.toUpperCase()})
+          );
+          stype = stype.toLowerCase();
 
-            // Adding menu for each script type
-            pgAdmin.Browser.add_menus([{
-              name: 'show_script_' + stype, node: self.type, module: self,
-              applies: ['object', 'context'], callback: 'show_script',
-              priority: 4, label: type_label, category: 'Scripts',
-              data: {'script': stype}, icon: 'fa fa-pencil',
-              enable: self.check_user_permission
-            }]);
-          });
+          // Adding menu for each script type
+          pgAdmin.Browser.add_menus([{
+            name: 'show_script_' + stype, node: self.type, module: self,
+            applies: ['object', 'context'], callback: 'show_script',
+            priority: 4, label: type_label, category: 'Scripts',
+            data: {'script': stype}, icon: 'fa fa-pencil',
+            enable: self.check_user_permission,
+          }]);
+        });
       }
     },
     ///////
@@ -219,9 +214,9 @@ define(
             parentData.schema && parentData.schema.can_create
            )
            ) {
-            return true;
+          return true;
         } else {
-           return false;
+          return false;
         }
       } else {
         return true;
@@ -260,20 +255,22 @@ define(
 
         // We know - which data model to be used for this object.
         var info = this.getTreeNodeHierarchy.apply(this, [item]),
-            newModel = new (this.model.extend({urlRoot: urlBase})) (
+          newModel = new (this.model.extend({urlRoot: urlBase})) (
                 attrs, {node_info: info}
                 ),
-            fields = Backform.generateViewSchema(
+          fields = Backform.generateViewSchema(
                 info, newModel, type, this, node
                 );
 
-        if (type == 'create' || type == 'edit') {
+        if (type === 'create' || type === 'edit') {
 
           if (callback && ctx) {
-              callback = callback.bind(ctx);
+            callback = callback.bind(ctx);
           } else {
             callback = function() {
-              console.log("Broke something!!! Why we don't have the callback or the context???");
+              console.warn(
+                'Broke something!!! Why we don\'t have the callback or the context???'
+              );
             };
           }
 
@@ -288,7 +285,7 @@ define(
                 </div>\
               </div>';
             if(!_.isUndefined(that.statusBar)) {
-              that.statusBar.html(alertMessage).css("visibility", "visible");
+              that.statusBar.html(alertMessage).css('visibility', 'visible');
             }
             callback(true);
 
@@ -298,7 +295,7 @@ define(
           var onSessionValidated =  function(sessHasChanged) {
 
             if(!_.isUndefined(that.statusBar)) {
-              that.statusBar.empty().css("visibility", "hidden");
+              that.statusBar.empty().css('visibility', 'hidden');
             }
 
             callback(false, sessHasChanged);
@@ -318,13 +315,13 @@ define(
             // It is used to show, edit, create the object in the
             // properties tab.
             view = new Backform.Fieldset({
-              el: el, model: newModel, schema: fields
+              el: el, model: newModel, schema: fields,
             });
           } else {
             // This generates a view to be used by the node dialog
             // (for create/edit operation).
             view = new Backform.Dialog({
-              el: el, model: newModel, schema: fields
+              el: el, model: newModel, schema: fields,
             });
           }
 
@@ -337,8 +334,8 @@ define(
           if (!newModel.isNew()) {
             // This is definetely not in create mode
             var msgDiv = '<div class="alert alert-info pg-panel-message pg-panel-properties-message">'+
-                gettext("Retrieving data from the server...") + '</div>',
-                $msgDiv = $(msgDiv);
+                gettext('Retrieving data from the server...') + '</div>',
+              $msgDiv = $(msgDiv);
             var timer = setTimeout(function(ctx) {
               // notify user if request is taking longer than 1 second
 
@@ -348,7 +345,7 @@ define(
             }, 1000, ctx);
 
             newModel.fetch({
-              success: function(res, msg, xhr) {
+              success: function() {
                 // clear timeout and remove message
                 clearTimeout(timer);
                 $msgDiv.addClass('hidden');
@@ -368,26 +365,20 @@ define(
                   'pgadmin:node:retrieval:error', 'properties',
                   xhr, error, message, item
                 );
-                if (
-                  !Alertify.pgHandleItemError(
-                    xhr, error, message, {item: item, info: info}
-                  )
-                ) {
+                if (!Alertify.pgHandleItemError(
+                  xhr, error, message, {item: item, info: info}
+                )) {
                   Alertify.pgNotifier(
                     error, xhr,
-                    S(
-                      gettext("Error retrieving properties - %s")
-                    ).sprintf(message || _label).value(),
-                    function() {
-                      console.log(arguments);
-                    }
-                  );
+                    gettext('Error retrieving properties - %(message)s', {
+                      message: message || _label,
+                    }));
                 }
                 // Close the panel (if could not fetch properties)
                 if (cancelFunc) {
                   cancelFunc();
                 }
-              }
+              },
             });
           } else {
             // Yay - render the view now!
@@ -412,28 +403,28 @@ define(
       var events = {};
       events[wcDocker.EVENT.RESIZE_ENDED] = function() {
         var $container = this.$container.find('.obj_properties').first(),
-            v = $container.data('obj-view');
+          v = $container.data('obj-view');
 
         if (v && v.model && v.model) {
           v.model.trigger(
             'pg-browser-resized', {
-              'view': v, 'panel': this, 'container': $container
-          });
+              'view': v, 'panel': this, 'container': $container,
+            });
 
         }
       };
 
       p = new pgBrowser.Panel({
-          name: 'node_props',
-          showTitle: true,
-          isCloseable: true,
-          isPrivate: true,
-          elContainer: true,
-          content: '<div class="obj_properties"><div class="alert alert-info pg-panel-message">' + gettext('Please wait while we fetch information about the node from the server!') + '</div></div>',
-          onCreate: function(myPanel, $container) {
-            $container.addClass('pg-no-overflow');
-          },
-          events: events
+        name: 'node_props',
+        showTitle: true,
+        isCloseable: true,
+        isPrivate: true,
+        elContainer: true,
+        content: '<div class="obj_properties"><div class="alert alert-info pg-panel-message">' + gettext('Please wait while we fetch information about the node from the server!') + '</div></div>',
+        onCreate: function(myPanel, $container) {
+          $container.addClass('pg-no-overflow');
+        },
+        events: events,
       });
       p.load(pgBrowser.docker);
     },
@@ -495,36 +486,36 @@ define(
           return;
 
         var self = this,
-            isParent = (_.isArray(this.parent_type) ?
+          isParent = (_.isArray(this.parent_type) ?
               function(d) {
                 return (_.indexOf(self.parent_type, d._type) != -1);
               } : function(d) {
                 return (self.parent_type == d._type);
               }),
-            addPanel = function() {
-              var d = window.document,
-                  b = d.body,
-                  el = d.createElement('div');
+          addPanel = function() {
+            var d = window.document,
+              b = d.body,
+              el = d.createElement('div');
 
-              d.body.insertBefore(el, d.body.firstChild);
+            d.body.insertBefore(el, d.body.firstChild);
 
-              var pW = screen.width < 800 ? '95%' : '500px',
-                  pH = screen.height < 600 ? '95%' : '550px',
-                  w = pgAdmin.toPx(el, self.width || pW, 'width', true),
-                  h = pgAdmin.toPx(el, self.height|| pH, 'height', true),
-                  x = (b.offsetWidth - w) / 2,
-                  y = (b.offsetHeight - h) / 2;
+            var pW = screen.width < 800 ? '95%' : '500px',
+              pH = screen.height < 600 ? '95%' : '550px',
+              w = pgAdmin.toPx(el, self.width || pW, 'width', true),
+              h = pgAdmin.toPx(el, self.height|| pH, 'height', true),
+              x = (b.offsetWidth - w) / 2,
+              y = (b.offsetHeight - h) / 2;
 
-              var p = pgBrowser.docker.addPanel(
+            var p = pgBrowser.docker.addPanel(
                 'node_props', wcDocker.DOCK.FLOAT, undefined,
                 {w: w + 'px', h: h + 'px', x: x + 'px', y: y + 'px'}
               );
 
-              b.removeChild(el);
+            b.removeChild(el);
               // delete(el);
 
-              return p;
-            };
+            return p;
+          };
 
         if (args.action == 'create') {
           // If we've parent, we will get the information of it for
@@ -622,11 +613,11 @@ define(
       },
       // Delete the selected object
       delete_obj: function(args, item) {
-          var input = args || {'url':'drop'},
-              obj = this,
-              t = pgBrowser.tree,
-              i = input.item || item || t.selected(),
-              d = i && i.length == 1 ? t.itemData(i) : undefined;
+        var input = args || {'url':'drop'},
+          obj = this,
+          t = pgBrowser.tree,
+          i = input.item || item || t.selected(),
+          d = i && i.length == 1 ? t.itemData(i) : undefined;
 
         if (!d)
           return;
@@ -646,7 +637,7 @@ define(
 
           if (!(_.isFunction(obj.canDropCascade) ?
                 obj.canDropCascade.apply(obj, [d, i]) : obj.canDropCascade)) {
-                Alertify.error(
+            Alertify.error(
                 S('The %s "%s" cannot be dropped!')
                 .sprintf(obj.label, d.label).value(),
                 10
@@ -688,16 +679,18 @@ define(
                   try {
                     var data = $.parseJSON(jqx.responseText);
                     msg = data.errormsg;
-                  } catch (e) {}
+                  } catch (e) {
+                    e.stack && console.warn && console.warn(e.stack);
+                  }
                 }
                 pgBrowser.report_error(
                     S( gettext('Error dropping %s: "%s"'))
                       .sprintf(obj.label, objName)
                         .value(), msg);
-              }
+              },
             });
           },
-          null).show()
+          null).show();
       },
       // Callback for creating script(s) & opening them in Query editor
       show_script: function(args, item) {
@@ -714,19 +707,18 @@ define(
          * Make sure - we're using the correct version of node
          */
         obj = pgBrowser.Nodes[d._type];
-        var objName = d.label,
-          sql_url;
+        var sql_url;
 
         // URL for script type
-        if(scriptType == 'insert') {
+        if(scriptType === 'insert') {
           sql_url = 'insert_sql';
-        } else if(scriptType == 'update') {
+        } else if(scriptType === 'update') {
           sql_url = 'update_sql';
-        } else if(scriptType == 'delete') {
+        } else if(scriptType === 'delete') {
           sql_url = 'delete_sql';
-        } else if(scriptType == 'select') {
+        } else if(scriptType === 'select') {
           sql_url = 'select_sql';
-        } else if(scriptType == 'exec') {
+        } else if(scriptType === 'exec') {
           sql_url = 'exec_sql';
         } else {
           // By Default get CREATE SQL
@@ -741,8 +733,7 @@ define(
 
       // Callback to render query editor
       show_query_tool: function(args, item) {
-        var obj = this,
-          t = pgBrowser.tree,
+        var t = pgBrowser.tree,
           i = item || t.selected(),
           d = i && i.length == 1 ? t.itemData(i) : undefined;
 
@@ -754,10 +745,10 @@ define(
       },
       added: function(item, data, browser) {
         var b = browser || pgBrowser,
-            t = b.tree,
-            pItem = t.parent(item),
-            pData = pItem && t.itemData(pItem),
-            pNode = pData && pgBrowser.Nodes[pData._type];
+          t = b.tree,
+          pItem = t.parent(item),
+          pData = pItem && t.itemData(pItem),
+          pNode = pData && pgBrowser.Nodes[pData._type];
 
         // Check node is a collection or not.
         if (pNode && pNode.is_collection) {
@@ -773,7 +764,7 @@ define(
             pItem, {
               label: (
                 _.escape(pData._label) + ' <span>(' + pData.collection_count + ')</span>'
-              )
+              ),
             }
           );
         }
@@ -788,8 +779,8 @@ define(
         // + Dependencies
         // + Statistics
         var b = browser || pgBrowser,
-            t = b.tree,
-            d = data || t.itemData(item);
+          t = b.tree,
+          d = data || t.itemData(item);
 
         // Update the menu items
         pgAdmin.Browser.enable_disable_menus.apply(b, [item]);
@@ -837,10 +828,10 @@ define(
       },
       removed: function(item) {
         var self = this,
-            t = pgBrowser.tree,
-            pItem = t.parent(item),
-            pData = pItem && t.itemData(pItem),
-            pNode = pData && pgBrowser.Nodes[pData._type];
+          t = pgBrowser.tree,
+          pItem = t.parent(item),
+          pData = pItem && t.itemData(pItem),
+          pNode = pData && pgBrowser.Nodes[pData._type];
 
         // Check node is a collection or not.
         if (
@@ -851,7 +842,7 @@ define(
             pItem, {
               label: (
                 _.escape(pData._label) + ' <span>(' + pData.collection_count + ')</span>'
-              )
+              ),
             }
           );
         }
@@ -860,24 +851,21 @@ define(
       },
       unloaded: function(item) {
         var self = this,
-            t = pgBrowser.tree,
-            data = item && t.itemData(item);
+          t = pgBrowser.tree,
+          data = item && t.itemData(item);
 
         // In case of unload remove the collection counter
-        if (self.is_collection && 'collection_count' in data)
-        {
+        if (self.is_collection && 'collection_count' in data) {
           delete data.collection_count;
           t.setLabel(item, {label: _.escape(data._label)});
         }
       },
       refresh: function(cmd, i) {
-        var self = this,
-            t = pgBrowser.tree,
-            item = i || t.selected(),
-            d = t.itemData(item);
+        var t = pgBrowser.tree,
+          item = i || t.selected();
 
-        pgBrowser.Events.trigger('pgadmin:browser:tree:refresh', item);
-      }
+        item && pgBrowser.Events.trigger('pgadmin:browser:tree:refresh', item);
+      },
     },
     /**********************************************************************
      * A hook (not a callback) to show object properties in given HTML
@@ -895,54 +883,52 @@ define(
           .addClass('pg-prop-content col-xs-12');
 
         // Handle key press events for Cancel, save and help button
-        var handleKeyDown = function(event, context) {
+      var handleKeyDown = function(event, context) {
           // If called on panel other than node_props, return
-          if (panel && panel['_type'] !== 'node_props') return;
+        if (panel && panel['_type'] !== 'node_props') return;
 
-          switch (event.which) {
-            case keyCode.ESCAPE:
-              closePanel();
-              break;
-            case keyCode.ENTER:
+        switch (event.which) {
+        case keyCode.ESCAPE:
+          closePanel();
+          break;
+        case keyCode.ENTER:
               // Return if event is fired from child element
-              if (event.target !== context) return;
-              if (view && view.model && view.model.sessChanged()) {
-                onSave.call(this, view);
-              }
-              break;
-            case keyCode.F1:
-              onDialogHelp();
-              break;
-            default:
-                break;
+          if (event.target !== context) return;
+          if (view && view.model && view.model.sessChanged()) {
+            onSave.call(this, view);
           }
-        }.bind(panel);
+          break;
+        case keyCode.F1:
+          onDialogHelp();
+          break;
+        default:
+          break;
+        }
+      }.bind(panel);
 
-        setTimeout(function() {
+      setTimeout(function() {
           // Register key press events with panel element
-          panel.$container.find('.backform-tab').on("keydown", function(event) {
-              handleKeyDown(event, this);
-          });
-        }, 200); // wait for panel tab to render
+        panel.$container.find('.backform-tab').on('keydown', function(event) {
+          handleKeyDown(event, this);
+        });
+      }, 200); // wait for panel tab to render
 
         // Template function to create the status bar
-        var createStatusBar = function(location){
-            var statusBar = $('<div></div>').addClass(
+      var createStatusBar = function(location){
+          var statusBar = $('<div></div>').addClass(
                       'pg-prop-status-bar'
                       ).appendTo(j);
-            statusBar.css("visibility", "hidden");
-            if (location == "header") {
-                statusBar.appendTo(that.header);
-            } else {
-                statusBar.prependTo(that.footer);
-            }
-            that.statusBar = statusBar;
-            return statusBar;
+          statusBar.css('visibility', 'hidden');
+          if (location == 'header') {
+            statusBar.appendTo(that.header);
+          } else {
+            statusBar.prependTo(that.footer);
+          }
+          that.statusBar = statusBar;
+          return statusBar;
         }.bind(panel),
         // Template function to create the button-group
         createButtons = function(buttons, location, extraClasses) {
-          var panel = this;
-
           // arguments must be non-zero length array of type
           // object, which contains following attributes:
           // label, type, extraClasses, register
@@ -958,12 +944,12 @@ define(
                 '<button type="<%= type %>" ',
                 'class="btn <%=extraClasses.join(\' \')%>"',
                 '<% if (disabled) { %> disabled="disabled"<% } %> title="<%-tooltip%>">',
-                '<span class="<%= icon %>"></span><% if (label != "") { %>&nbsp;<%-label%><% } %></button>'
-                ].join(' '));
-            if (location == "header"){
-                btnGroup.appendTo(that.header);
+                '<span class="<%= icon %>"></span><% if (label != "") { %>&nbsp;<%-label%><% } %></button>',
+              ].join(' '));
+            if (location == 'header'){
+              btnGroup.appendTo(that.header);
             }else{
-                btnGroup.appendTo(that.footer);
+              btnGroup.appendTo(that.footer);
             }
             if (extraClasses) {
               btnGroup.addClass(extraClasses);
@@ -974,7 +960,7 @@ define(
 
               // icon may not present for this button
               if (!btn.icon) {
-                btn.icon = "";
+                btn.icon = '';
               }
               var b = $(tmpl(btn));
               btnGroup.append(b);
@@ -991,12 +977,10 @@ define(
 
           // Avoid unnecessary reloads
           var panel = this,
-              i = tree.selected(),
-              d = i && tree.itemData(i),
-              n_type = d._type,
-              n_value = -1,
-              n = i && d && pgBrowser.Nodes[d._type],
-              treeHierarchy = n.getTreeNodeHierarchy(i);
+            i = tree.selected(),
+            d = i && tree.itemData(i),
+            n = i && d && pgBrowser.Nodes[d._type],
+            treeHierarchy = n.getTreeNodeHierarchy(i);
 
           if (_.isEqual($(panel).data('node-prop'), treeHierarchy)) {
             return;
@@ -1047,7 +1031,7 @@ define(
                 btn.click(function() {
                   onEdit();
                 });
-              }
+              },
             });
 
             buttons.push({
@@ -1060,7 +1044,7 @@ define(
                 btn.click(function() {
                   onSqlHelp();
                 });
-              }
+              },
             });
 
             createButtons(buttons, 'header', 'pg-prop-btn-group-above bg-gray-2 border-gray-3');
@@ -1068,7 +1052,6 @@ define(
           j.append(content);
         }.bind(panel),
         onSqlHelp = function() {
-          var panel = this;
           // See if we can find an existing panel, if not, create one
           var pnlSqlHelp = pgBrowser.docker.findPanels('pnl_sql_help')[0];
 
@@ -1091,17 +1074,17 @@ define(
 
           url = url.replace('$VERSION$', major + '.' + minor);
           if (!S(url).endsWith('/')) {
-            url = url + '/'
+            url = url + '/';
           }
           if (that.sqlCreateHelp == '' && that.sqlAlterHelp != '') {
-              url = url + that.sqlAlterHelp
+            url = url + that.sqlAlterHelp;
           } else if (that.sqlCreateHelp != '' && that.sqlAlterHelp == '') {
-              url = url + that.sqlCreateHelp
+            url = url + that.sqlCreateHelp;
           } else {
             if (view.model.isNew()) {
-              url = url + that.sqlCreateHelp
+              url = url + that.sqlCreateHelp;
             } else {
-              url = url + that.sqlAlterHelp
+              url = url + that.sqlAlterHelp;
             }
           }
 
@@ -1114,7 +1097,6 @@ define(
         }.bind(panel),
 
         onDialogHelp = function() {
-          var panel = this;
           // See if we can find an existing panel, if not, create one
           var pnlDialogHelp = pgBrowser.docker.findPanels('pnl_online_help')[0];
 
@@ -1160,28 +1142,28 @@ define(
                   pnlDependents = pgBrowser.docker.findPanels('dependents')[0];
 
                 if(pnlProperties)
-                    $(pnlProperties).removeData('node-prop');
+                  $(pnlProperties).removeData('node-prop');
                 if(pnlSql)
-                    $(pnlSql).removeData('node-prop');
+                  $(pnlSql).removeData('node-prop');
                 if(pnlStats)
-                    $(pnlStats).removeData('node-prop');
+                  $(pnlStats).removeData('node-prop');
                 if(pnlDependencies)
-                    $(pnlDependencies).removeData('node-prop');
+                  $(pnlDependencies).removeData('node-prop');
                 if(pnlDependents)
-                    $(pnlDependents).removeData('node-prop');
+                  $(pnlDependents).removeData('node-prop');
               },
               error: function(m, jqxhr) {
                 Alertify.pgNotifier(
-                  "error", jqxhr,
+                  'error', jqxhr,
                   S(
-                    gettext("Error saving properties: %s")
+                    gettext('Error saving properties: %s')
                     ).sprintf(jqxhr.statusText).value()
                   );
 
                 // Hide progress cursor
                 $('.obj_properties').removeClass('show_progress');
                 clearTimeout(timer);
-              }
+              },
             });
           }
         }.bind(panel),
@@ -1207,7 +1189,7 @@ define(
 
           that.header = $('<div></div>').addClass(
                       'pg-prop-header'
-                      ).appendTo(j)
+                      ).appendTo(j);
           that.footer = $('<div></div>').addClass(
                       'pg-prop-footer'
                       ).appendTo(j);
@@ -1215,8 +1197,8 @@ define(
           var updateButtons = function(hasError, modified) {
 
             var btnGroup = this.find('.pg-prop-btn-group'),
-                btnSave = btnGroup.find('button.btn-primary'),
-                btnReset = btnGroup.find('button.btn-warning');
+              btnSave = btnGroup.find('button.btn-primary'),
+              btnReset = btnGroup.find('button.btn-warning');
 
             if (hasError || !modified) {
               btnSave.prop('disabled', true);
@@ -1258,7 +1240,7 @@ define(
                 btn.click(function() {
                   onSqlHelp();
                 });
-              }
+              },
             },{
               label: '', type: 'help',
               tooltip: gettext('Help for this dialog.'),
@@ -1269,7 +1251,7 @@ define(
                 btn.click(function() {
                   onDialogHelp();
                 });
-              }
+              },
             },{
               label: gettext('Save'), type: 'save',
               tooltip: gettext('Save this object.'),
@@ -1281,7 +1263,7 @@ define(
                 btn.click(function() {
                   onSave.call(this, view);
                 });
-              }
+              },
             },{
               label: gettext('Cancel'), type: 'cancel',
               tooltip: gettext('Cancel changes to this object.'),
@@ -1294,7 +1276,7 @@ define(
                   panel.$container.removeAttr('action-mode');
                   onCancelFunc.call(arguments);
                 });
-              }
+              },
             },{
               label: gettext('Reset'), type: 'reset',
               tooltip: gettext('Reset the fields on this dialog.'),
@@ -1305,9 +1287,9 @@ define(
                 btn.click(function() {
                   setTimeout(function() { editFunc.call(); }, 0);
                 });
-              }
+              },
             }],'footer' ,'pg-prop-btn-group-below bg-gray-2 border-gray-3');
-          };
+          }
 
           // Create status bar.
           createStatusBar('footer');
@@ -1325,8 +1307,8 @@ define(
         }.bind(panel),
         updateTreeItem = function(that) {
           var _old = data,
-              _new = _.clone(view.model.tnode),
-              info = _.clone(view.model.node_info);
+            _new = _.clone(view.model.tnode),
+            info = _.clone(view.model.node_info);
 
           // Clear the cache for this node now.
           setTimeout(function() { that.clear_cache.apply(that, item); }, 0);
@@ -1343,15 +1325,15 @@ define(
                   'pgadmin:browser:node:' + _newNodeData._type + ':updated',
                   _item, _newNodeData, _oldNodeData
                 );
-              }
+              },
             }
           );
           closePanel();
         },
         saveNewNode = function(that) {
           var panel = this,
-              j = panel.$container.find('.obj_properties').first(),
-              view = j.data('obj-view');
+            j = panel.$container.find('.obj_properties').first(),
+            view = j.data('obj-view');
 
           // Clear the cache for this node now.
           setTimeout(function() { that.clear_cache.apply(that, item); }, 0);
@@ -1361,7 +1343,7 @@ define(
               _.clone(view.model.node_info)
             );
           } catch (e) {
-            console.log(e);
+            e.stack && console.warn && console.warn(e.stack);
           }
           closePanel();
         }.bind(panel, that),
@@ -1370,7 +1352,7 @@ define(
           setTimeout(function() {
             that.callbacks.show_obj_properties.apply(that, [{
               'action': 'edit',
-              'item': item
+              'item': item,
             }]);
           }, 0);
         },
@@ -1397,7 +1379,7 @@ define(
       if (panel.closeable()) {
         var onCloseFunc = function() {
           var j = this.$container.find('.obj_properties').first(),
-              view = j && j.data('obj-view');
+            view = j && j.data('obj-view');
 
           if (view) {
             view.remove({data: true, internal: true, silent: true});
@@ -1451,7 +1433,7 @@ define(
 
       var opURL = {
           'create': 'obj', 'drop': 'obj', 'edit': 'obj',
-          'properties': 'obj', 'statistics': 'stats'
+          'properties': 'obj', 'statistics': 'stats',
         }, self = this,
         priority = -Infinity;
 
@@ -1488,14 +1470,14 @@ define(
     Model: pgBrowser.DataModel,
     getTreeNodeHierarchy: function(i) {
       var idx = 0,
-          res = {},
-          t = pgBrowser.tree,
-          d;
+        res = {},
+        t = pgBrowser.tree,
+        d;
       do {
         d = t.itemData(i);
         if (d._type in pgBrowser.Nodes && pgBrowser.Nodes[d._type].hasId) {
           res[d._type] = _.extend({}, d, {
-            'priority': idx
+            'priority': idx,
           });
           idx -= 1;
         }
@@ -1506,24 +1488,18 @@ define(
     },
     cache: function(url, node_info, level, data) {
       var cached = this.cached = this.cached || {},
-          hash = url,
-          min_priority = (
+        hash = url,
+        min_priority = (
               node_info && node_info[level] && node_info[level].priority
               ) || 0;
 
       if (node_info) {
         _.each(
-            _.sortBy(
-              _.values(
-                _.pick(
-                  node_info,
-                  function(v, k, o) {
-                    return (v.priority <= min_priority);
-                  })),
-              function(o) { return o.priority; }),
-            function(o) {
-              hash = S('%s/%s').sprintf(hash, encodeURI(o._id)).value();
-            });
+            _.sortBy(_.values(_.pick(node_info,
+              function(v) { return (v.priority <= min_priority); }
+            )), function(o) { return o.priority; }), function(o) {
+          hash = S('%s/%s').sprintf(hash, encodeURI(o._id)).value();
+        });
       }
 
       if (_.isUndefined(data)) {
@@ -1540,7 +1516,7 @@ define(
 
       return res;
     },
-    clear_cache: function(item) {
+    clear_cache: function() {
       /*
        * Reset the cache, when new node is created.
        *
@@ -1566,7 +1542,7 @@ define(
         }
         return this.parent_type;
       }
-    }
+    },
   });
 
   return pgAdmin.Browser.Node;
