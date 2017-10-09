@@ -36,15 +36,15 @@ define('pgadmin.dashboard', [
       // if cancel query button then
       if (cell_action === 'cancel') {
         this.$el.html(
-          "<i class='fa fa-stop' data-toggle='tooltip' " +
-            "title='" + gettext('Cancel the active query') +
-            "'></i>"
+          '<i class=\'fa fa-stop\' data-toggle=\'tooltip\' ' +
+            'title=\'' + gettext('Cancel the active query') +
+            '\'></i>'
         );
       } else {
         this.$el.html(
-          "<i class='fa fa-times-circle' data-toggle='tooltip' " +
-            "title='" + gettext('Terminate the session') +
-            "'></i>"
+          '<i class=\'fa fa-times-circle\' data-toggle=\'tooltip\' ' +
+            'title=\'' + gettext('Terminate the session') +
+            '\'></i>'
         );
       }
       this.delegateEvents();
@@ -76,21 +76,21 @@ define('pgadmin.dashboard', [
       if (cell_action === 'cancel') {
         title = gettext('Cancel Active Query?');
         txtConfirm = gettext('Are you sure you wish to cancel the active query?');
-        txtSuccess = gettext('Active query cancelled successfully.')
-        txtError = gettext('An error occurred whilst cancelling the active query.')
-        action_url = cancel_query_url + self.model.get('pid')
+        txtSuccess = gettext('Active query cancelled successfully.');
+        txtError = gettext('An error occurred whilst cancelling the active query.');
+        action_url = cancel_query_url + self.model.get('pid');
       } else {
         title = gettext('Terminate Session?');
         txtConfirm = gettext('Are you sure you wish to terminate the session?');
-        txtSuccess = gettext('Session terminateed successfully.')
-        txtError = gettext('An error occurred whilst terminateing the active query.')
-        action_url = terminate_session_url + self.model.get('pid')
+        txtSuccess = gettext('Session terminateed successfully.');
+        txtError = gettext('An error occurred whilst terminateing the active query.');
+        action_url = terminate_session_url + self.model.get('pid');
       }
 
       alertify.confirm(
         title,
         txtConfirm,
-        function(evt) {
+        function() {
           $.ajax({
             url: action_url,
             type:'DELETE',
@@ -102,27 +102,27 @@ define('pgadmin.dashboard', [
                 alertify.error(txtError);
               }
             },
-            error: function(xhr, status, error) {
+            error: function(xhr) {
               try {
                 var err = $.parseJSON(xhr.responseText);
                 if (err.success == 0) {
                   alertify.error(err.errormsg);
                 }
-              } catch (e) {}
-            }
+              } catch (e) {
+                e.stack && console.warn && console.warn(e.stack);
+              }
+            },
           });
         },
-        function(evt) {
-          return true;
-        }
+        function() { return true; }
       );
-    }
+    },
   });
 
 
   // Subnode Cell, which will display subnode control
   var SessionDetailsCell = Backgrid.Extension.ObjectCell.extend({
-    enterEditMode: function () {
+    enterEditMode: function() {
       // Notify that we are about to enter in edit mode for current cell.
       this.model.trigger('enteringEditMode', [this]);
 
@@ -140,7 +140,7 @@ define('pgadmin.dashboard', [
         );
       }
     },
-    render: function(){
+    render: function() {
       this.$el.empty();
       this.$el.html(
         '<i class=\'fa fa-caret-right\' data-toggle=\'tooltip\' ' +
@@ -293,23 +293,23 @@ define('pgadmin.dashboard', [
               if (url != $(dashboardPanel).data('dashboard_url') ||
                 (url == $(dashboardPanel).data('dashboard_url') && $(dashboardPanel).data('server_status') == false )) {
                   // Clear out everything so any existing timers die off
-                  $(div).empty();
+                $(div).empty();
 
-                  $.ajax({
-                    url: url,
-                    type: 'GET',
-                    dataType: 'html',
-                    success: function (data) {
-                      $(div).html(data);
-                    },
-                    error: function () {
-                      $(div).html(
-                        '<div class="alert alert-danger pg-panel-message" role="alert">' + gettext('An error occurred whilst loading the dashboard.') + '</div>'
-                      );
-                    },
-                  });
-                  $(dashboardPanel).data('server_status', true);
-                }
+                $.ajax({
+                  url: url,
+                  type: 'GET',
+                  dataType: 'html',
+                  success: function (data) {
+                    $(div).html(data);
+                  },
+                  error: function () {
+                    $(div).html(
+                      '<div class="alert alert-danger pg-panel-message" role="alert">' + gettext('An error occurred whilst loading the dashboard.') + '</div>'
+                    );
+                  },
+                });
+                $(dashboardPanel).data('server_status', true);
+              }
 
             }
             else {
@@ -328,9 +328,7 @@ define('pgadmin.dashboard', [
     },
 
     // Render a chart
-    render_chart: function(
-      container, data, dataset, sid, did, url, options, counter, refresh
-    ) {
+    render_chart: function(container, data, dataset, sid, did, url, options, counter, refresh) {
 
       // Data format:
       // [
@@ -342,9 +340,9 @@ define('pgadmin.dashboard', [
       if (!dashboardVisible)
         return;
 
-      var x, y = 0;
+      var y = 0, x;
       if (dataset.length == 0) {
-        if (counter === true) {
+        if (counter == true) {
           // Have we stashed initial values?
           if (_.isUndefined($(container).data('counter_previous_vals'))) {
             $(container).data('counter_previous_vals', data[0]);
@@ -500,186 +498,8 @@ define('pgadmin.dashboard', [
         className: 'backgrid table-bordered presentation table backgrid-striped',
       });
 
-      // Add version to each field
-      _.each(subNodeFieldsModel[0].fields, function(obj) {
-        obj['version'] = version;
-      });
-
-      // Add cancel active query button
-      server_activity_columns.unshift({
-        name: "pg-backform-expand", label: "",
-        cell: SessionDetailsCell,
-        cell_priority: -1,
-        postgres_version: version,
-        schema: subNodeFieldsModel
-      });
-
-      // Add cancel active query button
-      server_activity_columns.unshift({
-        name: "pg-backform-delete", label: "",
-        cell: customDashboardActionCell,
-        cell_action: 'cancel',
-        editable: false, cell_priority: -1,
-        canDeleteRow: pgAdmin.Dashboard.can_take_action,
-        postgres_version: version
-      });
-
-      server_activity_columns.unshift({
-        name: "pg-backform-delete", label: "",
-        cell: customDashboardActionCell,
-        cell_action: 'terminate',
-        editable: false, cell_priority: -1,
-        canDeleteRow: pgAdmin.Dashboard.can_take_action,
-        postgres_version: version
-      });
-
-      var server_locks_columns = [{
-        name: "pid",
-        label: gettext('PID'),
-        editable: false,
-        cell: "string"
-      }, {
-        name: "datname",
-        label: gettext('Database'),
-        editable: false,
-        cell: "string"
-      }, {
-        name: "locktype",
-        label: gettext('Lock type'),
-        editable: false,
-        cell: "string"
-      }, {
-        name: "relation",
-        label: gettext('Target relation'),
-        editable: false,
-        cell: "string"
-      }, {
-        name: "page",
-        label: gettext('Page'),
-        editable: false,
-        cell: "string"
-      }, {
-        name: "tuple",
-        label: gettext('Tuple'),
-        editable: false,
-        cell: "string"
-      }, {
-        name: "virtualxid",
-        label: gettext('vXID (target)'),
-        editable: false,
-        cell: "string"
-      }, {
-        name: "transactionid",
-        label: gettext('XID (target)'),
-        editable: false,
-        cell: "string"
-      },{
-        name: "classid",
-        label: gettext('Class'),
-        editable: false,
-        cell: "string"
-      },{
-        name: "objid",
-        label: gettext('Object ID'),
-        editable: false,
-        cell: "string"
-      },{
-        name: "virtualtransaction",
-        label: gettext('vXID (owner)'),
-        editable: false,
-        cell: "string"
-      },{
-        name: "mode",
-        label: gettext('Mode'),
-        editable: false,
-        cell: "string"
-      },{
-        name: "granted",
-        label: gettext('Granted?'),
-        editable: false,
-        cell: "string"
-      }];
-
-      var server_prepared_columns = [{
-        name: "git",
-        label: gettext('Name'),
-        editable: false,
-        cell: "string"
-      }, {
-        name: "database",
-        label: gettext('Database'),
-        editable: false,
-        cell: "string"
-      }, {
-        name: "Owner",
-        label: gettext('Owner'),
-        editable: false,
-        cell: "string"
-      }, {
-        name: "transaction",
-        label: gettext('XID'),
-        editable: false,
-        cell: "string"
-      }, {
-        name: "prepared",
-        label: gettext('Prepared at'),
-        editable: false,
-        cell: "string"
-      }];
-
-      var server_config_columns = [{
-        name: "name",
-        label: gettext('Name'),
-        editable: false,
-        cell: "string"
-      }, {
-        name: "category",
-        label: gettext('Category'),
-        editable: false,
-        cell: "string"
-      }, {
-        name: "setting",
-        label: gettext('Setting'),
-        editable: false,
-        cell: "string"
-      }, {
-        name: "unit",
-        label: gettext('Unit'),
-        editable: false,
-        cell: "string"
-      }, {
-        name: "short_desc",
-        label: gettext('Description'),
-        editable: false,
-        cell: "string"
-      }];
-
-      // Render the graphs
-      pgAdmin.Dashboard.render_chart(
-        div_sessions, data_sessions, dataset_sessions, sid, did,
-        url_for('dashboard.session_stats'), options_line, false,
-        session_stats_refresh
-      );
-      pgAdmin.Dashboard.render_chart(
-        div_tps, data_tps, dataset_tps, sid, did,
-        url_for('dashboard.tps_stats'), options_line, true,
-        tps_stats_refresh
-      );
-      pgAdmin.Dashboard.render_chart(
-        div_ti, data_ti, dataset_ti, sid, did,
-        url_for('dashboard.ti_stats'), options_line, true,
-        ti_stats_refresh
-      );
-      pgAdmin.Dashboard.render_chart(
-        div_to, data_to, dataset_to, sid, did,
-        url_for('dashboard.to_stats'), options_line, true,
-        to_stats_refresh
-      );
-      pgAdmin.Dashboard.render_chart(
-        div_bio, data_bio, dataset_bio, sid, did,
-        url_for('dashboard.bio_stats'), options_line, true,
-        bio_stats_refresh
-      );
+      // Render the grid
+      $(container).append(grid.render().el);
 
       // Initialize a client-side filter to filter on the client
       // mode pageable collection's cache.
@@ -737,158 +557,11 @@ define('pgadmin.dashboard', [
             cls = 'danger';
           }
 
-          var newActiveQueryDetailsModel = new ActiveQueryDetailsModel();
-
-          var subNodeFieldsModel = Backform.generateViewSchema(
-            null, newActiveQueryDetailsModel, 'create', null, null, true
-          );
-
-          // Add version to each field
-          _.each(subNodeFieldsModel[0].fields, function(obj) {
-            obj['version'] = version;
-          });
-
-
-          // Add cancel active query button
-          database_activity_columns.unshift({
-            name: "pg-backform-expand", label: "",
-            cell: SessionDetailsCell,
-            cell_priority: -1,
-            postgres_version: version,
-            schema: subNodeFieldsModel
-          });
-
-          database_activity_columns.unshift({
-            name: "pg-backform-delete", label: "",
-            cell: customDashboardActionCell,
-            cell_action: 'cancel',
-            editable: false, cell_priority: -1,
-            canDeleteRow: pgAdmin.Dashboard.can_take_action,
-            postgres_version: version
-          });
-          database_activity_columns.unshift({
-            name: "pg-backform-delete", label: "",
-            cell: customDashboardActionCell,
-            cell_action: 'terminate',
-            editable: false, cell_priority: -1,
-            canDeleteRow: pgAdmin.Dashboard.can_take_action,
-            postgres_version: version
-          });
-
-          var database_locks_columns = [{
-            name: "pid",
-            label: gettext('PID'),
-            editable: false,
-            cell: "string"
-          }, {
-            name: "locktype",
-            label: gettext('Lock type'),
-            editable: false,
-            cell: "string"
-          }, {
-            name: "relation",
-            label: gettext('Target relation'),
-            editable: false,
-            cell: "string"
-          }, {
-            name: "page",
-            label: gettext('Page'),
-            editable: false,
-            cell: "string"
-          }, {
-            name: "tuple",
-            label: gettext('Tuple'),
-            editable: false,
-            cell: "string"
-          }, {
-            name: "virtualxid",
-            label: gettext('vXID (target)'),
-            editable: false,
-            cell: "string"
-          }, {
-            name: "transactionid",
-            label: gettext('XID (target)'),
-            editable: false,
-            cell: "string"
-          },{
-            name: "classid",
-            label: gettext('Class'),
-            editable: false,
-            cell: "string"
-          },{
-            name: "objid",
-            label: gettext('Object ID'),
-            editable: false,
-            cell: "string"
-          },{
-            name: "virtualtransaction",
-            label: gettext('vXID (owner)'),
-            editable: false,
-            cell: "string"
-          },{
-            name: "mode",
-            label: gettext('Mode'),
-            editable: false,
-            cell: "string"
-          },{
-            name: "granted",
-            label: gettext('Granted?'),
-            editable: false,
-            cell: "string"
-          }];
-
-          var database_prepared_columns = [{
-            name: "git",
-            label: gettext('Name'),
-            editable: false,
-            cell: "string"
-          }, {
-            name: "Owner",
-            label: gettext('Owner'),
-            editable: false,
-            cell: "string"
-          }, {
-            name: "transaction",
-            label: gettext('XID'),
-            editable: false,
-            cell: "string"
-          }, {
-            name: "prepared",
-            label: gettext('Prepared at'),
-            editable: false,
-            cell: "string"
-          }];
-
-          // Render the graphs
-          pgAdmin.Dashboard.render_chart(
-            div_sessions, data_sessions, dataset_sessions, sid, did,
-            url_for('dashboard.session_stats'), options_line, false,
-            session_stats_refresh
-          );
-          pgAdmin.Dashboard.render_chart(
-            div_tps, data_tps, dataset_tps, sid, did,
-            url_for('dashboard.tps_stats'), options_line, true,
-            tps_stats_refresh
-          );
-          pgAdmin.Dashboard.render_chart(
-            div_ti, data_ti, dataset_ti, sid, did,
-            url_for('dashboard.ti_stats'), options_line, true,
-            ti_stats_refresh
-          );
-          pgAdmin.Dashboard.render_chart(
-            div_to, data_to, dataset_to, sid, did,
-            url_for('dashboard.to_stats'), options_line, true,
-            to_stats_refresh
-          );
-          pgAdmin.Dashboard.render_chart(
-            div_bio, data_bio, dataset_bio, sid, did,
-            url_for('dashboard.bio_stats'), options_line, true,
-            bio_stats_refresh
-          );
-
-          // To align subnode controls properly
-          $(div_database_activity).addClass('pg-el-container');
-          $(div_database_activity).attr('el', 'sm');
+          // Replace the content with the error, if not already present. Always update the message
+          if (!$(container).hasClass('grid-error')) {
+            $(filter.el).hide();
+            $(container).addClass('grid-error');
+          }
 
           $(container).html(
             '<div class="alert alert-' + cls + ' pg-panel-message" role="alert">' + msg + '</div>'
@@ -1026,17 +699,19 @@ define('pgadmin.dashboard', [
       // Add cancel active query button
       server_activity_columns.unshift({
         name: 'pg-backform-delete', label: '',
-        cell: cancelQueryCell,
+        cell: customDashboardActionCell,
+        cell_action: 'cancel',
         editable: false, cell_priority: -1,
-        canDeleteRow: pgAdmin.Dashboard.can_cancel_active_query,
+        canDeleteRow: pgAdmin.Dashboard.can_take_action,
         postgres_version: version,
       });
 
       server_activity_columns.unshift({
         name: 'pg-backform-delete', label: '',
-        cell: terminateSessionCell,
+        cell: customDashboardActionCell,
+        cell_action: 'terminate',
         editable: false, cell_priority: -1,
-        canDeleteRow: pgAdmin.Dashboard.can_terminate_session,
+        canDeleteRow: pgAdmin.Dashboard.can_take_action,
         postgres_version: version,
       });
 
@@ -1215,42 +890,42 @@ define('pgadmin.dashboard', [
       // (Re)render the appropriate tab
       $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
         switch ($(e.target).attr('aria-controls')) {
-          case 'tab_server_activity':
-            pgAdmin.Dashboard.render_grid_data(div_server_activity);
-            break;
+        case 'tab_server_activity':
+          pgAdmin.Dashboard.render_grid_data(div_server_activity);
+          break;
 
-          case 'tab_server_locks':
-            pgAdmin.Dashboard.render_grid_data(div_server_locks);
-            break;
+        case 'tab_server_locks':
+          pgAdmin.Dashboard.render_grid_data(div_server_locks);
+          break;
 
-          case 'tab_server_prepared':
-            pgAdmin.Dashboard.render_grid_data(div_server_prepared);
-            break;
+        case 'tab_server_prepared':
+          pgAdmin.Dashboard.render_grid_data(div_server_prepared);
+          break;
 
-          case 'tab_server_config':
-            pgAdmin.Dashboard.render_grid_data(div_server_config);
-            break;
+        case 'tab_server_config':
+          pgAdmin.Dashboard.render_grid_data(div_server_config);
+          break;
         }
       });
 
       // Handle button clicks
       $('button').click(function() {
         switch(this.id) {
-          case 'btn_server_activity_refresh':
-            pgAdmin.Dashboard.render_grid_data(div_server_activity);
-            break;
+        case 'btn_server_activity_refresh':
+          pgAdmin.Dashboard.render_grid_data(div_server_activity);
+          break;
 
-          case 'btn_server_locks_refresh':
-            pgAdmin.Dashboard.render_grid_data(div_server_locks);
-            break;
+        case 'btn_server_locks_refresh':
+          pgAdmin.Dashboard.render_grid_data(div_server_locks);
+          break;
 
-          case 'btn_server_prepared_refresh':
-            pgAdmin.Dashboard.render_grid_data(div_server_prepared);
-            break;
+        case 'btn_server_prepared_refresh':
+          pgAdmin.Dashboard.render_grid_data(div_server_prepared);
+          break;
 
-          case 'btn_server_config_refresh':
-            pgAdmin.Dashboard.render_grid_data(div_server_config);
-            break;
+        case 'btn_server_config_refresh':
+          pgAdmin.Dashboard.render_grid_data(div_server_config);
+          break;
         }
       });
 
@@ -1284,63 +959,330 @@ define('pgadmin.dashboard', [
           max: 0,
           autoscale: 0,
         },
-        toggleVisibility: function(flag) {
-          dashboardVisible = flag;
+        yaxis : {
+          autoscale: 1,
         },
-        can_take_action: function(m) {
-          // We will validate if user is allowed to cancel the active query
-          // If there is only one active session means it probably our main
-          // connection session
-          var active_sessions = m.collection.where({'state': 'active'}),
-            pg_version = this.get('postgres_version') || null,
-            cell_action = this.get('cell_action') || null,
-            is_cancel_session = cell_action === 'cancel',
-            txtAction = is_cancel_session ? gettext('cancel') : gettext('terminate');
-
-          // With PG10, We have background process showing on dashboard
-          // We will not allow user to cancel them as they will fail with error
-          // anyway, so better usability we will throw our on notification
-
-          // Background processes do not have database field populated
-          if (pg_version && pg_version >= 100000 && !m.get('datname')) {
-            alertify.info(
-              gettext('You cannot ') +
-                txtAction +
-                gettext(' background worker processes.')
-            );
-            return false;
-            // If it is the last active connection on maintenance db then error out
-          } else if (maintenance_database == m.get('datname') &&
-            m.get('state') == 'active' && active_sessions.length == 1) {
-              alertify.error(
-                gettext('You are not allowed to ') +
-                  txtAction +
-                  gettext(' the main active session.')
-              );
-              return false;
-            } else if(is_cancel_session && m.get('state') == 'idle') {
-              // If this session is already idle then do nothing
-              alertify.info(
-                gettext('The session is already in idle state.')
-              );
-              return false;
-            } else if(is_super_user) {
-              // Super user can do anything
-              return true;
-            } else if (current_user && current_user == m.get('usename')) {
-              // Non-super user can cancel only their active queries
-              return true;
-            } else {
-              // Do not allow to cancel someone else session to non-super user
-              alertify.error(
-                gettext('Superuser privileges are required to ') +
-                  txtAction +
-                  gettext(' another users query.')
-              );
-              return false;
-            }
-        }
+        legend : {
+          position : 'nw',
+          backgroundColor : '#D2E8FF',
+        },
       };
 
-      return pgAdmin.Dashboard;
-    });
+      var database_activity_columns = [{
+        name: 'pid',
+        label: gettext('PID'),
+        editable: false,
+        cell: 'string',
+      }, {
+        name: 'usename',
+        label: gettext('User'),
+        editable: false,
+        cell: 'string',
+      }, {
+        name: 'application_name',
+        label: gettext('Application'),
+        editable: false,
+        cell: 'string',
+      }, {
+        name: 'client_addr',
+        label: gettext('Client'),
+        editable: false,
+        cell: 'string',
+      }, {
+        name: 'backend_start',
+        label: gettext('Backend start'),
+        editable: false,
+        cell: 'string',
+      }, {
+        name: 'state',
+        label: gettext('State'),
+        editable: false,
+        cell: 'string',
+      }];
+
+      if (version < 90600) {
+        database_activity_columns = database_activity_columns.concat(
+          [{
+            name: 'waiting',
+            label: gettext('Waiting?'),
+            editable: false,
+            cell: 'string',
+          }]);
+      } else {
+        database_activity_columns = database_activity_columns.concat(
+          [{
+            name: 'wait_event',
+            label: gettext('Wait Event'),
+            editable: false,
+            cell: 'string',
+          },{
+            name: 'blocking_pids',
+            label: gettext('Blocking PIDs'),
+            editable: false,
+            cell: 'string',
+          }]);
+      }
+
+      var newActiveQueryDetailsModel = new ActiveQueryDetailsModel();
+
+      var subNodeFieldsModel = Backform.generateViewSchema(
+        null, newActiveQueryDetailsModel, 'create', null, null, true
+      );
+
+      // Add version to each field
+      _.each(subNodeFieldsModel[0].fields, function(obj) {
+        obj['version'] = version;
+      });
+
+
+      // Add cancel active query button
+      database_activity_columns.unshift({
+        name: 'pg-backform-expand', label: '',
+        cell: SessionDetailsCell,
+        cell_priority: -1,
+        postgres_version: version,
+        schema: subNodeFieldsModel,
+      });
+
+      database_activity_columns.unshift({
+        name: 'pg-backform-delete', label: '',
+        cell: customDashboardActionCell,
+        cell_action: 'cancel',
+        editable: false, cell_priority: -1,
+        canDeleteRow: pgAdmin.Dashboard.can_take_action,
+        postgres_version: version,
+      });
+      database_activity_columns.unshift({
+        name: 'pg-backform-delete', label: '',
+        cell: customDashboardActionCell,
+        cell_action: 'terminate',
+        editable: false, cell_priority: -1,
+        canDeleteRow: pgAdmin.Dashboard.can_take_action,
+        postgres_version: version,
+      });
+
+      var database_locks_columns = [{
+        name: 'pid',
+        label: gettext('PID'),
+        editable: false,
+        cell: 'string',
+      }, {
+        name: 'locktype',
+        label: gettext('Lock type'),
+        editable: false,
+        cell: 'string',
+      }, {
+        name: 'relation',
+        label: gettext('Target relation'),
+        editable: false,
+        cell: 'string',
+      }, {
+        name: 'page',
+        label: gettext('Page'),
+        editable: false,
+        cell: 'string',
+      }, {
+        name: 'tuple',
+        label: gettext('Tuple'),
+        editable: false,
+        cell: 'string',
+      }, {
+        name: 'virtualxid',
+        label: gettext('vXID (target)'),
+        editable: false,
+        cell: 'string',
+      }, {
+        name: 'transactionid',
+        label: gettext('XID (target)'),
+        editable: false,
+        cell: 'string',
+      },{
+        name: 'classid',
+        label: gettext('Class'),
+        editable: false,
+        cell: 'string',
+      },{
+        name: 'objid',
+        label: gettext('Object ID'),
+        editable: false,
+        cell: 'string',
+      },{
+        name: 'virtualtransaction',
+        label: gettext('vXID (owner)'),
+        editable: false,
+        cell: 'string',
+      },{
+        name: 'mode',
+        label: gettext('Mode'),
+        editable: false,
+        cell: 'string',
+      },{
+        name: 'granted',
+        label: gettext('Granted?'),
+        editable: false,
+        cell: 'string',
+      }];
+
+      var database_prepared_columns = [{
+        name: 'git',
+        label: gettext('Name'),
+        editable: false,
+        cell: 'string',
+      }, {
+        name: 'Owner',
+        label: gettext('Owner'),
+        editable: false,
+        cell: 'string',
+      }, {
+        name: 'transaction',
+        label: gettext('XID'),
+        editable: false,
+        cell: 'string',
+      }, {
+        name: 'prepared',
+        label: gettext('Prepared at'),
+        editable: false,
+        cell: 'string',
+      }];
+
+      // Render the graphs
+      pgAdmin.Dashboard.render_chart(
+        div_sessions, data_sessions, dataset_sessions, sid, did,
+        url_for('dashboard.session_stats'), options_line, false,
+        session_stats_refresh
+      );
+      pgAdmin.Dashboard.render_chart(
+        div_tps, data_tps, dataset_tps, sid, did,
+        url_for('dashboard.tps_stats'), options_line, true,
+        tps_stats_refresh
+      );
+      pgAdmin.Dashboard.render_chart(
+        div_ti, data_ti, dataset_ti, sid, did,
+        url_for('dashboard.ti_stats'), options_line, true,
+        ti_stats_refresh
+      );
+      pgAdmin.Dashboard.render_chart(
+        div_to, data_to, dataset_to, sid, did,
+        url_for('dashboard.to_stats'), options_line, true,
+        to_stats_refresh
+      );
+      pgAdmin.Dashboard.render_chart(
+        div_bio, data_bio, dataset_bio, sid, did,
+        url_for('dashboard.bio_stats'), options_line, true,
+        bio_stats_refresh
+      );
+
+      // To align subnode controls properly
+      $(div_database_activity).addClass('pg-el-container');
+      $(div_database_activity).attr('el', 'sm');
+
+      // Render the tabs, but only get data for the activity tab for now
+      pgAdmin.Dashboard.render_grid(
+        div_database_activity, sid, did, url_for('dashboard.activity'),
+        database_activity_columns
+      );
+      pgAdmin.Dashboard.render_grid(
+        div_database_locks, sid, did, url_for('dashboard.locks'),
+        database_locks_columns
+      );
+      pgAdmin.Dashboard.render_grid(
+        div_database_prepared, sid, did, url_for('dashboard.prepared'),
+        database_prepared_columns
+      );
+
+      pgAdmin.Dashboard.render_grid_data(div_database_activity);
+
+      // (Re)render the appropriate tab
+      $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+        switch ($(e.target).attr('aria-controls')) {
+        case 'tab_database_activity':
+          pgAdmin.Dashboard.render_grid_data(div_database_activity);
+          break;
+
+        case 'tab_database_locks':
+          pgAdmin.Dashboard.render_grid_data(div_database_locks);
+          break;
+
+        case 'tab_database_prepared':
+          pgAdmin.Dashboard.render_grid_data(div_database_prepared);
+          break;
+        }
+      });
+
+      // Handle button clicks
+      $('button').click(function() {
+        switch(this.id) {
+        case 'btn_database_activity_refresh':
+          pgAdmin.Dashboard.render_grid_data(div_database_activity);
+          break;
+
+        case 'btn_database_locks_refresh':
+          pgAdmin.Dashboard.render_grid_data(div_database_locks);
+          break;
+
+        case 'btn_database_prepared_refresh':
+          pgAdmin.Dashboard.render_grid_data(div_database_prepared);
+          break;
+        }
+      });
+    },
+    toggleVisibility: function(flag) {
+      dashboardVisible = flag;
+    },
+    can_take_action: function(m) {
+      // We will validate if user is allowed to cancel the active query
+      // If there is only one active session means it probably our main
+      // connection session
+      var active_sessions = m.collection.where({'state': 'active'}),
+        pg_version = this.get('postgres_version') || null,
+        cell_action = this.get('cell_action') || null,
+        is_cancel_session = cell_action === 'cancel',
+        txtAction = is_cancel_session ? gettext('cancel') : gettext('terminate');
+
+      // With PG10, We have background process showing on dashboard
+      // We will not allow user to cancel them as they will fail with error
+      // anyway, so better usability we will throw our on notification
+
+      // Background processes do not have database field populated
+      if (pg_version && pg_version >= 100000 && !m.get('datname')) {
+        alertify.info(
+          gettext('You cannot ') +
+            txtAction +
+            gettext(' background worker processes.')
+        );
+        return false;
+        // If it is the last active connection on maintenance db then error out
+      } else if (maintenance_database == m.get('datname') &&
+        m.get('state') == 'active' && active_sessions.length == 1) {
+        alertify.error(
+            gettext('You are not allowed to ') +
+              txtAction +
+              gettext(' the main active session.')
+          );
+        return false;
+      } else if(is_cancel_session && m.get('state') == 'idle') {
+          // If this session is already idle then do nothing
+        alertify.info(
+            gettext('The session is already in idle state.')
+          );
+        return false;
+      } else if(is_super_user) {
+          // Super user can do anything
+        return true;
+      } else if (current_user && current_user == m.get('usename')) {
+          // Non-super user can cancel only their active queries
+        return true;
+      } else {
+          // Do not allow to cancel someone else session to non-super user
+        alertify.error(
+            gettext('Superuser privileges are required to ') +
+              txtAction +
+              gettext(' another users query.')
+          );
+        return false;
+      }
+    },
+  };
+
+  return pgAdmin.Dashboard;
+});
