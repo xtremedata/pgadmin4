@@ -81,7 +81,7 @@
     </div>
     <div class="allowed_file_types"></div>
     <script>
-	require(['sources/generated/file_utils'], function() {
+	requirejs(['sources/generated/file_utils'], function() {
 	    pgAdmin.FileUtils.init();
     });
     setTimeout(function(){ $('#file-input-path').focus(); }, 1000);
