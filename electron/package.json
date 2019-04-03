@@ -14,7 +14,7 @@
     "publish": "electron-forge publish",
     "dist:deb": "electron-forge make --platform=linux --arch=x64 --targets=deb",
     "dist:rpm": "electron-forge make --platform=linux --arch=x64 --targets=rpm",
-    "dist:darwin": "electron-forge make --platform=darwin --arch=x64 --targets=zip",
+    "dist:darwin": "electron-forge make --platform=darwin --arch=x64 --targets=dmg",
     "dist:windows": "electron-forge make --platform=win32 --arch=x64 --targets=squirrel",
     "lint": "eslint src test --color",
     "copy-folder:nix": "cp -r ../web web && find web | grep .pyc$ | xargs -I '{}' rm '{}'",
@@ -46,8 +46,7 @@
       },
       "electronPackagerConfig": {
         "packageManager": "yarn",
-        "asar": false,
-        "icon": "assets/icons/pgAdmin4"
+        "asar": false
       },
       "electronWinstallerConfig": {
         "name": "pgAdmin4",
@@ -81,13 +80,10 @@
   },
   "dependencies": {
     "axios": "^0.18.0",
-    "bootstrap": "^4.3.1",
     "cross-env": "^5.1.5",
     "electron-compile": "^6.4.2",
     "electron-squirrel-startup": "^1.0.0",
-    "jquery": "^3.3.1",
     "logform": "^1.6.0",
-    "popper.js": "^1.15.0",
     "winston": "^3.0.0-rc5"
   },
   "optionalDependencies": {
