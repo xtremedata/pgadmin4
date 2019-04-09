@@ -40,8 +40,8 @@ function createNewWindow(url) {
   };
 
   let newWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1024,
+    height: 768,
     icon: path.join(__dirname, 'assets/icons/mac/logo-256.png.icns'),
     webPreferences,
     show: false,
@@ -83,6 +83,7 @@ function createNewWindow(url) {
 
 function createMainWindow() {
   mainWindow = createNewWindow(pythonApplicationUrl);
+  mainWindow.maximize();
   const Menu = electron.Menu;
 
   // Create the Application's main menu
@@ -192,7 +193,7 @@ app.on('ready', () => {
     frame: false,
     width: 200,
     height: 100,
-    icon: `${__dirname}assets/icons/linux/pgAdmin4.png`,
+    icon: `${__dirname}assets/icons/pgAdmin4.png`,
   });
 
   loadingWindow.loadURL(`file://${__dirname}/index.html`);
@@ -221,8 +222,15 @@ function createPyProc() {
     sourceFolder = path.join('..', '..');
     useServerMode = true;
   }
-  const pythonPath = calculatePythonExecutablePath();
+  let pythonPath = '';
+  if (process.platform === 'win32') {
+    pythonPath = path.join(__dirname, sourceFolder, 'venv', 'python.exe');
+  }
+  pythonPath = path.join(__dirname, sourceFolder, 'venv', 'bin', 'python');
+
   const scriptPath = path.join(__dirname, sourceFolder, 'web', 'pgAdmin4.py');
+  electronLogger.debug('pythonPath:' + pythonPath);
+  electronLogger.debug('scriptPath:' + scriptPath);
   electronLogger.info('info: Spawning...');
   const env = Object.create(process.env);
   env.PGADMIN_PORT = pythonApplicationPort;
@@ -248,13 +256,6 @@ function createPyProc() {
   pyProc.stderr.on('data', (data) => {
     pythonAppLogger.info(`PYTHON: info: ${data}`);
   });
-}
-
-function calculatePythonExecutablePath() {
-  if (process.platform === 'win32') {
-    return path.join(__dirname, '..', 'venv', 'python.exe');
-  }
-  return path.join(__dirname, '..', 'venv', 'bin', 'python');
 }
 
 function exitPyProc() {

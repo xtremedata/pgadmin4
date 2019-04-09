@@ -14,7 +14,7 @@
     "publish": "electron-forge publish",
     "dist:deb": "electron-forge make --platform=linux --arch=x64 --targets=deb",
     "dist:rpm": "electron-forge make --platform=linux --arch=x64 --targets=rpm",
-    "dist:darwin": "electron-forge make --platform=darwin --arch=x64 --targets=dmg",
+    "dist:darwin": "electron-forge make --platform=darwin --arch=x64 --targets=zip",
     "dist:windows": "electron-forge make --platform=win32 --arch=x64 --targets=squirrel",
     "lint": "eslint src test --color",
     "copy-folder:nix": "cp -r ../web web && find web | grep .pyc$ | xargs -I '{}' rm '{}'",
@@ -46,7 +46,8 @@
       },
       "electronPackagerConfig": {
         "packageManager": "yarn",
-        "asar": false
+        "asar": false,
+        "icon": "assets/icons/pgAdmin4"
       },
       "electronWinstallerConfig": {
         "name": "pgAdmin4",

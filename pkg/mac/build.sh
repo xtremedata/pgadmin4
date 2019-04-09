@@ -7,6 +7,7 @@ export SOURCEDIR=${WD}/../..
 export BUILDROOT=${WD}/../../mac-build
 export DISTROOT=${WD}/../../dist
 export VIRTUALENV=venv
+export BUILD_RESOURCES='Contents/Resources/app'
 
 if [ ! -f ${SOURCEDIR}/pkg/mac/framework.conf ]; then
     echo
@@ -47,16 +48,6 @@ else
     export PIP=pip
 fi
 
-if [ "x${QTDIR}" == "x" ]; then
-    echo "QTDIR not set. Setting it to default"
-    export QTDIR=~/Qt/5.8/clang_64
-fi
-export QMAKE=${QTDIR}/bin/qmake
-if ! ${QMAKE} --version > /dev/null 2>&1; then
-    echo "Error: qmake not found. QT installation is not present or incomplete."
-    exit 1
-fi
-
 if [ "x${PGDIR}" == "x" ]; then
     echo "PGDIR not set. Setting it to default"
     export PGDIR=/usr/local/pgsql
@@ -85,84 +76,50 @@ _cleanup() {
 _create_python_virtualenv() {
     export PATH=${PGDIR}/bin:${PATH}
     export LD_LIBRARY_PATH=${PGDIR}/lib:${LD_LIBRARY_PATH}
-    test -d ${BUILDROOT} || mkdir ${BUILDROOT} || exit 1
-    cd ${BUILDROOT}
 
-    if [ ${SYSTEM_PYTHON} -eq 1 ]; then
-        test -d ${VIRTUALENV} || virtualenv -p ${PYTHON} ${VIRTUALENV} || exit 1
-    else
-        test -d ${VIRTUALENV} || virtualenv -p ${PYTHON} --always-copy ${VIRTUALENV} || exit 1
-    fi
+    cd "${BUILDROOT}/${APP_BUNDLE_NAME}/${BUILD_RESOURCES}"
 
-    source ${VIRTUALENV}/bin/activate
-    ${PIP} install --no-cache-dir --no-binary psycopg2 -r ${SOURCEDIR}/requirements.txt || { echo PIP install failed. Please resolve the issue and rerun the script; exit 1; }
+    echo "## Creating Virtual Environment in ${BUILDROOT}/${APP_BUNDLE_NAME}/${BUILD_RESOURCES}"
+    ${PYTHON} -m venv --copies ./${VIRTUALENV}
 
-    # Figure out some paths for use when completing the venv
-    # Use "python" here as we want the venv path
-    export PYMODULES_PATH=`python -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())"`
-    export DIR_PYMODULES_PATH=`dirname ${PYMODULES_PATH}`
-    
-    # Use $PYTHON here as we want the system path
+    # Hack: Copies all python installation files to the virtual environment
+    # This was done because virtualenv does not copy all of the files
+    # Looks like it assumes that they are not needed or that they should be installed in the system
+    echo "  ## Copy all python libraries to the newly created virtual environment"
     export PYSYSLIB_PATH=`${PYTHON} -c "import sys; print('%s/lib/python%d.%.d' % (sys.prefix, sys.version_info.major, sys.version_info.minor))"`
-    
-    # Symlink in the rest of the Python libs. This is required because the runtime
-    # will clear PYTHONHOME for safety, which has the side-effect of preventing
-    # it from finding modules that are not explicitly included in the venv
-    cd ${DIR_PYMODULES_PATH}
+    cp -r ${PYSYSLIB_PATH} ${VIRTUALENV}/lib
 
-    # Files
-    for FULLPATH in ${PYSYSLIB_PATH}/*.py; do
-        FILE=${FULLPATH##*/}
-        if [ ! -e ${FILE} ]; then
-           if [ ${SYSTEM_PYTHON} -eq 1 ]; then
-               ln -s ${FULLPATH} ${FILE}
-           else
-               cp ${FULLPATH} ${FILE}
-           fi
-        fi
-    done
+    source ./${VIRTUALENV}/bin/activate
 
-    # Paths
-    for FULLPATH in ${PYSYSLIB_PATH}/*/; do
-        FULLPATH=${FULLPATH%*/}
-        FILE=${FULLPATH##*/}
-        if [ ! -e ${FILE} ]; then
-            if [ ${SYSTEM_PYTHON} -eq 1 ]; then
-                ln -s ${FULLPATH} ${FILE}
-            else
-                cp -R ${FULLPATH} ${FILE}
-            fi
-        fi
-    done
-
-    # Remove tests
-    cd site-packages
-    find . -name "test" -type d -exec rm -rf "{}" \;
-    find . -name "tests" -type d -exec rm -rf "{}" \;
-
-    # Link the python<version> directory to python so that the private environment path is found by the application.
-    if test -d ${DIR_PYMODULES_PATH}; then
-        ln -s $(basename ${DIR_PYMODULES_PATH}) ${DIR_PYMODULES_PATH}/../python
-    fi
+    echo "## Installs all the dependencies of pgAdmin"
+    ${PIP} install --no-cache-dir --no-binary psycopg2 -r ${SOURCEDIR}/requirements.txt || { echo PIP install failed. Please resolve the issue and rerun the script; exit 1; }
 }
 
-_build_runtime() {
+_build_electron() {
+    rm -rf ${SOURCEDIR}/electron/node_modules
+    rm -rf ${SOURCEDIR}/electron/out
+    pushd ${SOURCEDIR}/electron > /dev/null
+
+    echo "## Creating the .app directory..."
+    yarn install
+    yarn dist:darwin
+    popd > /dev/null
+
+    test -d ${BUILDROOT} || mkdir ${BUILDROOT} || exit 1
+    cp -r ${SOURCEDIR}/electron/out/pgAdmin-darwin-x64/pgAdmin.app "${BUILDROOT}/${APP_BUNDLE_NAME}"
+
     _create_python_virtualenv || exit 1
-    cd ${SOURCEDIR}/runtime
-    make clean
-    ${QMAKE} || { echo qmake failed; exit 1; }
-    make || { echo make failed; exit 1; }
-    cp -r pgAdmin4.app "${BUILDROOT}/${APP_BUNDLE_NAME}"
 }
 
 _build_doc() {
+    echo "## Copying docs..."
     cd ${SOURCEDIR}/docs/en_US
-    test -d "${BUILDROOT}/${APP_BUNDLE_NAME}/Contents/Resources" || "mkdir -p ${BUILDROOT}/${APP_BUNDLE_NAME}/Contents/Resources"
-    test -d "${BUILDROOT}/${APP_BUNDLE_NAME}/Contents/Resources/docs/en_US" || mkdir -p "${BUILDROOT}/${APP_BUNDLE_NAME}/Contents/Resources/docs/en_US"
-    cp -r _build/html "${BUILDROOT}/${APP_BUNDLE_NAME}/Contents/Resources/docs/en_US/" || exit 1
+    test -d "${BUILDROOT}/${APP_BUNDLE_NAME}/${BUILD_RESOURCES}/docs/en_US" || mkdir -p "${BUILDROOT}/${APP_BUNDLE_NAME}/${BUILD_RESOURCES}/docs/en_US"
+    cp -r _build/html "${BUILDROOT}/${APP_BUNDLE_NAME}/${BUILD_RESOURCES}/docs/en_US/" || exit 1
 }
 
 _complete_bundle() {
+    echo "## Complete bundle..."
     cd ${SOURCEDIR}/pkg/mac
 
     # Copy the binary utilities into place
@@ -175,20 +132,9 @@ _complete_bundle() {
     # Replace the place holders with the current version
     sed -e "s/PGADMIN_LONG_VERSION/${APP_LONG_VERSION}/g" -e "s/PGADMIN_SHORT_VERSION/${APP_SHORT_VERSION}/g" pgadmin.Info.plist.in > pgadmin.Info.plist
 
-    # copy Python private environment to app bundle
-    cp -PR ${BUILDROOT}/${VIRTUALENV} "${BUILDROOT}/${APP_BUNDLE_NAME}/Contents/Resources/" || exit 1
-
-    if [ ${SYSTEM_PYTHON} -eq 1 ]; then
-        # remove the python bin and include from app bundle as it is not needed
-        rm -rf "${BUILDROOT}/${APP_BUNDLE_NAME}/Contents/Resources/${VIRTUALENV}/bin" "${BUILDROOT}/${APP_BUNDLE_NAME}/Contents/Resources/${VIRTUALENV}/include"
-        rm -rf "${BUILDROOT}/${APP_BUNDLE_NAME}/Contents/Resources/${VIRTUALENV}/.Python"
-    fi
 
     # Remove any TCL-related files that may cause us problems
-    find "${BUILDROOT}/${APP_BUNDLE_NAME}/Contents/Resources/${VIRTUALENV}/" -name "_tkinter*" -exec rm -f "{}" \;
-
-    # run complete-bundle to copy the dependent libraries and frameworks and fix the rpaths
-    ./complete-bundle.sh "${BUILDROOT}/${APP_BUNDLE_NAME}" || { echo complete-bundle.sh failed; exit 1; }
+    find "${BUILDROOT}/${APP_BUNDLE_NAME}/${BUILD_RESOURCES}/${VIRTUALENV}/" -name "_tkinter*" -exec rm -f "{}" \;
 
     pushd ${SOURCEDIR}/web
         yarn install || exit 1
@@ -198,8 +144,9 @@ _complete_bundle() {
     popd
 
     # copy the web directory to the bundle as it is required by runtime
-    cp -r ${SOURCEDIR}/web "${BUILDROOT}/${APP_BUNDLE_NAME}/Contents/Resources/" || exit 1
-    cd "${BUILDROOT}/${APP_BUNDLE_NAME}/Contents/Resources/web"
+    rm -rf ${SOURCEDIR}/web/node_modules
+    cp -r ${SOURCEDIR}/web "${BUILDROOT}/${APP_BUNDLE_NAME}/${BUILD_RESOURCES}/" || exit 1
+    cd "${BUILDROOT}/${APP_BUNDLE_NAME}/${BUILD_RESOURCES}/web"
     rm -f pgadmin4.db config_local.*
     rm -rf karma.conf.js package.json node_modules/ regression/ tools/ pgadmin/static/js/generated/.cache
     find . -name "tests" -type d -exec rm -rf "{}" \;
@@ -264,7 +211,7 @@ _codesign_dmg() {
 
 _get_version || { echo Could not get versioning; exit 1; }
 _cleanup
-_build_runtime || { echo Runtime build failed; exit 1; }
+_build_electron || { echo Electron build failed; exit 1; }
 _build_doc
 _complete_bundle
 _framework_config
