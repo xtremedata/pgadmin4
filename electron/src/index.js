@@ -13,6 +13,7 @@ const pythonApplicationPort = 3456;
 const secret = crypto.randomBytes(12).toString('hex');
 const pythonApplicationUrl = `http://127.0.0.1:${pythonApplicationPort}?key=${secret}`;
 const session = electron.session;
+const Menu = electron.Menu;
 
 const allWindows = {};
 
@@ -82,9 +83,9 @@ function createNewWindow(url) {
 }
 
 function createMainWindow() {
+  setLoadingText('Loading the home page...');
   mainWindow = createNewWindow(pythonApplicationUrl);
   mainWindow.maximize();
-  const Menu = electron.Menu;
 
   // Create the Application's main menu
   const template = [{
@@ -124,35 +125,6 @@ function createMainWindow() {
         },
       },
     ],
-  }, {
-    label: 'Edit',
-    submenu: [
-      { label: 'Undo', accelerator: 'CmdOrCtrl+Z', selector: 'undo:' },
-      {
-        label: 'Redo',
-        accelerator: 'Shift+CmdOrCtrl+Z',
-        selector: 'redo:',
-      },
-      { type: 'separator' },
-      { label: 'Cut', accelerator: 'CmdOrCtrl+X', selector: 'cut:' },
-      { label: 'Copy', accelerator: 'CmdOrCtrl+C', selector: 'copy:' },
-      { label: 'Paste', accelerator: 'CmdOrCtrl+V', selector: 'paste:' },
-      {
-        label: 'Select All',
-        accelerator: 'CmdOrCtrl+A',
-        selector: 'selectAll:',
-      },
-      { type: 'separator' },
-      {
-        label: 'Dev Tools',
-        accelerator: 'CmdOrCtrl+Alt+I',
-        click: () => {
-          if (activeWindow !== null) {
-            activeWindow.webContents.openDevTools();
-          }
-        },
-      },
-    ],
   },
   ];
 
@@ -181,6 +153,11 @@ function createMainWindow() {
   });
 }
 
+function setLoadingText(text) {
+  if(loadingWindow) {
+    loadingWindow.webContents.executeJavaScript(`setText('${text}');`);
+  }
+}
 
 app.on('ready', () => {
   if (process.env.ENV === 'DEV') {
@@ -191,14 +168,30 @@ app.on('ready', () => {
   loadingWindow = new BrowserWindow({
     show: false,
     frame: false,
-    width: 200,
-    height: 100,
+    width: 440,
+    height: 170,
+    resizable: false,
     icon: `${__dirname}assets/icons/pgAdmin4.png`,
   });
 
+  const template = [];
+
+  if (process.platform === 'darwin') {
+    template.unshift({
+      label: app.getName(),
+    });
+  }
+
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+
+  electronLogger.debug(`Loader - file://${__dirname}/index.html`);
+
   loadingWindow.loadURL(`file://${__dirname}/index.html`);
 
-  loadingWindow.show();
+  loadingWindow.webContents.once('dom-ready', () => {
+    loadingWindow.show();
+    setLoadingText('pgAdmin4 loading...');
+  });
 });
 
 app.on('window-all-closed', () => {
@@ -210,7 +203,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('activate', () => {
-  if (mainWindow === null) {
+  if (mainWindow === null && !loadingWindow.isVisible()) {
     createMainWindow();
   }
 });
@@ -237,6 +230,7 @@ function createPyProc() {
   env.PGADMIN_KEY = secret;
   env.SERVER_MODE = useServerMode;
 
+  setLoadingText('Starting python server...');
   pyProc = childProcess.spawn(pythonPath, [scriptPath], { env });
 
   waitForPythonServerToBeAvailable.waitForPythonServerToBeAvailable(pythonApplicationUrl, () => {
