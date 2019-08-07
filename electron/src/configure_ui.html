@@ -25,12 +25,12 @@
           <div class="form-check mr-3">
             <label class="form-check-label mr-1" for="fixedPortCheck">Fixed port number?</label>
             <input type="checkbox" class="form-check-input" id="fixedPortCheck"
-              name="fixed_port" onchange="onCheckChange(event);" />
+              name="fixed_port"/>
           </div>
           <div class="form-group">
             <label class="mr-1" for="portNo">Port Number</label>
             <input type="number" class="form-control" id="portNo" min="1" max="65535" value="1"
-              name="port_no" onchange="onTextChange(event);" onkeyup="onTextChange(event);" />
+              name="port_no"/>
           </div>
         </div>
       </div>
@@ -45,7 +45,7 @@
           <label for="pythonPath" class="col-sm-3 col-form-label">Python Path</label>
           <div class="col-sm-9">
             <input type="text" class="form-control" id="pythonPath" placeholder="/usr/pgadmin4/bin/python"
-              name="python_path" onchange="onTextChange(event);" onkeyup="onTextChange(event);">
+              name="python_path">
             <span class="form-text text-muted">Enter the path to the directory containing python binary if desired to change python environment</span>
           </div>
         </div>
@@ -53,7 +53,7 @@
           <label for="appPath" class="col-sm-3 col-form-label">Application Path</label>
           <div class="col-sm-9">
             <input type="text" class="form-control" id="appPath" placeholder="/usr/pgadmin4/web"
-              name="app_path" onchange="onTextChange(event);" onkeyup="onTextChange(event);">
+              name="app_path">
             <span class="form-text text-muted">Enter the path to the directory containing pgAdmin.py if desired</span>
           </div>
         </div>

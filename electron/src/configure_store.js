@@ -17,7 +17,7 @@ var ConfigureStore = {
       this.jsonData = JSON.parse(fs.readFileSync(this.filePath));  
     } catch (error) {
       /* If the file is not present or invalid JSON data in file */
-      this.jsonData = {}
+      this.jsonData = {};
     }
     this.isInit = true;
 
@@ -26,7 +26,7 @@ var ConfigureStore = {
 
   isInitCheck() {
     if(!this.isInit) {
-      throw "ConfigureStore not initialized";
+      throw 'ConfigureStore not initialized';
     }
   },
 
@@ -57,9 +57,9 @@ var ConfigureStore = {
 
   keys: function() {
     return Object.keys(this.jsonData);
-  }
-}
+  },
+};
 
 module.exports = {
-  ConfigureStore: ConfigureStore
-}
+  ConfigureStore: ConfigureStore,
+};

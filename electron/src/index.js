@@ -60,6 +60,11 @@ function createNewWindow(url) {
   }
   newWindow.loadURL(urlToLoad);
 
+  newWindow.on('close', (e) => {
+    e.preventDefault();
+    newWindow.destroy();
+  });
+
   newWindow.on('closed', () => {
     electronLogger.debug(`window: ${urlToLoad} just closed`);
     newWindow = null;
@@ -98,24 +103,35 @@ function createMainWindow() {
         click: () => {
           createNewWindow(pythonApplicationUrl);
         },
-      }, {
-        label: 'New tab',
-        accelerator: 'CommandOrControl+t',
-        selector: 'newtab:',
-        click: () => {
-          activeWindow.webContents.send(
-            'tabs-channel',
-            'create',
-            'pgAdmin4',
-            pythonApplicationUrl,
-          );
-        },
+      },
+      {
+        label: 'Open windows',
+        role: 'window',
+        submenu: [{
+          role: 'minimize',
+        },{
+          role: 'close',
+        }],
       },
       { type: 'separator' },
       {
         label: 'Configure',
         click() {
           handleConfigureClick();
+        },
+      },
+      {
+        label: 'Diagnose',
+        click: () => {
+          if (activeWindow !== null) {
+            if(activeWindow.webContents.isDevToolsOpened()) {
+              activeWindow.webContents.closeDevTools();
+            } else {
+              activeWindow.webContents.openDevTools({
+                mode: 'bottom',
+              });
+            }
+          }
         },
       },
       { type: 'separator' },
@@ -133,16 +149,17 @@ function createMainWindow() {
       },
     ],
   },{
-    label: "Edit",
+    label: 'Edit',
     submenu: [
-      { label: "Undo", accelerator: "CmdOrCtrl+Z", selector: "undo:" },
-      { label: "Redo", accelerator: "Shift+CmdOrCtrl+Z", selector: "redo:" },
-      { type: "separator" },
-      { label: "Cut", accelerator: "CmdOrCtrl+X", selector: "cut:" },
-      { label: "Copy", accelerator: "CmdOrCtrl+C", selector: "copy:" },
-      { label: "Paste", accelerator: "CmdOrCtrl+V", selector: "paste:" },
-      { label: "Select All", accelerator: "CmdOrCtrl+A", selector: "selectAll:" }
-  ]}];
+      { label: 'Undo', accelerator: 'CmdOrCtrl+Z', selector: 'undo:' },
+      { label: 'Redo', accelerator: 'Shift+CmdOrCtrl+Z', selector: 'redo:' },
+      { type: 'separator' },
+      { label: 'Cut', accelerator: 'CmdOrCtrl+X', selector: 'cut:' },
+      { label: 'Copy', accelerator: 'CmdOrCtrl+C', selector: 'copy:' },
+      { label: 'Paste', accelerator: 'CmdOrCtrl+V', selector: 'paste:' },
+      { label: 'Select All', accelerator: 'CmdOrCtrl+A', selector: 'selectAll:' },
+    ]},
+  ];
 
   if (process.platform === 'darwin') {
     template.unshift({
@@ -156,15 +173,6 @@ function createMainWindow() {
         { role: 'hideothers' },
         { role: 'unhide' },
         { type: 'separator' },
-        {
-          label: 'Dev Tools',
-          accelerator: 'CmdOrCtrl+Alt+I',
-            click: () => {
-              if (activeWindow !== null) {
-                activeWindow.webContents.openDevTools();
-              }
-            },
-          },
         { role: 'quit' },
       ],
     });
@@ -216,11 +224,11 @@ function loadingWindowClose() {
   }
 }
 
-function showMessageBox(message, title="", type="info") {
+function showMessageBox(message, title='', type='info') {
   const messageBoxOptions = {
     type: type,
     title: title,
-    message: message
+    message: message,
   };
   dialog.showMessageBox(messageBoxOptions);
 }
@@ -238,7 +246,7 @@ function getAvailablePort(host) {
         }
       });
 
-      server.on('listening', function (e) {
+      server.on('listening', function () {
         const {port} = server.address();
         server.close(() => {
           resolve(port);
@@ -390,9 +398,7 @@ app.on('ready', () => {
 app.on('window-all-closed', () => {
   electronLogger.debug('perhaps going to close windows');
   globalShortcut.unregisterAll();
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  app.quit();
 });
 
 app.on('activate', () => {
