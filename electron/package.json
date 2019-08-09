@@ -7,15 +7,15 @@
   "author": "pgAdmin Hackers",
   "license": "PostgreSQL",
   "scripts": {
-    "start": "electron-forge start",
-    "start:dev": "cross-env ENV=DEV electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make",
-    "publish": "electron-forge publish",
-    "dist:deb": "electron-forge make --platform=linux --arch=x64 --targets=deb",
-    "dist:rpm": "electron-forge make --platform=linux --arch=x64 --targets=rpm",
-    "dist:darwin": "electron-forge make --platform=darwin --arch=x64 --targets=zip",
-    "dist:windows": "electron-forge make --platform=win32 --arch=x64 --targets=squirrel",
+    "start": "cross-env NODE_ENV=production yarn run electron .",
+    "start:dev": "yarn run electron .",
+    "package": "",
+    "make": "",
+    "publish": "",
+    "dist:deb": "",
+    "dist:rpm": "",
+    "dist:darwin": "electron-builder --mac --x64",
+    "dist:windows": "electron-builder --win --x64",
     "linter": "yarn eslint --no-eslintrc -c .eslintrc.js --ext .js .",
     "copy-folder:nix": "cp -r ../web web && find web | grep .pyc$ | xargs -I '{}' rm '{}'",
     "build:nix": "yarn copy-folder:nix && yarn bundle-app-js",
@@ -30,87 +30,32 @@
     "query",
     "database"
   ],
-  "config": {
-    "forge": {
-      "make_targets": {
-        "win32": [
-          "squirrel"
-        ],
-        "darwin": [
-          "dmg"
-        ],
-        "linux": [
-          "deb",
-          "rpm"
-        ]
-      },
-      "electronPackagerConfig": {
-        "packageManager": "yarn",
-        "asar": false,
-        "icon": "assets/icons/pgAdmin4"
-      },
-      "electronWinstallerConfig": {
-        "name": "pgAdmin4",
-        "setupIcon": "assets/icons/windows/pgAdmin4.ico"
-      },
-      "electronInstallerDebian": {
-        "icon": "assets/icons/linux/pgAdmin4.png",
-        "categories": [
-          "Development"
-        ],
-        "homepage": "http://pgadmin.org",
-        "depends": [
-          "libpq5"
-        ]
-      },
-      "electronInstallerRedhat": {},
-      "github_repository": {
-        "owner": "",
-        "name": ""
-      },
-      "windowsStoreConfig": {
-        "packageName": "",
-        "name": "electron"
-      },
-      "electronInstallerDMG": {
-        "background": "assets/icons/linux/pgAdmin4.png",
-        "icon": "assets/icons/darwin/pgAdmin4.icns",
-        "format": "UDZO"
-      }
+  "build": {
+    "appId": "com.postgres.pgAdmin",
+    "asar": false,
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "target": [
+        "zip"
+      ],
+      "icon": "assets/icons/pgAdmin4.icns"
+    },
+    "nsis": {
+      "perMachine": true
     }
   },
   "dependencies": {
     "axios": "^0.18.0",
     "bootstrap": "^4.3.1",
     "cross-env": "^5.1.5",
-    "electron-compile": "^6.4.2",
     "electron-squirrel-startup": "^1.0.0",
     "jquery": "^3.3.1",
     "logform": "^1.6.0",
     "popper.js": "^1.15.0",
     "winston": "^3.0.0-rc5"
   },
-  "optionalDependencies": {
-    "macos-alias": "^0.2.11"
-  },
   "devDependencies": {
-    "babel-loader": "^7.1.4",
-    "babel-plugin-transform-async-to-generator": "^6.24.1",
-    "babel-preset-env": "^1.6.1",
-    "babel-preset-react": "^6.24.1",
-    "chai": "^4.1.2",
-    "chai-as-promised": "^7.1.1",
-    "electron-forge": "^5.2.4",
-    "electron-prebuilt-compile": "2.0.0",
-    "eslint": "^3",
-    "eslint-config-airbnb": "^15",
-    "eslint-plugin-import": "^2",
-    "eslint-plugin-jsx-a11y": "^5",
-    "eslint-plugin-react": "^7",
-    "is-docker": "^1.1.0",
-    "mocha": "^5.1.1",
-    "spectron": "^3.8.0",
-    "webpack": "^4.8.1",
-    "webpack-babel-installer": "^1.0.0"
+    "electron": "^6.0.1",
+    "electron-builder": "^21.2.0"
   }
 }

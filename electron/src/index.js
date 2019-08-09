@@ -285,12 +285,10 @@ function exitPyProc() {
 }
 
 function createPyProc() {
-  let useServerMode = false;
   let sourceFolder = '..';
 
-  if (process.env.ENV === 'DEV' || process.env.ENV === 'TEST') {
+  if (process.env.NODE_ENV !== 'production') {
     sourceFolder = path.join('..', '..');
-    useServerMode = true;
   }
   let pythonPath = '', appPath = '';
 
@@ -319,7 +317,6 @@ function createPyProc() {
       const env = Object.create(process.env);
       env.PGADMIN_PORT = pythonApplicationPort;
       env.PGADMIN_KEY = secret;
-      env.SERVER_MODE = useServerMode;
 
       setLoadingText('Starting python server...');
       electronLogger.debug('pythonPath:' + pythonPath);

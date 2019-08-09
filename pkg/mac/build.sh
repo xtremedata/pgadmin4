@@ -97,7 +97,7 @@ _create_python_virtualenv() {
 
 _build_electron() {
     rm -rf ${SOURCEDIR}/electron/node_modules
-    rm -rf ${SOURCEDIR}/electron/out
+    rm -rf ${SOURCEDIR}/electron/dist
     pushd ${SOURCEDIR}/electron > /dev/null
 
     echo "## Creating the .app directory..."
@@ -106,7 +106,7 @@ _build_electron() {
     popd > /dev/null
 
     test -d ${BUILDROOT} || mkdir ${BUILDROOT} || exit 1
-    cp -r ${SOURCEDIR}/electron/out/pgAdmin-darwin-x64/pgAdmin.app "${BUILDROOT}/${APP_BUNDLE_NAME}"
+    cp -r ${SOURCEDIR}/electron/dist/mac/pgAdmin.app "${BUILDROOT}/${APP_BUNDLE_NAME}"
 
     _create_python_virtualenv || exit 1
 }
@@ -209,6 +209,7 @@ _codesign_dmg() {
     ./codesign-dmg.sh || { echo codesign-bundle.sh failed; exit 1; }    
 }
 
+starttime=`date +%s`
 _get_version || { echo Could not get versioning; exit 1; }
 _cleanup
 _build_electron || { echo Electron build failed; exit 1; }
@@ -218,3 +219,7 @@ _framework_config
 _codesign_bundle
 _create_dmg
 _codesign_dmg
+
+endtime=`date +%s`
+total_runtime=$((endtime-starttime))
+echo "Total time take: ${total_runtime}"
