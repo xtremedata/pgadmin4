@@ -8,9 +8,14 @@ const BrowserWindow = electron.BrowserWindow;
 const path = require('path');
 const waitForPythonServerToBeAvailable = require('./check_python_server');
 const childProcess = require('child_process');
-const { electronLogger, pythonAppLogger } = require('./logger');
-const { EVENTS } = require('./constants');
+const { createLogger } = require('./logger');
+const { EVENTS, CONFIG_FILENAME } = require('./constants');
 const {ipcEventMain} = require('./ipc_event');
+
+const APP_DATA_DIR = path.join(app.getPath('appData'),app.getName());
+
+const electronLogger = createLogger(path.join(APP_DATA_DIR, 'electron.log'),'electron');
+const pythonAppLogger = createLogger(path.join(APP_DATA_DIR, 'pgAdmin.log'),'python');
 
 var {ConfigureStore} = require('./configure_store');
 
@@ -226,14 +231,14 @@ function handleConfigureClick() {
   let eventHandlers = {};
 
   eventHandlers[EVENTS.LOAD_CONFIG] = () => {
-    electronLogger.debug('Received request-load-config');
-    configureWindow.webContents.send('load-config', ConfigureStore.get_data_json());
+    electronLogger.debug(`Received ${EVENTS.LOAD_CONFIG}`);
+    configureWindow.webContents.send(EVENTS.LOAD_CONFIG, ConfigureStore.get_data_json());
   };
   eventHandlers[EVENTS.SAVE_CONFIG] = (event, data) => {
-    electronLogger.debug('Received save-config');
+    electronLogger.debug(`Received ${EVENTS.SAVE_CONFIG}`);
     ConfigureStore.set(data);
     ConfigureStore.save();
-    configureWindow.webContents.send('save-data-success');
+    configureWindow.webContents.send(EVENTS.SAVE_DATA_SUCCESS);
   };
 
   configureWindow.on('focus', () => {
@@ -418,6 +423,20 @@ app.on('ready', () => {
         },
       },
       {
+        label: 'Diagnose',
+        click: () => {
+          if (activeWindow !== null) {
+            if(activeWindow.webContents.isDevToolsOpened()) {
+              activeWindow.webContents.closeDevTools();
+            } else {
+              activeWindow.webContents.openDevTools({
+                mode: 'bottom',
+              });
+            }
+          }
+        },
+      },
+      {
         label: 'About pgAdmin',
         selector: 'orderFrontStandardAboutPanel:',
       },
@@ -437,12 +456,23 @@ app.on('ready', () => {
         },
       },
     ],
+  },{
+    label: 'Edit',
+    submenu: [
+      { label: 'Undo', accelerator: 'CmdOrCtrl+Z', selector: 'undo:' },
+      { label: 'Redo', accelerator: 'Shift+CmdOrCtrl+Z', selector: 'redo:' },
+      { type: 'separator' },
+      { label: 'Cut', accelerator: 'CmdOrCtrl+X', selector: 'cut:' },
+      { label: 'Copy', accelerator: 'CmdOrCtrl+C', selector: 'copy:' },
+      { label: 'Paste', accelerator: 'CmdOrCtrl+V', selector: 'paste:' },
+      { label: 'Select All', accelerator: 'CmdOrCtrl+A', selector: 'selectAll:' },
+    ],
   }];
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 
   try {
-    ConfigureStore.init();
+    ConfigureStore.init(path.join(APP_DATA_DIR, CONFIG_FILENAME));
     electronLogger.debug('Config file : ' + ConfigureStore.getConfigFilePath());
     electronLogger.debug('Python path in config : ' + ConfigureStore.get('python_path'));
   } catch (error) {
@@ -470,11 +500,15 @@ app.on('ready', () => {
     loadingWindow.show();
     setLoadingText('pgAdmin4 loading...');
     createPyProc();
-  });  
+  });
+
+  loadingWindow.on('closed', () => {
+    loadingWindow = null;
+  });
 });
 
 app.on('activate', () => {
-  if (mainWindow === null && !loadingWindow.isVisible()) {
+  if (mainWindow === null && loadingWindow && !loadingWindow.isVisible()) {
     createMainWindow();
   }
 });

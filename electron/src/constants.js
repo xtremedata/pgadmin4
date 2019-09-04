@@ -5,4 +5,5 @@ module.exports = {
     SAVE_DATA_SUCCESS: 'save-data-success',
     SAVE_DATA_FAILED: 'save-data-failed',
   },
+  CONFIG_FILENAME: 'configure-settings.json',
 };

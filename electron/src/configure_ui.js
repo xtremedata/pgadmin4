@@ -12,14 +12,14 @@ function setState(key, value) {
 
 function onTextChange(e) {
   let $ele = $(e.currentTarget);
-  setState($ele.attr('name'), $ele.val());
+  setState($ele.attr('data-name'), $ele.val());
 }
 
 function onCheckChange(e) {
   let $ele = $(e.currentTarget);
-  setState($ele.attr('name'), $ele.prop('checked'));
+  setState($ele.attr('data-name'), $ele.prop('checked'));
 
-  if($ele.attr('name') == 'fixed_port') {
+  if($ele.attr('data-name') == 'fixed_port') {
     portNoDisableCheck();
   }
 }
@@ -53,17 +53,15 @@ window.ipcEvent.on(EVENTS.SAVE_DATA_FAILED, ()=>{
 window.ipcEvent.on(EVENTS.LOAD_CONFIG, (event, data)=>{
   state = data;
   Object.keys(state).map((keyname) => {
-    let $ele = $(`*[name="${keyname}"]`);
+    let $ele = $(`*[data-name="${keyname}"]`);
     let value = state[keyname];
 
     switch ($ele.attr('type')) {
     case 'checkbox':
-      $ele.on('change', onCheckChange)
-        .prop('checked', value);
+      $ele.prop('checked', value);
       break;
     default:
-      $ele.on('change keyup', onTextChange)
-        .val(value);
+      $ele.val(value);
       break;
     }
   });
@@ -71,6 +69,18 @@ window.ipcEvent.on(EVENTS.LOAD_CONFIG, (event, data)=>{
   portNoDisableCheck();
   setStatus('');
   $('#btnSave').prop('disabled', false);
+});
+
+$('*[data-name]').each(function() {
+  let $ele = $(this);
+  switch ($ele.attr('type')) {
+  case 'checkbox':
+    $ele.on('change', onCheckChange);
+    break;
+  default:
+    $ele.on('change keyup', onTextChange);
+    break;
+  }
 });
 
 setStatus('Loading config...');
