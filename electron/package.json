@@ -7,8 +7,8 @@
   "author": "pgAdmin Hackers",
   "license": "PostgreSQL",
   "scripts": {
-    "start": "cross-env NODE_ENV=production yarn run electron .",
-    "start:dev": "yarn run electron .",
+    "start": "yarn run electron .",
+    "start:dev": "cross-env NODE_ENV=dev yarn run electron .",
     "package": "",
     "make": "",
     "publish": "",
@@ -32,6 +32,7 @@
   ],
   "build": {
     "appId": "com.postgres.pgAdmin",
+    "productName": "pgAdmin",
     "asar": false,
     "mac": {
       "category": "public.app-category.developer-tools",
@@ -56,6 +57,7 @@
   },
   "devDependencies": {
     "electron": "^6.0.1",
-    "electron-builder": "^21.2.0"
+    "electron-builder": "^21.2.0",
+    "eslint": "^6.3.0"
   }
 }

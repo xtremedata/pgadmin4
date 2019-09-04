@@ -9,8 +9,12 @@ const path = require('path');
 const waitForPythonServerToBeAvailable = require('./check_python_server');
 const childProcess = require('child_process');
 const { electronLogger, pythonAppLogger } = require('./logger');
+const { EVENTS } = require('./constants');
+const {ipcEventMain} = require('./ipc_event');
+
 var {ConfigureStore} = require('./configure_store');
-ConfigureStore.init();
+
+var ipcEvent = ipcEventMain;
 
 /* to be changed with configuration */
 var pythonApplicationUrl;
@@ -69,6 +73,10 @@ function createNewWindow(url) {
     electronLogger.debug(`window: ${urlToLoad} just closed`);
     newWindow = null;
     delete allWindows[windowId];
+
+    if(Object.keys(allWindows).length <= 0) {
+      app.quit();
+    }
   });
 
   newWindow.on('focus', () => {
@@ -92,62 +100,86 @@ function createMainWindow() {
   mainWindow = createNewWindow(pythonApplicationUrl);
   mainWindow.maximize();
 
+  let appSubmenu = [
+    {
+      label: 'New window',
+      accelerator: 'CommandOrControl+N',
+      selector: 'newwindow:',
+      click: () => {
+        createNewWindow(pythonApplicationUrl);
+      },
+    },
+    {
+      label: 'Open windows',
+      role: 'window',
+      submenu: [{
+        role: 'minimize',
+      },{
+        role: 'close',
+      }],
+    },
+    { type: 'separator' },
+    {
+      label: 'Configure',
+      click() {
+        handleConfigureClick();
+      },
+    },
+    {
+      label: 'Diagnose',
+      click: () => {
+        if (activeWindow !== null) {
+          if(activeWindow.webContents.isDevToolsOpened()) {
+            activeWindow.webContents.closeDevTools();
+          } else {
+            activeWindow.webContents.openDevTools({
+              mode: 'bottom',
+            });
+          }
+        }
+      },
+    },
+    {
+      label: 'Hard reload',
+      click: () => {
+        if (activeWindow !== null) {
+          activeWindow.webContents.reloadIgnoringCache();
+        }
+      },
+    },
+  ];
+
+  if (process.platform === 'darwin') {
+    appSubmenu.push(...[
+      { type: 'separator' },
+      { role: 'services', submenu: [] },
+      { type: 'separator' },
+      { role: 'hide' },
+      { role: 'hideothers' },
+      { role: 'unhide' },
+    ]);
+  }
+
+  appSubmenu.push(...[
+    { type: 'separator' },
+    {
+      label: 'About pgAdmin',
+      selector: 'orderFrontStandardAboutPanel:',
+    },
+    { type: 'separator' },
+    {
+      label: 'Quit',
+      accelerator: 'Command+Q',
+      click() {
+        app.quit();
+      },
+    },
+  ]);
+
   // Create the Application's main menu
   const template = [{
-    label: 'pgAdmin',
-    submenu: [
-      {
-        label: 'New window',
-        accelerator: 'CommandOrControl+N',
-        selector: 'newwindow:',
-        click: () => {
-          createNewWindow(pythonApplicationUrl);
-        },
-      },
-      {
-        label: 'Open windows',
-        role: 'window',
-        submenu: [{
-          role: 'minimize',
-        },{
-          role: 'close',
-        }],
-      },
-      { type: 'separator' },
-      {
-        label: 'Configure',
-        click() {
-          handleConfigureClick();
-        },
-      },
-      {
-        label: 'Diagnose',
-        click: () => {
-          if (activeWindow !== null) {
-            if(activeWindow.webContents.isDevToolsOpened()) {
-              activeWindow.webContents.closeDevTools();
-            } else {
-              activeWindow.webContents.openDevTools({
-                mode: 'bottom',
-              });
-            }
-          }
-        },
-      },
-      { type: 'separator' },
-      {
-        label: 'About pgAdmin',
-        selector: 'orderFrontStandardAboutPanel:',
-      },
-      { type: 'separator' },
-      {
-        label: 'Quit',
-        accelerator: 'Command+Q',
-        click() {
-          app.quit();
-        },
-      },
-    ],
+    label: app.getName(),
+    submenu: appSubmenu,
   },{
     label: 'Edit',
     submenu: [
@@ -161,22 +193,6 @@ function createMainWindow() {
     ]},
   ];
 
-  if (process.platform === 'darwin') {
-    template.unshift({
-      label: app.getName(),
-      submenu: [
-        { role: 'about' },
-        { type: 'separator' },
-        { role: 'services', submenu: [] },
-        { type: 'separator' },
-        { role: 'hide' },
-        { role: 'hideothers' },
-        { role: 'unhide' },
-        { type: 'separator' },
-        { role: 'quit' },
-      ],
-    });
-  }
 
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 
@@ -200,19 +216,47 @@ function handleConfigureClick() {
     height: 600,
     title: 'Configure',
     resizable: false,
+    minimizable: false,
+    maximizable: false,    
+    webPreferences: {
+      preload: path.resolve(__dirname, 'configure_preload.js'),
+    },
   });
+  let confiUIPath = `file://${__dirname}/configure_ui.html`;
+  let eventHandlers = {};
+
+  eventHandlers[EVENTS.LOAD_CONFIG] = () => {
+    electronLogger.debug('Received request-load-config');
+    configureWindow.webContents.send('load-config', ConfigureStore.get_data_json());
+  };
+  eventHandlers[EVENTS.SAVE_CONFIG] = (event, data) => {
+    electronLogger.debug('Received save-config');
+    ConfigureStore.set(data);
+    ConfigureStore.save();
+    configureWindow.webContents.send('save-data-success');
+  };
 
   configureWindow.on('focus', () => {
     activeWindow = configureWindow;
   });
 
-  electronLogger.debug(`Settings - file://${__dirname}/configure_ui.html`);
-
-  configureWindow.loadURL(`file://${__dirname}/configure_ui.html`);
-
   configureWindow.webContents.once('dom-ready', () => {
     configureWindow.show();
   });
+
+  configureWindow.on('close', () => {
+    Object.keys(eventHandlers).forEach((event)=>{
+      ipcEvent.off(event, eventHandlers[event]);  
+    });
+  });
+
+  /* Bind events */
+  Object.keys(eventHandlers).forEach((event)=>{
+    ipcEvent.on(event, eventHandlers[event]);  
+  });
+  
+  electronLogger.debug(`Settings - ${confiUIPath}`);  
+  configureWindow.loadURL(confiUIPath);
 }
 
 function loadingWindowClose() {
@@ -269,7 +313,6 @@ function pyProcExitHandler() {
     'Unable to start python process. Please check logs for errors.',
     'Failed to start', 'error'
   );
-  app.quit();
 }
 
 function exitPyProc() {
@@ -287,7 +330,7 @@ function exitPyProc() {
 function createPyProc() {
   let sourceFolder = '..';
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.ENV === 'dev') {
     sourceFolder = path.join('..', '..');
   }
   let pythonPath = '', appPath = '';
@@ -305,7 +348,8 @@ function createPyProc() {
   }
 
   appPath = path.join(
-    ConfigureStore.get('app_path', path.join(__dirname, sourceFolder, 'web')),
+    ConfigureStore.get('app_path', path.join(__dirname, sourceFolder)),
+    'web',
     'pgAdmin4.py'
   );
 
@@ -323,30 +367,33 @@ function createPyProc() {
       electronLogger.debug('appPath:' + appPath);
 
       pyProc = childProcess.spawn(pythonPath, [appPath], { env });
-
-      pyProc.on('exit', pyProcExitHandler);
-
       pyProc.on('error', (error) => {
         pythonAppLogger.error('PYTHON: ERROR: ', error);
         pyProcExitHandler();
       });
 
-      pyProc.stdout.on('data', (data) => {
-        pythonAppLogger.info(`PYTHON: ${data}`);
-      });
+      electronLogger.debug('Python proc pid :' + pyProc.pid);
 
-      pyProc.stderr.on('data', (data) => {
-        pythonAppLogger.info(`PYTHON: ${data}`);
-      });
+      if(pyProc.pid != undefined) {
+        pyProc.on('exit', pyProcExitHandler);
+        pyProc.on('close', pyProcExitHandler);
 
-      waitForPythonServerToBeAvailable.waitForPythonServerToBeAvailable(pythonApplicationUrl, () => {
-        electronLogger.debug('debug: Python server is Up, going to start the pgAdmin window');
-        createMainWindow();
-        electronLogger.debug('debug: closing the loading window');
-      });
+        pyProc.stdout.on('data', (data) => {
+          pythonAppLogger.info(`PYTHON: ${data}`);
+        });
+
+        pyProc.stderr.on('data', (data) => {
+          pythonAppLogger.info(`PYTHON: ${data}`);
+        });
+
+        waitForPythonServerToBeAvailable.waitForPythonServerToBeAvailable(pythonApplicationUrl, () => {
+          electronLogger.debug('debug: Python server is Up, going to start the pgAdmin window');
+          createMainWindow();
+          electronLogger.debug('debug: closing the loading window');
+        });
+      }
     })
     .catch((err) => {
-      loadingWindowClose();
       showMessageBox(
         `Unable to get port. Port error: ${err}`,
         'Failed to start', 'error'
@@ -355,12 +402,55 @@ function createPyProc() {
     });
 }
 
-app.on('ready', createPyProc);
-
 app.on('ready', () => {
   if (process.env.ENV === 'DEV') {
     session.defaultSession.clearCache(() => {
     });
+  }
+
+  const template = [{
+    label: 'pgAdmin',
+    submenu: [
+      {
+        label: 'Configure',
+        click() {
+          handleConfigureClick();
+        },
+      },
+      {
+        label: 'About pgAdmin',
+        selector: 'orderFrontStandardAboutPanel:',
+      },
+      { type: 'separator' },
+      {
+        label: 'Restart',
+        click() {
+          app.relaunch();
+          app.quit();
+        },
+      },      
+      {
+        label: 'Quit',
+        accelerator: 'Command+Q',
+        click() {
+          app.quit();
+        },
+      },
+    ],
+  }];
+
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+
+  try {
+    ConfigureStore.init();
+    electronLogger.debug('Config file : ' + ConfigureStore.getConfigFilePath());
+    electronLogger.debug('Python path in config : ' + ConfigureStore.get('python_path'));
+  } catch (error) {
+    showMessageBox(
+      `Unable to load config file - ${error}`,
+      'Failed to start', 'error'
+    );
+    app.quit();
   }
 
   loadingWindow = new BrowserWindow({
@@ -372,16 +462,6 @@ app.on('ready', () => {
     icon: `${__dirname}assets/icons/pgAdmin4.png`,
   });
 
-  const template = [];
-
-  if (process.platform === 'darwin') {
-    template.unshift({
-      label: app.getName(),
-    });
-  }
-
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
-
   electronLogger.debug(`Loader - file://${__dirname}/loader.html`);
 
   loadingWindow.loadURL(`file://${__dirname}/loader.html`);
@@ -389,13 +469,8 @@ app.on('ready', () => {
   loadingWindow.webContents.once('dom-ready', () => {
     loadingWindow.show();
     setLoadingText('pgAdmin4 loading...');
-  });
-});
-
-app.on('window-all-closed', () => {
-  electronLogger.debug('perhaps going to close windows');
-  globalShortcut.unregisterAll();
-  app.quit();
+    createPyProc();
+  });  
 });
 
 app.on('activate', () => {
@@ -413,4 +488,8 @@ app.on('before-quit', () => {
 
 app.on('quit', () => {
   electronLogger.debug('quit');
+});
+
+app.on('window-all-closed', (e) => {
+  e.preventDefault();
 });

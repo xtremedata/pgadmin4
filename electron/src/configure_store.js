@@ -30,14 +30,22 @@ var ConfigureStore = {
     }
   },
 
+  getConfigFilePath() {
+    return this.filePath;
+  },
+
   save: function() {
     this.isInitCheck();
     fs.writeFileSync(this.filePath, JSON.stringify(this.jsonData, null, 4), {flag: 'w'});
   },
 
+  get_data_json: function() {
+    return this.jsonData;
+  },
+
   get: function(key, if_not_value) {
     this.isInitCheck();
-    if(this.jsonData.hasOwnProperty(key)) {
+    if(this.jsonData[key] != undefined) {
       return this.jsonData[key];
     } else {
       return if_not_value;
@@ -46,12 +54,20 @@ var ConfigureStore = {
 
   set: function(key, value) {
     this.isInitCheck();
-    if(value === '' || value == null || typeof(value) == 'undefined') {
-      if(this.jsonData.hasOwnProperty(key)) {
-        delete this.jsonData[key];
-      }
+
+    if(typeof key === 'object'){
+      this.jsonData = {
+        ...this.jsonData,
+        ...key,
+      };
     } else {
-      this.jsonData[key] = value;
+      if(value === '' || value == null || typeof(value) == 'undefined') {
+        if(this.jsonData[key] != undefined) {
+          delete this.jsonData[key];
+        }
+      } else {
+        this.jsonData[key] = value;
+      }
     }
   },
 

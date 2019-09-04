@@ -1,46 +1,77 @@
-const $ = window.$ = window.jQuery = require('jquery');
-window.Bootstrap = require('bootstrap');
+window.ipcEvent = window.get_event_handle();
 
-var {ConfigureStore} = require('./configure_store');
-ConfigureStore.init();
+var $ = window.$ = window.jQuery = window.require_package('jquery');
+window.Bootstrap = window.require_package('bootstrap');
+const {EVENTS} = window.require_package('./constants');
+
+var state = {};
+
+function setState(key, value) {
+  state[key] = value;
+}
 
 function onTextChange(e) {
   let $ele = $(e.currentTarget);
-  ConfigureStore.set($ele.attr('name'), $ele.val());
+  setState($ele.attr('name'), $ele.val());
 }
 
 function onCheckChange(e) {
   let $ele = $(e.currentTarget);
-  ConfigureStore.set($ele.attr('name'), $ele.prop('checked'));
+  setState($ele.attr('name'), $ele.prop('checked'));
 
   if($ele.attr('name') == 'fixed_port') {
     portNoDisableCheck();
   }
 }
 
-$('#btnSave').on('click', ()=> {
-  ConfigureStore.save();
-});
-
 function portNoDisableCheck() {
-  $('#portNo').prop('disabled', !ConfigureStore.get('fixed_port', false));
+  if(state.fixed_port === undefined) {
+    state.fixed_port = false;
+  }
+  $('#portNo').prop('disabled', state.fixed_port);
 }
 
-/* load the values initially */
-ConfigureStore.keys().map((keyname) => {
-  let $ele = $(`*[name="${keyname}"]`);
-  let value = ConfigureStore.get(keyname);
+function setStatus(msg) {
+  $('.status-text').html(msg);
+}
 
-  switch ($ele.attr('type')) {
-  case 'checkbox':
-    $ele.on('change', onCheckChange)
-      .prop('checked', value);
-    break;
-  default:
-    $ele.on('change keyup', onTextChange)
-      .val(value);
-    break;
-  }
+$('#btnSave').on('click', ()=> {
+  $('#btnSave').prop('disabled', true);
+  window.ipcEvent.send(EVENTS.SAVE_CONFIG, state);
 });
 
-portNoDisableCheck();
+window.ipcEvent.on(EVENTS.SAVE_DATA_SUCCESS, ()=>{
+  $('#btnSave').prop('disabled', false);
+  setStatus('Success !!');
+});
+
+window.ipcEvent.on(EVENTS.SAVE_DATA_FAILED, ()=>{
+  $('#btnSave').prop('disabled', false);
+  setStatus('Failed !!');
+});
+
+window.ipcEvent.on(EVENTS.LOAD_CONFIG, (event, data)=>{
+  state = data;
+  Object.keys(state).map((keyname) => {
+    let $ele = $(`*[name="${keyname}"]`);
+    let value = state[keyname];
+
+    switch ($ele.attr('type')) {
+    case 'checkbox':
+      $ele.on('change', onCheckChange)
+        .prop('checked', value);
+      break;
+    default:
+      $ele.on('change keyup', onTextChange)
+        .val(value);
+      break;
+    }
+  });
+
+  portNoDisableCheck();
+  setStatus('');
+  $('#btnSave').prop('disabled', false);
+});
+
+setStatus('Loading config...');
+window.ipcEvent.send(EVENTS.LOAD_CONFIG);
