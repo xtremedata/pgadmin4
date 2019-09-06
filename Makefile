@@ -19,6 +19,9 @@ all: docs pip src runtime
 appbundle: docs
 	./pkg/mac/build.sh
 
+appbundle-electron: docs
+	./pkg/mac/build-electron.sh
+
 install-node:
 	cd web && yarn install
 

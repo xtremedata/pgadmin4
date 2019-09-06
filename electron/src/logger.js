@@ -1,5 +1,6 @@
 const winston = require('winston');
 const { format } = require('logform');
+const path = require('path');
 
 const pythonLogFormat = format.printf((info) => {
   return `[${info.label}] ${info.level}: ${info.message}`;
@@ -9,19 +10,21 @@ const electronLogFormat = format.printf((info) => {
 });
 
 const createLogger = function(logFilePath, logFormat='', level='debug') {
-  let formatObj = null;
+  let formatObj = null, fileName = null;
 
   if(logFormat === 'python') {
     formatObj = format.combine(
       format.label({ label: 'PythonServer' }),
       pythonLogFormat,
     );
+    fileName = path.join(logFilePath, 'pgadmin.log');
   } else if(logFormat === 'electron') {
     formatObj = format.combine(
       format.label({ label: 'Electron' }),
       format.timestamp(),
       electronLogFormat,
     );
+    fileName = path.join(logFilePath, 'electron.log');
   }
 
   return winston.createLogger({
@@ -29,11 +32,17 @@ const createLogger = function(logFilePath, logFormat='', level='debug') {
     format: formatObj,
     transports: [
       new winston.transports.Console(),
-      new winston.transports.File({ filename: logFilePath }),
+      new winston.transports.File({ filename: fileName}),
     ],
   });
 };
 
-module.exports = {
-  createLogger,
+module.exports = function(logFilePath, level='debug') {
+  if(!logFilePath) {
+    logFilePath = '.';
+  }
+  return {
+    electronLogger: createLogger(logFilePath, 'electron', level),
+    pythonAppLogger: createLogger(logFilePath, 'python', level),
+  };
 };

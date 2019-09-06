@@ -1,0 +1,4 @@
+provider: generic
+url: 'http://0.0.0.0:8000/'
+channel: latest
+updaterCacheDirName: pgadmin-updater

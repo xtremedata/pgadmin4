@@ -28,6 +28,7 @@ module.exports = {
     'module': true,
     '__dirname': true,
     'process': true,
+    'setImmediate': true,
   },
   'rules': {
     'indent': [

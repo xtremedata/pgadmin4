@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { electronLogger } = require('./logger');
+var logger = console;
 
 function checkIfPythonServerIsAvailable(serverAddress) {
   return axios.get(serverAddress)
@@ -31,14 +31,17 @@ function waitForPythonServerToBeAvailable(serverAddress, functionToExecuteWhenAp
       if (isAvailable) {
         return functionToExecuteWhenApplicationIsUp();
       }
-      electronLogger.error('Server not available, waiting.....');
+      logger.error('Server not available, waiting.....');
       return delayedCheckIfServerIsAvailable(serverAddress, functionToExecuteWhenApplicationIsUp);
     })
     .catch((error) => {
-      electronLogger.error(`Error waiting for python server availability: ${error}\n ${error.stack}`);
+      logger.error(`Error waiting for python server availability: ${error}\n ${error.stack}`);
     });
 }
 
-module.exports = {
-  waitForPythonServerToBeAvailable,
+module.exports = function(_logger) {
+  if(_logger) {
+    logger = _logger;
+  }
+  return waitForPythonServerToBeAvailable;
 };

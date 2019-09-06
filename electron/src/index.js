@@ -2,22 +2,31 @@ const electron = require('electron');
 const { globalShortcut, dialog } = require('electron');
 const crypto = require('crypto');
 const net = require('net');
-
-const app = electron.app;
-const BrowserWindow = electron.BrowserWindow;
 const path = require('path');
-const waitForPythonServerToBeAvailable = require('./check_python_server');
 const childProcess = require('child_process');
-const { createLogger } = require('./logger');
-const { EVENTS, CONFIG_FILENAME } = require('./constants');
-const {ipcEventMain} = require('./ipc_event');
+
+/* pgAdmin */
+const app = electron.app;
+
+/* In dev mode, prebuilt electron is used. So getVersion
+ * returns version of electron and not the actual app
+ */
+if(process.env.ENV === 'dev') {
+  const version = require('../package.json').version;
+  app.getVersion = ()=> version;
+}
+
+const BrowserWindow = electron.BrowserWindow;
+var {ConfigureStore} = require('./configure_store');
 
 const APP_DATA_DIR = path.join(app.getPath('appData'),app.getName());
+const { EVENTS, CONFIG_FILENAME } = require('./constants');
 
-const electronLogger = createLogger(path.join(APP_DATA_DIR, 'electron.log'),'electron');
-const pythonAppLogger = createLogger(path.join(APP_DATA_DIR, 'pgAdmin.log'),'python');
+const {electronLogger, pythonAppLogger} = require('./logger')(APP_DATA_DIR, 'debug');
+const waitForPythonServerToBeAvailable = require('./check_python_server')(electronLogger);
 
-var {ConfigureStore} = require('./configure_store');
+const {ipcEventMain} = require('./ipc_event');
+const checkForUpdates = require('./updater')(electronLogger);
 
 var ipcEvent = ipcEventMain;
 
@@ -167,6 +176,12 @@ function createMainWindow() {
 
   appSubmenu.push(...[
     { type: 'separator' },
+    {
+      label: 'Check for updates',
+      click() {
+        checkForUpdates(arguments);
+      },
+    },
     {
       label: 'About pgAdmin',
       selector: 'orderFrontStandardAboutPanel:',
@@ -391,7 +406,7 @@ function createPyProc() {
           pythonAppLogger.info(`PYTHON: ${data}`);
         });
 
-        waitForPythonServerToBeAvailable.waitForPythonServerToBeAvailable(pythonApplicationUrl, () => {
+        waitForPythonServerToBeAvailable(pythonApplicationUrl, () => {
           electronLogger.debug('debug: Python server is Up, going to start the pgAdmin window');
           createMainWindow();
           electronLogger.debug('debug: closing the loading window');

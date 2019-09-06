@@ -1,6 +1,6 @@
 {
   "name": "pgAdmin",
-  "version": "4.0.5-dev",
+  "version": "4.10.0",
   "description": "pgAdmin is the most popular and feature rich Open Source administration and development platform for PostgreSQL, the most advanced Open Source database in the world.",
   "main": "src/index.js",
   "repository": "git.postgresql.org",
@@ -31,7 +31,7 @@
     "database"
   ],
   "build": {
-    "appId": "com.postgres.pgAdmin",
+    "appId": "org.postgresql.pgadmin",
     "productName": "pgAdmin",
     "asar": false,
     "mac": {
@@ -43,20 +43,27 @@
     },
     "nsis": {
       "perMachine": true
-    }
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "http://0.0.0.0:8000/"
+      }
+    ]
   },
   "dependencies": {
     "axios": "^0.18.0",
     "bootstrap": "^4.3.1",
     "cross-env": "^5.1.5",
     "electron-squirrel-startup": "^1.0.0",
+    "electron-updater": "^4.1.2",
     "jquery": "^3.3.1",
     "logform": "^1.6.0",
     "popper.js": "^1.15.0",
     "winston": "^3.0.0-rc5"
   },
   "devDependencies": {
-    "electron": "^6.0.1",
+    "electron": "^6.0.7",
     "electron-builder": "^21.2.0",
     "eslint": "^6.3.0"
   }
