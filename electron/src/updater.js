@@ -62,10 +62,11 @@ autoUpdater.on('checking-for-update', (event) => {
   logger.debug('Checking for update', event);
 });
 
-function checkForUpdates(menuItem) {
+function checkForUpdates(menuItem, feedURL='') {
   updater = menuItem;
   updater.enabled = false;
   logger.debug('Checking for updates...');
+  autoUpdater.setFeedURL(feedURL);
   autoUpdater.checkForUpdates();
 }
 

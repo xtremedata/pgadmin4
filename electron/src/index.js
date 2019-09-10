@@ -4,14 +4,16 @@ const crypto = require('crypto');
 const net = require('net');
 const path = require('path');
 const childProcess = require('child_process');
+const axios = require('axios');
 
 /* pgAdmin */
 const app = electron.app;
+const C = require('./constants');
 
 /* In dev mode, prebuilt electron is used. So getVersion
  * returns version of electron and not the actual app
  */
-if(process.env.ENV === 'dev') {
+if(C.IS_DEV) {
   const version = require('../package.json').version;
   app.getVersion = ()=> version;
 }
@@ -19,10 +21,7 @@ if(process.env.ENV === 'dev') {
 const BrowserWindow = electron.BrowserWindow;
 var {ConfigureStore} = require('./configure_store');
 
-const APP_DATA_DIR = path.join(app.getPath('appData'),app.getName());
-const { EVENTS, CONFIG_FILENAME } = require('./constants');
-
-const {electronLogger, pythonAppLogger} = require('./logger')(APP_DATA_DIR, 'debug');
+const {electronLogger, pythonAppLogger} = require('./logger')(C.APP_DATA_DIR, C.LOG_LEVEL);
 const waitForPythonServerToBeAvailable = require('./check_python_server')(electronLogger);
 
 const {ipcEventMain} = require('./ipc_event');
@@ -43,6 +42,7 @@ let pyProc = null;
 let activeWindow = null;
 let loadingWindow = null;
 let manualPyProcExit = false;
+let feedURL = null;
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require('electron-squirrel-startup')) { // eslint-disable-line global-require
@@ -163,7 +163,7 @@ function createMainWindow() {
     },
   ];
 
-  if (process.platform === 'darwin') {
+  if (C.OS_PLATFORM === 'darwin') {
     appSubmenu.push(...[
       { type: 'separator' },
       { role: 'services', submenu: [] },
@@ -179,7 +179,15 @@ function createMainWindow() {
     {
       label: 'Check for updates',
       click() {
-        checkForUpdates(arguments);
+        if(feedURL != null) {
+          checkForUpdates(arguments, feedURL);
+        } else {
+          electronLogger.debug('Feed URL not set: '+ feedURL);
+          showMessageBox(
+            'Upgrade feed URL info is not available',
+            'Upgrade', 'error'
+          );
+        }
       },
     },
     {
@@ -237,7 +245,7 @@ function handleConfigureClick() {
     title: 'Configure',
     resizable: false,
     minimizable: false,
-    maximizable: false,    
+    maximizable: false,
     webPreferences: {
       preload: path.resolve(__dirname, 'configure_preload.js'),
     },
@@ -245,15 +253,15 @@ function handleConfigureClick() {
   let confiUIPath = `file://${__dirname}/configure_ui.html`;
   let eventHandlers = {};
 
-  eventHandlers[EVENTS.LOAD_CONFIG] = () => {
-    electronLogger.debug(`Received ${EVENTS.LOAD_CONFIG}`);
-    configureWindow.webContents.send(EVENTS.LOAD_CONFIG, ConfigureStore.get_data_json());
+  eventHandlers[C.EVENTS.LOAD_CONFIG] = () => {
+    electronLogger.debug(`Received ${C.EVENTS.LOAD_CONFIG}`);
+    configureWindow.webContents.send(C.EVENTS.LOAD_CONFIG, ConfigureStore.get_data_json());
   };
-  eventHandlers[EVENTS.SAVE_CONFIG] = (event, data) => {
-    electronLogger.debug(`Received ${EVENTS.SAVE_CONFIG}`);
+  eventHandlers[C.EVENTS.SAVE_CONFIG] = (event, data) => {
+    electronLogger.debug(`Received ${C.EVENTS.SAVE_CONFIG}`);
     ConfigureStore.set(data);
     ConfigureStore.save();
-    configureWindow.webContents.send(EVENTS.SAVE_DATA_SUCCESS);
+    configureWindow.webContents.send(C.EVENTS.SAVE_DATA_SUCCESS);
   };
 
   configureWindow.on('focus', () => {
@@ -266,16 +274,16 @@ function handleConfigureClick() {
 
   configureWindow.on('close', () => {
     Object.keys(eventHandlers).forEach((event)=>{
-      ipcEvent.off(event, eventHandlers[event]);  
+      ipcEvent.off(event, eventHandlers[event]);
     });
   });
 
   /* Bind events */
   Object.keys(eventHandlers).forEach((event)=>{
-    ipcEvent.on(event, eventHandlers[event]);  
+    ipcEvent.on(event, eventHandlers[event]);
   });
-  
-  electronLogger.debug(`Settings - ${confiUIPath}`);  
+
+  electronLogger.debug(`Settings - ${confiUIPath}`);
   configureWindow.loadURL(confiUIPath);
 }
 
@@ -347,15 +355,41 @@ function exitPyProc() {
   }
 }
 
+function setUpradeFeedURL() {
+  var getFeedURL = function(version, os) {
+    let subUrl = C.DOWNLOAD_SUB_URL;
+    subUrl = subUrl.replace('${version}', version);
+    subUrl = subUrl.replace('${os}', os);
+    return  `${C.DOWNLOAD_BASE_URL}/${subUrl}`;
+  };
+
+  electronLogger.debug('Upgrade check URL:' + C.UPGRADE_CHECK_URL);
+
+  axios.get(C.UPGRADE_CHECK_URL)
+    .then((res) => {
+      electronLogger.debug('Upgrade check response:' + JSON.stringify(res.data));
+      let upgradeData = res.data;
+
+      if(upgradeData[C.UPGRADE_CHECK_KEY]) {
+        upgradeData = upgradeData[C.UPGRADE_CHECK_KEY];
+        feedURL = getFeedURL(upgradeData.version, C.OS_NAME);
+        electronLogger.debug(`Feed URL[${feedURL}]`);
+      }
+    })
+    .catch((error) => {
+      electronLogger.debug(error);
+    });
+}
+
 function createPyProc() {
   let sourceFolder = '..';
 
-  if (process.env.ENV === 'dev') {
+  if (C.IS_DEV) {
     sourceFolder = path.join('..', '..');
   }
   let pythonPath = '', appPath = '';
 
-  if (process.platform === 'win32') {
+  if (C.OS_PLATFORM === 'win32') {
     pythonPath = path.join(
       ConfigureStore.get('python_path', path.join(__dirname, sourceFolder, 'venv')),
       'python.exe'
@@ -423,10 +457,11 @@ function createPyProc() {
 }
 
 app.on('ready', () => {
-  if (process.env.ENV === 'DEV') {
-    session.defaultSession.clearCache(() => {
-    });
+  if (C.IS_DEV) {
+    session.defaultSession.clearCache(() => {});
   }
+
+  setUpradeFeedURL();
 
   const template = [{
     label: 'pgAdmin',
@@ -462,7 +497,7 @@ app.on('ready', () => {
           app.relaunch();
           app.quit();
         },
-      },      
+      },
       {
         label: 'Quit',
         accelerator: 'Command+Q',
@@ -487,7 +522,7 @@ app.on('ready', () => {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 
   try {
-    ConfigureStore.init(path.join(APP_DATA_DIR, CONFIG_FILENAME));
+    ConfigureStore.init(path.join(C.APP_DATA_DIR, C.CONFIG_FILENAME));
     electronLogger.debug('Config file : ' + ConfigureStore.getConfigFilePath());
     electronLogger.debug('Python path in config : ' + ConfigureStore.get('python_path'));
   } catch (error) {
