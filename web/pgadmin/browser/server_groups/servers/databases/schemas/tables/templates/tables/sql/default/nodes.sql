@@ -1,6 +1,6 @@
 SELECT rel.oid, rel.relname AS name,
     (SELECT count(*) FROM pg_trigger WHERE tgrelid=rel.oid) AS triggercount,
-    (SELECT count(*) FROM pg_trigger WHERE tgrelid=rel.oid AND tgenabled = 'O') AS has_enable_triggers,
+    (SELECT count(*) FROM pg_trigger WHERE tgrelid=rel.oid AND tgenabled is false) AS has_enable_triggers,
     (SELECT count(1) FROM pg_inherits WHERE inhrelid=rel.oid LIMIT 1) as is_inherits,
     (SELECT count(1) FROM pg_inherits WHERE inhparent=rel.oid LIMIT 1) as is_inherited
 FROM pg_class rel
