@@ -23,7 +23,7 @@ class DBX(ServerType):
         return "dbx.png"
 
     def instanceOf(self, ver):
-        return "dbX Database" in ver
+        return "PostgreSQL 8.1.2" in ver
 
 
 # Default Server Type

@@ -83,6 +83,16 @@ class Setting(db.Model):
     value = db.Column(db.String(1024))
 
 
+class DataGroup(db.Model):
+    """Define a data group for the treeview"""
+    __tablename__ = 'datagroup'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    name = db.Column(db.String(128), nullable=False)
+    __table_args__ = (db.UniqueConstraint('user_id', 'name'),)
+
+
 class ServerGroup(db.Model):
     """Define a server group for the treeview"""
     __tablename__ = 'servergroup'
