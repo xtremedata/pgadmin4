@@ -634,7 +634,7 @@ define('pgadmin.dashboard', [
           serverModule = require('pgadmin.node.server'),
           itemData = pgBrowser.tree.itemData(i);
 
-        while (itemData && itemData._type != 'server_group') {
+        while (itemData && itemData._type != 'server_group' && itemData._type != 'data_group') {
           i = pgBrowser.tree.next(i);
           itemData = pgBrowser.tree.itemData(i);
         }

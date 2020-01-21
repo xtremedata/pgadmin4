@@ -255,6 +255,7 @@ var webpackShimConfig = {
     'pgadmin.node.sequence': path.join(__dirname, './pgadmin/browser/server_groups/servers/databases/schemas/sequences/static/js/sequence'),
     'pgadmin.node.server': path.join(__dirname, './pgadmin/browser/server_groups/servers/static/js/server'),
     'pgadmin.node.server_group': path.join(__dirname, './pgadmin/browser/server_groups/static/js/server_group'),
+    'pgadmin.node.data_group': path.join(__dirname, './pgadmin/browser/data_groups/static/js/data_group'),
     'pgadmin.node.synonym': path.join(__dirname, './pgadmin/browser/server_groups/servers/databases/schemas/synonyms/static/js/synonym'),
     'pgadmin.node.table': path.join(__dirname, './pgadmin/browser/server_groups/servers/databases/schemas/tables/static/js/table'),
     'pgadmin.node.tablespace': path.join(__dirname, './pgadmin/browser/server_groups/servers/tablespaces/static/js/tablespace'),
