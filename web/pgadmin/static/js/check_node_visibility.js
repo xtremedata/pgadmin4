@@ -24,7 +24,7 @@ define(['jquery', 'underscore'],
 
       // Exclude non-applicable nodes
       var nodes_not_supported = [
-        'server_group', 'server', 'catalog_object_column',
+        'data_group', 'server_group', 'server', 'catalog_object_column',
       ];
       if(_.indexOf(nodes_not_supported, node_type) >= 0) {
         return true;

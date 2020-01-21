@@ -99,12 +99,12 @@ class DataGroupView(NodeView):
     def list(self):
         res = []
 
-        for sg in DataGroup.query.filter_by(
+        for dg in DataGroup.query.filter_by(
                 user_id=current_user.id
         ).order_by('name'):
             res.append({
-                'id': sg.id,
-                'name': sg.name
+                'id': dg.id,
+                'name': dg.name
             })
 
         return ajax_response(response=res, status=200)
@@ -118,9 +118,9 @@ class DataGroupView(NodeView):
         ).order_by("id")
 
         # if data group id is 1 we won't delete it.
-        sg = groups.first()
+        dg = groups.first()
 
-        if sg.id == gid:
+        if dg.id == gid:
             return make_json_response(
                 status=417,
                 success=0,
@@ -130,9 +130,9 @@ class DataGroupView(NodeView):
             )
 
         # There can be only one record at most
-        sg = groups.filter_by(id=gid).first()
+        dg = groups.filter_by(id=gid).first()
 
-        if sg is None:
+        if dg is None:
             return make_json_response(
                 status=410,
                 success=0,
@@ -142,7 +142,7 @@ class DataGroupView(NodeView):
             )
         else:
             try:
-                db.session.delete(sg)
+                db.session.delete(dg)
                 db.session.commit()
             except Exception as e:
                 db.session.rollback()
@@ -206,11 +206,11 @@ class DataGroupView(NodeView):
         """Update the data-group properties"""
 
         # There can be only one record at most
-        sg = DataGroup.query.filter_by(
+        dg = DataGroup.query.filter_by(
             user_id=current_user.id,
             id=gid).first()
 
-        if sg is None:
+        if dg is None:
             return make_json_response(
                 status=410,
                 success=0,
@@ -220,7 +220,7 @@ class DataGroupView(NodeView):
             )
         else:
             return ajax_response(
-                response={'id': sg.id, 'name': sg.name},
+                response={'id': dg.id, 'name': dg.name},
                 status=200
             )
 
@@ -232,20 +232,20 @@ class DataGroupView(NodeView):
         )
         if data[u'name'] != '':
             try:
-                sg = DataGroup(
+                dg = DataGroup(
                     user_id=current_user.id,
                     name=data[u'name'])
-                db.session.add(sg)
+                db.session.add(dg)
                 db.session.commit()
 
-                data[u'id'] = sg.id
-                data[u'name'] = sg.name
+                data[u'id'] = dg.id
+                data[u'name'] = dg.name
 
                 return jsonify(
                     node=self.blueprint.generate_browser_node(
-                        "%d" % sg.id,
+                        "%d" % dg.id,
                         None,
-                        sg.name,
+                        dg.name,
                         "icon-%s" % self.node_type,
                         True,
                         self.node_type,

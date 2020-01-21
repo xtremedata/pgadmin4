@@ -21,7 +21,7 @@ depends_on = None
 
 
 def upgrade():
-    db.engine.execute("ALTER TABLE user RENAME TO user_old")
+    db.engine.execute("ALTER TABLE user RENAME TO user_old;")
 
     db.engine.execute("""
         CREATE TABLE user (
@@ -42,9 +42,10 @@ def upgrade():
             id, email, password, active, confirmed_at
         ) SELECT
             id, email, password, active, confirmed_at
-        FROM user_old""")
+        FROM user_old;
+        """)
 
-    db.engine.execute("DROP TABLE user_old")
+    db.engine.execute("DROP TABLE user_old;")
 
 
 def downgrade():

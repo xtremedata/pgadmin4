@@ -373,29 +373,73 @@ def setup_db():
             os.chmod(config.SQLITE_PATH, 0o600)
 
 
+def init_db():
+    """Initializes the configuration database."""
+
+    create_app_data_directory(config)
+
+    app = create_app()
+
+    print(u"pgAdmin 4 - Application Initialisation")
+    print(u"======================================\n")
+
+    with app.app_context():
+        # Run migration for the first time i.e. create database
+        from config import SQLITE_PATH
+        if not os.path.exists(SQLITE_PATH):
+            db_init(app)
+        else:
+            raise Exception("DB seems initialized")
+
+
+def migrate_db():
+    """Create migrate scripts for the configuration database."""
+
+    create_app_data_directory(config)
+
+    app = create_app()
+
+    print(u"pgAdmin 4 - Application Initialisation")
+    print(u"======================================\n")
+
+    with app.app_context():
+        # Run migration for the first time i.e. create database
+        from config import SQLITE_PATH
+        if not os.path.exists(SQLITE_PATH):
+            db_init(app)
+
+        db_migrate(app)
+
+
 if __name__ == '__main__':
     # Configuration settings
     import config
     from pgadmin.model import SCHEMA_VERSION
-    from pgadmin.setup import db_upgrade, create_app_data_directory
+    from pgadmin.setup import db_init, db_migrate, db_upgrade, create_app_data_directory
 
     parser = argparse.ArgumentParser(description='Setup the pgAdmin config DB')
 
-    imp_exp_group = parser.add_mutually_exclusive_group(required=False)
+    cmd_group = parser.add_mutually_exclusive_group(required=False)
 
-    exp_group = imp_exp_group.add_argument_group('Dump server config')
+    cmd_group.add_argument('--user', metavar="USER_NAME",
+            help='Load/dump servers for the specified '
+            'username', required=False)
+
+    exp_group = cmd_group.add_argument_group('Dump server config')
     exp_group.add_argument('--dump-servers', metavar="OUTPUT_FILE",
-                           help='Dump the servers in the DB', required=False)
+            help='Dump the servers in the DB', required=False)
     exp_group.add_argument('--servers', metavar="SERVERS", nargs='*',
-                           help='One or more servers to dump', required=False)
+            help='One or more servers to dump', required=False)
 
-    imp_group = imp_exp_group.add_argument_group('Load server config')
+    imp_group = cmd_group.add_argument_group('Load server config')
     imp_group.add_argument('--load-servers', metavar="INPUT_FILE",
-                           help='Load servers into the DB', required=False)
+            help='Load servers into the DB', required=False)
 
-    imp_exp_group.add_argument('--user', metavar="USER_NAME",
-                               help='Dump/load servers for the specified '
-                                    'username', required=False)
+    init_group = cmd_group.add_argument_group('Initialize configuration database')
+    init_group.add_argument('--init-db', action='store_true', help='Initialize configuration database ')
+
+    migrate_group = cmd_group.add_argument_group('Initialize configuration database')
+    migrate_group.add_argument('--migrate-db', action='store_true', help='Initialize configuration database ')
 
     args, extra = parser.parse_known_args()
 
@@ -409,5 +453,9 @@ if __name__ == '__main__':
         dump_servers(args)
     elif args.load_servers is not None:
         load_servers(args)
+    elif args.init_db:
+        init_db()
+    elif args.migrate_db:
+        migrate_db()
     else:
         setup_db()
