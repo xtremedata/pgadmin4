@@ -14,7 +14,7 @@ import argparse
 import json
 import os
 import sys
-from pgadmin.model import db, User, Version, ServerGroup, Server, \
+from pgadmin.model import db, User, Version, DataGroup, ServerGroup, Server, \
     SCHEMA_VERSION as CURRENT_SCHEMA_VERSION
 
 if sys.version_info[0] >= 3:

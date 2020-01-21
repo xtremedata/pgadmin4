@@ -29,6 +29,7 @@ from werkzeug.local import LocalProxy
 from werkzeug.utils import find_modules
 
 from pgadmin.model import db, Role, Server, ServerGroup, \
+    DataGroup, \
     User, Keys, Version, SCHEMA_VERSION as CURRENT_SCHEMA_VERSION
 from pgadmin.utils import PgAdminModule, driver, KeyManager
 from pgadmin.utils.preferences import Preferences
