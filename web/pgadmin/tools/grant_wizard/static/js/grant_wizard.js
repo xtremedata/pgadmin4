@@ -437,7 +437,7 @@ define([
                 node_(node name), node_type(node type)
                 and pass it to collection which will fetch Object Type properties.
               */
-              var gid = info['server_group']._id,
+              var gid = 'server_group' in info ? info['server_group']._id : info['data_group']._id,
                 sid = info.server._id,
                 did = info.database._id,
                 node_id = d._id,

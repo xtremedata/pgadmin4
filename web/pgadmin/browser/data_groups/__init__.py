@@ -38,7 +38,7 @@ class DataGroupModule(BrowserPluginModule):
                 "%d" % (group.id), None,
                 group.name,
                 "icon-%s" % self.node_type,
-                True,
+                False,
                 self.node_type,
                 can_delete=True if idx > 0 else False
             )

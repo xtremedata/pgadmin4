@@ -241,6 +241,10 @@ def create():
         server_group = ServerGroup(user_id=usr.id, name="Servers")
         db.session.add(server_group)
         db.session.commit()
+        # Add default data group for new user.
+        data_group = DataGroup(user_id=usr.id, name="Datas")
+        db.session.add(data_group)
+        db.session.commit()
     except Exception as e:
         return internal_server_error(errormsg=str(e))
 
