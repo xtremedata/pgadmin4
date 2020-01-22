@@ -93,6 +93,26 @@ class DataGroup(db.Model):
     __table_args__ = (db.UniqueConstraint('user_id', 'name'),)
 
 
+class DataSource(db.Model):
+    """Define a file type data source for the treeview"""
+    __tablename__ = 'datasource'
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    datagroup_id = db.Column( db.Integer, db.ForeignKey('datagroup.id'), nullable=False)
+
+    name = db.Column(db.String(128), nullable=False)
+    ds_type = db.Column(
+            db.String(16), 
+            db.CheckConstraint("ds_type IN ('S3')"),
+            nullable=False)
+    key_name = db.Column(
+            db.String(128),
+            nullable=False)
+    key_secret = db.Column(
+            db.String(256),
+            nullable=False)
+
+
 class ServerGroup(db.Model):
     """Define a server group for the treeview"""
     __tablename__ = 'servergroup'
