@@ -9,22 +9,22 @@
 
 import simplejson as json
 import re
-import pgadmin.browser.server_groups as sg
+import pgadmin.browser.datasource_groups as sg
 from flask import render_template, request, make_response, jsonify, \
     current_app, url_for
 from flask_babelex import gettext
 from flask_security import current_user, login_required
-from pgadmin.browser.server_groups.servers.types import ServerType
+from pgadmin.browser.datasource_groups.datasources.types import DataSourceType
 from pgadmin.browser.utils import PGChildNodeView
 from pgadmin.utils.ajax import make_json_response, bad_request, forbidden, \
-    make_response as ajax_response, internal_server_error, unauthorized, gone
+    make_response as ajax_response, internal_datasource_error, unauthorized, gone
 from pgadmin.utils.crypto import encrypt, decrypt, pqencryptpassword
 from pgadmin.utils.menu import MenuItem
 from pgadmin.tools.sqleditor.utils.query_history import QueryHistory
 
 import config
 from config import PG_DEFAULT_DRIVER
-from pgadmin.model import db, Server, ServerGroup, User
+from pgadmin.model import db, DataSource, DataGroup, User
 from pgadmin.utils.driver import get_driver
 from pgadmin.utils.master_password import get_crypt_key
 from pgadmin.utils.exception import CryptKeyMissing
@@ -49,56 +49,43 @@ def has_any(data, keys):
     return False
 
 
-def recovery_state(connection, postgres_version):
-    recovery_check_sql = render_template(
-        "connect/sql/#{0}#/check_recovery.sql".format(postgres_version))
 
-    status, result = connection.execute_dict(recovery_check_sql)
-    if status and 'rows' in result and len(result['rows']) > 0:
-        in_recovery = result['rows'][0]['inrecovery']
-        wal_paused = result['rows'][0]['isreplaypaused']
-    else:
-        in_recovery = None
-        wal_paused = None
-    return status, result, in_recovery, wal_paused
-
-
-def server_icon_and_background(is_connected, manager, server):
+def datasource_icon_and_background(is_connected, manager, datasource):
     """
 
     Args:
-        is_connected: Flag to check if server is connected
+        is_connected: Flag to check if datasource is connected
         manager: Connection manager
-        server: Sever object
+        datasource: Sever object
 
     Returns:
-        Server Icon CSS class
+        DataSource Icon CSS class
     """
-    server_background_color = ''
-    if server and server.bgcolor:
-        server_background_color = ' {0}'.format(
-            server.bgcolor
+    datasource_background_color = ''
+    if datasource and datasource.bgcolor:
+        datasource_background_color = ' {0}'.format(
+            datasource.bgcolor
         )
         # If user has set font color also
-        if server.fgcolor:
-            server_background_color = '{0} {1}'.format(
-                server_background_color,
-                server.fgcolor
+        if datasource.fgcolor:
+            datasource_background_color = '{0} {1}'.format(
+                datasource_background_color,
+                datasource.fgcolor
             )
 
     if is_connected:
         return 'icon-{0}{1}'.format(
-            manager.server_type, server_background_color
+            manager.datasource_type, datasource_background_color
         )
     else:
-        return 'icon-server-not-connected{0}'.format(
-            server_background_color
+        return 'icon-datasource-not-connected{0}'.format(
+            datasource_background_color
         )
 
 
-class ServerModule(sg.ServerGroupPluginModule):
-    NODE_TYPE = "server"
-    LABEL = gettext("Servers")
+class DataSourceModule(sg.DataGroupPluginModule):
+    NODE_TYPE = "datasource"
+    LABEL = gettext("DataSources")
 
     @property
     def node_type(self):
@@ -107,20 +94,20 @@ class ServerModule(sg.ServerGroupPluginModule):
     @property
     def script_load(self):
         """
-        Load the module script for server, when any of the server-group node is
+        Load the module script for datasource, when any of the data-group node is
         initialized.
         """
-        return sg.ServerGroupModule.NODE_TYPE
+        return sg.DataGroupModule.NODE_TYPE
 
     @login_required
     def get_nodes(self, gid):
-        """Return a JSON document listing the server groups for the user"""
-        servers = Server.query.filter_by(user_id=current_user.id,
-                                         servergroup_id=gid)
+        """Return a JSON document listing the data groups for the user"""
+        datasources = DataSource.query.filter_by(user_id=current_user.id,
+                                         datagroup_id=gid)
 
         driver = get_driver(PG_DEFAULT_DRIVER)
 
-        for server in servers:
+        for datasource in datasources:
             connected = False
             manager = None
             errmsg = None
@@ -128,7 +115,7 @@ class ServerModule(sg.ServerGroupPluginModule):
             in_recovery = None
             wal_paused = None
             try:
-                manager = driver.connection_manager(server.id)
+                manager = driver.connection_manager(datasource.id)
                 conn = manager.connection()
                 was_connected = conn.wasConnected
             except CryptKeyMissing:
@@ -139,23 +126,23 @@ class ServerModule(sg.ServerGroupPluginModule):
                 errmsg = str(e)
 
             yield self.generate_browser_node(
-                "%d" % (server.id),
+                "%d" % (datasource.id),
                 gid,
-                server.name,
-                server_icon_and_background(connected, manager, server),
+                datasource.name,
+                datasource_icon_and_background(connected, manager, datasource),
                 True,
                 self.NODE_TYPE,
                 connected=connected,
-                server_type=manager.server_type if connected else "pg",
+                datasource_type=manager.datasource_type if connected else "pg",
                 version=manager.version,
                 db=manager.db,
                 user=manager.user_info if connected else None,
                 in_recovery=in_recovery,
                 wal_pause=wal_paused,
-                is_password_saved=True if server.password is not None
+                is_password_saved=True if datasource.password is not None
                 else False,
                 is_tunnel_password_saved=True
-                if server.tunnel_password is not None else False,
+                if datasource.tunnel_password is not None else False,
                 was_connected=was_connected,
                 errmsg=errmsg
             )
@@ -169,12 +156,12 @@ class ServerModule(sg.ServerGroupPluginModule):
         """
         Returns a snippet of css to include in the page
         """
-        snippets = [render_template("css/servers.css")]
+        snippets = [render_template("css/datasources.css")]
 
         for submodule in self.submodules:
             snippets.extend(submodule.csssnippets)
 
-        for st in ServerType.types():
+        for st in DataSourceType.types():
             snippets.extend(st.csssnippets)
 
         return snippets
@@ -183,23 +170,23 @@ class ServerModule(sg.ServerGroupPluginModule):
         scripts = []
 
         scripts.extend([{
-            'name': 'pgadmin.browser.server.privilege',
+            'name': 'pgadmin.browser.datasource.privilege',
             'path': url_for('%s.static' % self.name, filename='js/privilege'),
             'when': self.node_type,
             'is_template': False,
             'deps': ['pgadmin.browser.node.ui']
         }, {
-            'name': 'pgadmin.browser.server.variable',
+            'name': 'pgadmin.browser.datasource.variable',
             'path': url_for('%s.static' % self.name, filename='js/variable'),
             'when': self.node_type,
             'is_template': False
         }, {
-            'name': 'pgadmin.server.supported_servers',
-            'path': url_for('browser.index') + 'server/supported_servers',
+            'name': 'pgadmin.datasource.supported_datasources',
+            'path': url_for('browser.index') + 'datasource/supported_datasources',
             'is_template': True,
             'when': self.node_type
         }])
-        scripts.extend(sg.ServerGroupPluginModule.get_own_javascripts(self))
+        scripts.extend(sg.DataGroupPluginModule.get_own_javascripts(self))
 
         return scripts
 
@@ -215,32 +202,32 @@ class ServerModule(sg.ServerGroupPluginModule):
             app.jinja_env.filters['qtTypeIdent'] = driver.qtTypeIdent
             app.jinja_env.filters['hasAny'] = has_any
 
-        super(ServerModule, self).register(app, options, first_registration)
+        super(DataSourceModule, self).register(app, options, first_registration)
 
-    # We do not have any preferences for server node.
+    # We do not have any preferences for datasource node.
     def register_preferences(self):
         """
         register_preferences
         Override it so that - it does not register the show_node preference for
-        server type.
+        datasource type.
         """
-        ServerType.register_preferences()
+        DataSourceType.register_preferences()
 
     def get_exposed_url_endpoints(self):
-        return ['NODE-server.connect_id']
+        return ['NODE-datasource.connect_id']
 
 
-class ServerMenuItem(MenuItem):
+class DataSourceMenuItem(MenuItem):
     def __init__(self, **kwargs):
-        kwargs.setdefault("type", ServerModule.NODE_TYPE)
-        super(ServerMenuItem, self).__init__(**kwargs)
+        kwargs.setdefault("type", DataSourceModule.NODE_TYPE)
+        super(DataSourceMenuItem, self).__init__(**kwargs)
 
 
-blueprint = ServerModule(__name__)
+blueprint = DataSourceModule(__name__)
 
 
-class ServerNode(PGChildNodeView):
-    node_type = ServerModule.NODE_TYPE
+class DataSourceNode(PGChildNodeView):
+    node_type = DataSourceModule.NODE_TYPE
 
     parent_ids = [{'type': 'int', 'id': 'gid'}]
     ids = [{'type': 'int', 'id': 'sid'}]
@@ -256,7 +243,7 @@ class ServerNode(PGChildNodeView):
         'dependency': [{'get': 'dependencies'}],
         'dependent': [{'get': 'dependents'}],
         'children': [{'get': 'children'}],
-        'supported_servers.js': [{}, {}, {'get': 'supported_servers'}],
+        'supported_datasources.js': [{}, {}, {'get': 'supported_datasources'}],
         'reload':
             [{'get': 'reload_configuration'}],
         'restore_point':
@@ -318,16 +305,16 @@ class ServerNode(PGChildNodeView):
                 'sslcert', 'sslkey', 'sslrootcert', 'sslcrl', 'sslcompression'
             ]
             # Required SSL fields for SERVER mode from user
-            required_ssl_fields_server_mode = ['sslcert', 'sslkey']
+            required_ssl_fields_datasource_mode = ['sslcert', 'sslkey']
 
             for field in ssl_fields:
                 if field not in data:
-                    # In Server mode,
+                    # In DataSource mode,
                     # we will set dummy SSL certificate file path which will
-                    # prevent using default SSL certificates from web servers
+                    # prevent using default SSL certificates from web datasources
 
                     if config.SERVER_MODE and \
-                            field in required_ssl_fields_server_mode:
+                            field in required_ssl_fields_datasource_mode:
                         # Set file manager directory from preference
                         import os
                         file_extn = '.key' if field.endswith('key') else '.crt'
@@ -346,16 +333,16 @@ class ServerNode(PGChildNodeView):
     def nodes(self, gid):
         res = []
         """
-        Return a JSON document listing the servers under this server group
+        Return a JSON document listing the datasources under this datasource group
         for the user.
         """
-        servers = Server.query.filter_by(user_id=current_user.id,
-                                         servergroup_id=gid)
+        datasources = DataSource.query.filter_by(user_id=current_user.id,
+                                         datagroup_id=gid)
 
         driver = get_driver(PG_DEFAULT_DRIVER)
 
-        for server in servers:
-            manager = driver.connection_manager(server.id)
+        for datasource in datasources:
+            manager = driver.connection_manager(datasource.id)
             conn = manager.connection()
             connected = conn.connected()
             errmsg = None
@@ -367,57 +354,57 @@ class ServerNode(PGChildNodeView):
                 if not status:
                     connected = False
                     manager.release()
-                    errmsg = "{0} : {1}".format(server.name, result)
+                    errmsg = "{0} : {1}".format(datasource.name, result)
 
             res.append(
                 self.blueprint.generate_browser_node(
-                    "%d" % (server.id),
+                    "%d" % (datasource.id),
                     gid,
-                    server.name,
-                    server_icon_and_background(connected, manager, server),
+                    datasource.name,
+                    datasource_icon_and_background(connected, manager, datasource),
                     True,
                     self.node_type,
                     connected=connected,
-                    server_type=manager.server_type if connected else 'pg',
+                    datasource_type=manager.datasource_type if connected else 'pg',
                     version=manager.version,
                     db=manager.db,
                     user=manager.user_info if connected else None,
                     in_recovery=in_recovery,
                     wal_pause=wal_paused,
-                    is_password_saved=True if server.password is not None
+                    is_password_saved=True if datasource.password is not None
                     else False,
                     is_tunnel_password_saved=True
-                    if server.tunnel_password is not None else False,
+                    if datasource.tunnel_password is not None else False,
                     errmsg=errmsg
                 )
             )
 
         if not len(res):
             return gone(errormsg=gettext(
-                'The specified server group with id# {0} could not be found.'
+                'The specified datasource group with id# {0} could not be found.'
             ))
 
         return make_json_response(result=res)
 
     @login_required
     def node(self, gid, sid):
-        """Return a JSON document listing the server groups for the user"""
-        server = Server.query.filter_by(user_id=current_user.id,
-                                        servergroup_id=gid,
+        """Return a JSON document listing the datasource groups for the user"""
+        datasource = DataSource.query.filter_by(user_id=current_user.id,
+                                        datagroup_id=gid,
                                         id=sid).first()
 
-        if server is None:
+        if datasource is None:
             return make_json_response(
                 status=410,
                 success=0,
                 errormsg=gettext(
                     gettext(
-                        "Could not find the server with id# {0}."
+                        "Could not find the datasource with id# {0}."
                     ).format(sid)
                 )
             )
 
-        manager = get_driver(PG_DEFAULT_DRIVER).connection_manager(server.id)
+        manager = get_driver(PG_DEFAULT_DRIVER).connection_manager(datasource.id)
         conn = manager.connection()
         connected = conn.connected()
         errmsg = None
@@ -429,50 +416,50 @@ class ServerNode(PGChildNodeView):
             if not status:
                 connected = False
                 manager.release()
-                errmsg = "{0} : {1}".format(server.name, result)
+                errmsg = "{0} : {1}".format(datasource.name, result)
 
         return make_json_response(
             result=self.blueprint.generate_browser_node(
-                "%d" % (server.id),
+                "%d" % (datasource.id),
                 gid,
-                server.name,
-                server_icon_and_background(connected, manager, server),
+                datasource.name,
+                datasource_icon_and_background(connected, manager, datasource),
                 True,
                 self.node_type,
                 connected=connected,
-                server_type=manager.server_type if connected else 'pg',
+                datasource_type=manager.datasource_type if connected else 'pg',
                 version=manager.version,
                 db=manager.db,
                 user=manager.user_info if connected else None,
                 in_recovery=in_recovery,
                 wal_pause=wal_paused,
-                is_password_saved=True if server.password is not None
+                is_password_saved=True if datasource.password is not None
                 else False,
                 is_tunnel_password_saved=True
-                if server.tunnel_password is not None else False,
+                if datasource.tunnel_password is not None else False,
                 errmsg=errmsg
             ),
         )
 
     @login_required
     def delete(self, gid, sid):
-        """Delete a server node in the settings database."""
-        servers = Server.query.filter_by(user_id=current_user.id, id=sid)
+        """Delete a datasource node in the settings database."""
+        datasources = DataSource.query.filter_by(user_id=current_user.id, id=sid)
 
-        # TODO:: A server, which is connected, cannot be deleted
-        if servers is None:
+        # TODO:: A datasource, which is connected, cannot be deleted
+        if datasources is None:
             return make_json_response(
                 status=410,
                 success=0,
                 errormsg=gettext(
-                    'The specified server could not be found.\n'
+                    'The specified datasource could not be found.\n'
                     'Does the user have permission to access the '
-                    'server?'
+                    'datasource?'
                 )
             )
         else:
             try:
-                for s in servers:
+                for s in datasources:
                     get_driver(PG_DEFAULT_DRIVER).delete_manager(s.id)
                     db.session.delete(s)
                 db.session.commit()
@@ -486,22 +473,22 @@ class ServerNode(PGChildNodeView):
                     errormsg=e.message)
 
         return make_json_response(success=1,
-                                  info=gettext("Server deleted"))
+                                  info=gettext("DataSource deleted"))
 
     @login_required
     def update(self, gid, sid):
-        """Update the server settings"""
-        server = Server.query.filter_by(
+        """Update the datasource settings"""
+        datasource = DataSource.query.filter_by(
             user_id=current_user.id, id=sid).first()
 
-        if server is None:
+        if datasource is None:
             return make_json_response(
                 status=410,
                 success=0,
-                errormsg=gettext("Could not find the required server.")
+                errormsg=gettext("Could not find the required datasource.")
             )
 
-        # Not all parameters can be modified, while the server is connected
+        # Not all parameters can be modified, while the datasource is connected
         config_param_map = {
             'name': 'name',
             'host': 'host',
@@ -510,7 +497,7 @@ class ServerNode(PGChildNodeView):
             'db': 'maintenance_db',
             'username': 'username',
             'sslmode': 'ssl_mode',
-            'gid': 'servergroup_id',
+            'gid': 'datagroup_id',
             'comment': 'comment',
             'role': 'role',
             'db_res': 'db_res',
@@ -572,7 +559,7 @@ class ServerNode(PGChildNodeView):
                     return forbidden(
                         errormsg=gettext(
                             "'{0}' is not allowed to modify, "
-                            "when server is connected."
+                            "when datasource is connected."
                         ).format(disp_lbl[arg])
                     )
 
@@ -583,7 +570,7 @@ class ServerNode(PGChildNodeView):
                 # it manually to integer
                 if arg == 'sslcompression':
                     value = 1 if value else 0
-                setattr(server, config_param_map[arg], value)
+                setattr(datasource, config_param_map[arg], value)
                 idx += 1
 
         if idx == 0:
@@ -601,34 +588,34 @@ class ServerNode(PGChildNodeView):
                 errormsg=e.message
             )
 
-        # When server is connected, we don't require to update the connection
+        # When datasource is connected, we don't require to update the connection
         # manager. Because - we don't allow to change any of the parameters,
         # which will affect the connections.
         if not conn.connected():
-            manager.update(server)
+            manager.update(datasource)
 
         return jsonify(
             node=self.blueprint.generate_browser_node(
-                "%d" % (server.id), server.servergroup_id,
-                server.name,
-                server_icon_and_background(connected, manager, server),
+                "%d" % (datasource.id), datasource.datagroup_id,
+                datasource.name,
+                datasource_icon_and_background(connected, manager, datasource),
                 True,
                 self.node_type,
                 connected=connected,
                 user=manager.user_info if connected else None,
-                server_type='pg'  # default server type
+                datasource_type='pg'  # default datasource type
             )
         )
 
     @login_required
     def list(self, gid):
         """
-        Return list of attributes of all servers.
+        Return list of attributes of all datasources.
         """
-        servers = Server.query.filter_by(
+        datasources = DataSource.query.filter_by(
             user_id=current_user.id,
-            servergroup_id=gid).order_by(Server.name)
-        sg = ServerGroup.query.filter_by(
+            datagroup_id=gid).order_by(DataSource.name)
+        sg = DataGroup.query.filter_by(
             user_id=current_user.id,
             id=gid
         ).first()
@@ -636,26 +623,26 @@ class ServerNode(PGChildNodeView):
 
         driver = get_driver(PG_DEFAULT_DRIVER)
 
-        for server in servers:
-            manager = driver.connection_manager(server.id)
+        for datasource in datasources:
+            manager = driver.connection_manager(datasource.id)
             conn = manager.connection()
             connected = conn.connected()
 
             res.append({
-                'id': server.id,
-                'name': server.name,
-                'host': server.host,
-                'port': server.port,
-                'db': server.maintenance_db,
-                'username': server.username,
-                'gid': server.servergroup_id,
+                'id': datasource.id,
+                'name': datasource.name,
+                'host': datasource.host,
+                'port': datasource.port,
+                'db': datasource.maintenance_db,
+                'username': datasource.username,
+                'gid': datasource.datagroup_id,
                 'group-name': sg.name,
-                'comment': server.comment,
-                'role': server.role,
+                'comment': datasource.comment,
+                'role': datasource.role,
                 'connected': connected,
                 'version': manager.ver,
-                'server_type': manager.server_type if connected else 'pg',
-                'db_res': server.db_res.split(',') if server.db_res else None
+                'datasource_type': manager.datasource_type if connected else 'pg',
+                'db_res': datasource.db_res.split(',') if datasource.db_res else None
             })
 
         return ajax_response(
@@ -664,21 +651,21 @@ class ServerNode(PGChildNodeView):
 
     @login_required
     def properties(self, gid, sid):
-        """Return list of attributes of a server"""
-        server = Server.query.filter_by(
+        """Return list of attributes of a datasource"""
+        datasource = DataSource.query.filter_by(
             user_id=current_user.id,
             id=sid).first()
 
-        if server is None:
+        if datasource is None:
             return make_json_response(
                 status=410,
                 success=0,
-                errormsg=gettext("Could not find the required server.")
+                errormsg=gettext("Could not find the required datasource.")
             )
 
-        sg = ServerGroup.query.filter_by(
+        sg = DataGroup.query.filter_by(
             user_id=current_user.id,
-            id=server.servergroup_id
+            id=datasource.datagroup_id
         ).first()
 
         driver = get_driver(PG_DEFAULT_DRIVER)
@@ -687,56 +674,56 @@ class ServerNode(PGChildNodeView):
         conn = manager.connection()
         connected = conn.connected()
 
-        is_ssl = True if server.ssl_mode in self.SSL_MODES else False
+        is_ssl = True if datasource.ssl_mode in self.SSL_MODES else False
 
         return ajax_response(
             response={
-                'id': server.id,
-                'name': server.name,
-                'host': server.host,
-                'hostaddr': server.hostaddr,
-                'port': server.port,
-                'db': server.maintenance_db,
-                'username': server.username,
-                'gid': str(server.servergroup_id),
+                'id': datasource.id,
+                'name': datasource.name,
+                'host': datasource.host,
+                'hostaddr': datasource.hostaddr,
+                'port': datasource.port,
+                'db': datasource.maintenance_db,
+                'username': datasource.username,
+                'gid': str(datasource.datagroup_id),
                 'group-name': sg.name,
-                'comment': server.comment,
-                'role': server.role,
+                'comment': datasource.comment,
+                'role': datasource.role,
                 'connected': connected,
                 'version': manager.ver,
-                'sslmode': server.ssl_mode,
-                'server_type': manager.server_type if connected else 'pg',
-                'bgcolor': server.bgcolor,
-                'fgcolor': server.fgcolor,
-                'db_res': server.db_res.split(',') if server.db_res else None,
-                'passfile': server.passfile if server.passfile else None,
-                'sslcert': server.sslcert if is_ssl else None,
-                'sslkey': server.sslkey if is_ssl else None,
-                'sslrootcert': server.sslrootcert if is_ssl else None,
-                'sslcrl': server.sslcrl if is_ssl else None,
-                'sslcompression': True if is_ssl and server.sslcompression
+                'sslmode': datasource.ssl_mode,
+                'datasource_type': manager.datasource_type if connected else 'pg',
+                'bgcolor': datasource.bgcolor,
+                'fgcolor': datasource.fgcolor,
+                'db_res': datasource.db_res.split(',') if datasource.db_res else None,
+                'passfile': datasource.passfile if datasource.passfile else None,
+                'sslcert': datasource.sslcert if is_ssl else None,
+                'sslkey': datasource.sslkey if is_ssl else None,
+                'sslrootcert': datasource.sslrootcert if is_ssl else None,
+                'sslcrl': datasource.sslcrl if is_ssl else None,
+                'sslcompression': True if is_ssl and datasource.sslcompression
                 else False,
-                'service': server.service if server.service else None,
+                'service': datasource.service if datasource.service else None,
                 'connect_timeout':
-                    server.connect_timeout if server.connect_timeout else 0,
-                'use_ssh_tunnel': server.use_ssh_tunnel
-                if server.use_ssh_tunnel else 0,
-                'tunnel_host': server.tunnel_host if server.tunnel_host
+                    datasource.connect_timeout if datasource.connect_timeout else 0,
+                'use_ssh_tunnel': datasource.use_ssh_tunnel
+                if datasource.use_ssh_tunnel else 0,
+                'tunnel_host': datasource.tunnel_host if datasource.tunnel_host
                 else None,
-                'tunnel_port': server.tunnel_port if server.tunnel_port
+                'tunnel_port': datasource.tunnel_port if datasource.tunnel_port
                 else 22,
-                'tunnel_username': server.tunnel_username
-                if server.tunnel_username else None,
-                'tunnel_identity_file': server.tunnel_identity_file
-                if server.tunnel_identity_file else None,
-                'tunnel_authentication': server.tunnel_authentication
-                if server.tunnel_authentication else 0
+                'tunnel_username': datasource.tunnel_username
+                if datasource.tunnel_username else None,
+                'tunnel_identity_file': datasource.tunnel_identity_file
+                if datasource.tunnel_identity_file else None,
+                'tunnel_authentication': datasource.tunnel_authentication
+                if datasource.tunnel_authentication else 0
             }
         )
 
     @login_required
     def create(self, gid):
-        """Add a server node to the settings database"""
+        """Add a datasource node to the settings database"""
         required_args = [
             u'name',
             u'db',
@@ -782,12 +769,12 @@ class ServerNode(PGChildNodeView):
         # To check ssl configuration
         is_ssl, data = self.check_ssl_fields(data)
 
-        server = None
+        datasource = None
 
         try:
-            server = Server(
+            datasource = DataSource(
                 user_id=current_user.id,
-                servergroup_id=data.get('gid', gid),
+                datagroup_id=data.get('gid', gid),
                 name=data.get('name'),
                 host=data.get('host', None),
                 hostaddr=data.get('hostaddr', None),
@@ -815,7 +802,7 @@ class ServerNode(PGChildNodeView):
                 tunnel_authentication=data.get('tunnel_authentication', 0),
                 tunnel_identity_file=data.get('tunnel_identity_file', None)
             )
-            db.session.add(server)
+            db.session.add(datasource)
             db.session.commit()
 
             connected = False
@@ -824,8 +811,8 @@ class ServerNode(PGChildNodeView):
 
             if 'connect_now' in data and data['connect_now']:
                 manager = get_driver(PG_DEFAULT_DRIVER).connection_manager(
-                    server.id)
-                manager.update(server)
+                    datasource.id)
+                manager.update(datasource)
                 conn = manager.connection()
 
                 have_password = False
@@ -840,7 +827,7 @@ class ServerNode(PGChildNodeView):
                     password = encrypt(password, crypt_key)
                 elif 'passfile' in data and data["passfile"] != '':
                     passfile = data['passfile']
-                    setattr(server, 'passfile', passfile)
+                    setattr(datasource, 'passfile', passfile)
                     db.session.commit()
 
                 if 'tunnel_password' in data and data["tunnel_password"] != '':
@@ -853,30 +840,30 @@ class ServerNode(PGChildNodeView):
                     password=password,
                     passfile=passfile,
                     tunnel_password=tunnel_password,
-                    server_types=ServerType.types()
+                    datasource_types=DataSourceType.types()
                 )
                 if hasattr(str, 'decode') and errmsg is not None:
                     errmsg = errmsg.decode('utf-8')
                 if not status:
-                    db.session.delete(server)
+                    db.session.delete(datasource)
                     db.session.commit()
                     return make_json_response(
                         status=401,
                         success=0,
                         errormsg=gettext(
-                            u"Unable to connect to server:\n\n%s" % errmsg)
+                            u"Unable to connect to datasource:\n\n%s" % errmsg)
                     )
                 else:
                     if 'save_password' in data and data['save_password'] and \
                             have_password and config.ALLOW_SAVE_PASSWORD:
-                        setattr(server, 'password', password)
+                        setattr(datasource, 'password', password)
                         db.session.commit()
 
                     if 'save_tunnel_password' in data and \
                         data['save_tunnel_password'] and \
                         have_tunnel_password and \
                             config.ALLOW_SAVE_TUNNEL_PASSWORD:
-                        setattr(server, 'tunnel_password', tunnel_password)
+                        setattr(datasource, 'tunnel_password', tunnel_password)
                         db.session.commit()
 
                     user = manager.user_info
@@ -884,22 +871,22 @@ class ServerNode(PGChildNodeView):
 
             return jsonify(
                 node=self.blueprint.generate_browser_node(
-                    "%d" % server.id, server.servergroup_id,
-                    server.name,
-                    server_icon_and_background(connected, manager, server),
+                    "%d" % datasource.id, datasource.datagroup_id,
+                    datasource.name,
+                    datasource_icon_and_background(connected, manager, datasource),
                     True,
                     self.node_type,
                     user=user,
                     connected=connected,
-                    server_type=manager.server_type
-                    if manager and manager.server_type
+                    datasource_type=manager.datasource_type
+                    if manager and manager.datasource_type
                     else 'pg'
                 )
             )
 
         except Exception as e:
-            if server:
-                db.session.delete(server)
+            if datasource:
+                db.session.delete(datasource)
                 db.session.commit()
 
             current_app.logger.exception(e)
@@ -925,19 +912,19 @@ class ServerNode(PGChildNodeView):
         if conn.connected():
             status, res = conn.execute_dict(
                 render_template(
-                    "/servers/sql/#{0}#/stats.sql".format(manager.version),
+                    "/datasources/sql/#{0}#/stats.sql".format(manager.version),
                     conn=conn, _=gettext
                 )
             )
 
             if not status:
-                return internal_server_error(errormsg=res)
+                return internal_datasource_error(errormsg=res)
 
             return make_json_response(data=res)
 
         return make_json_response(
             info=gettext(
-                "Server has no active connection for generating statistics."
+                "DataSource has no active connection for generating statistics."
             )
         )
 
@@ -949,7 +936,7 @@ class ServerNode(PGChildNodeView):
     def dependents(self, gid, sid):
         return make_json_response(data='')
 
-    def supported_servers(self, **kwargs):
+    def supported_datasources(self, **kwargs):
         """
         This property defines (if javascript) exists for this node.
         Override this property for your own logic.
@@ -957,15 +944,15 @@ class ServerNode(PGChildNodeView):
 
         return make_response(
             render_template(
-                "servers/supported_servers.js",
-                server_types=ServerType.types()
+                "datasources/supported_datasources.js",
+                datasource_types=DataSourceType.types()
             ),
             200, {'Content-Type': 'application/javascript'}
         )
 
     def connect_status(self, gid, sid):
         """Check and return the connection status."""
-        server = Server.query.filter_by(id=sid).first()
+        datasource = DataSource.query.filter_by(id=sid).first()
         manager = get_driver(PG_DEFAULT_DRIVER).connection_manager(sid)
         conn = manager.connection()
         connected = conn.connected()
@@ -979,15 +966,15 @@ class ServerNode(PGChildNodeView):
             if not status:
                 connected = False
                 manager.release()
-                errmsg = "{0} : {1}".format(server.name, result)
+                errmsg = "{0} : {1}".format(datasource.name, result)
 
         return make_json_response(
             data={
-                'icon': server_icon_and_background(connected, manager, server),
+                'icon': datasource_icon_and_background(connected, manager, datasource),
                 'connected': connected,
                 'in_recovery': in_recovery,
                 'wal_pause': wal_paused,
-                'server_type': manager.server_type if connected else "pg",
+                'datasource_type': manager.datasource_type if connected else "pg",
                 'user': manager.user_info if connected else None,
                 'errmsg': errmsg
             }
@@ -995,28 +982,28 @@ class ServerNode(PGChildNodeView):
 
     def connect(self, gid, sid):
         """
-        Connect the Server and return the connection object.
+        Connect the DataSource and return the connection object.
         Verification Process before Connection:
-            Verify requested server.
+            Verify requested datasource.
 
-            Check the server password is already been stored in the
+            Check the datasource password is already been stored in the
             database or not.
-            If Yes, connect the server and return connection.
+            If Yes, connect the datasource and return connection.
             If No, Raise HTTP error and ask for the password.
 
             In case of 'Save Password' request from user, excrypted Pasword
-            will be stored in the respected server database and
-            establish the connection OR just connect the server and do not
+            will be stored in the respected datasource database and
+            establish the connection OR just connect the datasource and do not
             store the password.
         """
         current_app.logger.info(
-            'Connection Request for server#{0}'.format(sid)
+            'Connection Request for datasource#{0}'.format(sid)
         )
 
-        # Fetch Server Details
-        server = Server.query.filter_by(id=sid).first()
-        if server is None:
-            return bad_request(gettext("Server not found."))
+        # Fetch DataSource Details
+        datasource = DataSource.query.filter_by(id=sid).first()
+        if datasource is None:
+            return bad_request(gettext("DataSource not found."))
 
         if current_user and hasattr(current_user, 'id'):
             # Fetch User Details.
@@ -1038,7 +1025,7 @@ class ServerNode(PGChildNodeView):
         prompt_password = False
         prompt_tunnel_password = False
 
-        # Connect the Server
+        # Connect the DataSource
         manager = get_driver(PG_DEFAULT_DRIVER).connection_manager(sid)
         conn = manager.connection()
 
@@ -1047,13 +1034,13 @@ class ServerNode(PGChildNodeView):
         if not crypt_key_present:
             raise CryptKeyMissing
 
-        # If server using SSH Tunnel
-        if server.use_ssh_tunnel:
+        # If datasource using SSH Tunnel
+        if datasource.use_ssh_tunnel:
             if 'tunnel_password' not in data:
-                if server.tunnel_password is None:
+                if datasource.tunnel_password is None:
                     prompt_tunnel_password = True
                 else:
-                    tunnel_password = server.tunnel_password
+                    tunnel_password = datasource.tunnel_password
             else:
                 tunnel_password = data['tunnel_password'] \
                     if 'tunnel_password'in data else ''
@@ -1065,20 +1052,20 @@ class ServerNode(PGChildNodeView):
                 try:
                     tunnel_password = encrypt(tunnel_password, crypt_key) \
                         if tunnel_password is not None else \
-                        server.tunnel_password
+                        datasource.tunnel_password
                 except Exception as e:
                     current_app.logger.exception(e)
-                    return internal_server_error(errormsg=str(e))
+                    return internal_datasource_error(errormsg=str(e))
 
         if 'password' not in data:
             conn_passwd = getattr(conn, 'password', None)
-            if conn_passwd is None and server.password is None and \
-                    server.passfile is None and server.service is None:
+            if conn_passwd is None and datasource.password is None and \
+                    datasource.passfile is None and datasource.service is None:
                 prompt_password = True
-            elif server.passfile and server.passfile != '':
-                passfile = server.passfile
+            elif datasource.passfile and datasource.passfile != '':
+                passfile = datasource.passfile
             else:
-                password = conn_passwd or server.password
+                password = conn_passwd or datasource.password
         else:
             password = data['password'] if 'password' in data else None
             save_password = data['save_password']\
@@ -1088,16 +1075,16 @@ class ServerNode(PGChildNodeView):
             # password key.
             try:
                 password = encrypt(password, crypt_key) \
-                    if password is not None else server.password
+                    if password is not None else datasource.password
             except Exception as e:
                 current_app.logger.exception(e)
-                return internal_server_error(errormsg=str(e))
+                return internal_datasource_error(errormsg=str(e))
 
-        # Check do we need to prompt for the database server or ssh tunnel
+        # Check do we need to prompt for the database datasource or ssh tunnel
         # password or both. Return the password template in case password is
         # not provided, or password has not been saved earlier.
         if prompt_password or prompt_tunnel_password:
-            return self.get_response_for_password(server, 428, prompt_password,
+            return self.get_response_for_password(datasource, 428, prompt_password,
                                                   prompt_tunnel_password)
 
         status = True
@@ -1106,86 +1093,86 @@ class ServerNode(PGChildNodeView):
                 password=password,
                 passfile=passfile,
                 tunnel_password=tunnel_password,
-                server_types=ServerType.types()
+                datasource_types=DataSourceType.types()
             )
         except OperationalError as e:
-            return internal_server_error(errormsg=str(e))
+            return internal_datasource_error(errormsg=str(e))
         except Exception as e:
             current_app.logger.exception(e)
             return self.get_response_for_password(
-                server, 401, True, True, getattr(e, 'message', str(e)))
+                datasource, 401, True, True, getattr(e, 'message', str(e)))
 
         if not status:
             if hasattr(str, 'decode'):
                 errmsg = errmsg.decode('utf-8')
 
             current_app.logger.error(
-                "Could not connect to server(#{0}) - '{1}'.\nError: {2}"
-                .format(server.id, server.name, errmsg)
+                "Could not connect to datasource(#{0}) - '{1}'.\nError: {2}"
+                .format(datasource.id, datasource.name, errmsg)
             )
-            return self.get_response_for_password(server, 401, True,
+            return self.get_response_for_password(datasource, 401, True,
                                                   True, errmsg)
         else:
             if save_password and config.ALLOW_SAVE_PASSWORD:
                 try:
                     # Save the encrypted password using the user's login
                     # password key.
-                    setattr(server, 'password', password)
+                    setattr(datasource, 'password', password)
                     db.session.commit()
                 except Exception as e:
                     # Release Connection
                     current_app.logger.exception(e)
-                    manager.release(database=server.maintenance_db)
+                    manager.release(database=datasource.maintenance_db)
                     conn = None
 
-                    return internal_server_error(errormsg=e.message)
+                    return internal_datasource_error(errormsg=e.message)
 
             if save_tunnel_password and config.ALLOW_SAVE_TUNNEL_PASSWORD:
                 try:
                     # Save the encrypted tunnel password.
-                    setattr(server, 'tunnel_password', tunnel_password)
+                    setattr(datasource, 'tunnel_password', tunnel_password)
                     db.session.commit()
                 except Exception as e:
                     # Release Connection
                     current_app.logger.exception(e)
-                    manager.release(database=server.maintenance_db)
+                    manager.release(database=datasource.maintenance_db)
                     conn = None
 
-                    return internal_server_error(errormsg=e.message)
+                    return internal_datasource_error(errormsg=e.message)
 
-            current_app.logger.info('Connection Established for server: \
-                %s - %s' % (server.id, server.name))
-            # Update the recovery and wal pause option for the server
+            current_app.logger.info('Connection Established for datasource: \
+                %s - %s' % (datasource.id, datasource.name))
+            # Update the recovery and wal pause option for the datasource
             # if connected successfully
             _, _, in_recovery, wal_paused =\
                 recovery_state(conn, manager.version)
 
             return make_json_response(
                 success=1,
-                info=gettext("Server connected."),
+                info=gettext("DataSource connected."),
                 data={
-                    'icon': server_icon_and_background(True, manager, server),
+                    'icon': datasource_icon_and_background(True, manager, datasource),
                     'connected': True,
-                    'server_type': manager.server_type,
-                    'type': manager.server_type,
+                    'datasource_type': manager.datasource_type,
+                    'type': manager.datasource_type,
                     'version': manager.version,
                     'db': manager.db,
                     'user': manager.user_info,
                     'in_recovery': in_recovery,
                     'wal_pause': wal_paused,
-                    'is_password_saved': True if server.password is not None
+                    'is_password_saved': True if datasource.password is not None
                     else False,
                     'is_tunnel_password_saved': True
-                    if server.tunnel_password is not None else False,
+                    if datasource.tunnel_password is not None else False,
                 }
             )
 
     def disconnect(self, gid, sid):
-        """Disconnect the Server."""
+        """Disconnect the DataSource."""
 
-        server = Server.query.filter_by(id=sid).first()
-        if server is None:
-            return bad_request(gettext("Server not found."))
+        datasource = DataSource.query.filter_by(id=sid).first()
+        if datasource is None:
+            return bad_request(gettext("DataSource not found."))
 
         # Release Connection
         manager = get_driver(PG_DEFAULT_DRIVER).connection_manager(sid)
@@ -1193,52 +1180,52 @@ class ServerNode(PGChildNodeView):
         status = manager.release()
 
         if not status:
-            return unauthorized(gettext("Server could not be disconnected."))
+            return unauthorized(gettext("DataSource could not be disconnected."))
         else:
             return make_json_response(
                 success=1,
-                info=gettext("Server disconnected."),
+                info=gettext("DataSource disconnected."),
                 data={
-                    'icon': server_icon_and_background(False, manager, server),
+                    'icon': datasource_icon_and_background(False, manager, datasource),
                     'connected': False
                 }
             )
 
     def reload_configuration(self, gid, sid):
-        """Reload the server configuration"""
+        """Reload the datasource configuration"""
 
-        # Reload the server configurations
+        # Reload the datasource configurations
         manager = get_driver(PG_DEFAULT_DRIVER).connection_manager(sid)
         conn = manager.connection()
 
         if conn.connected():
-            # Execute the command for reload configuration for the server
+            # Execute the command for reload configuration for the datasource
             status, rid = conn.execute_scalar("SELECT pg_reload_conf();")
 
             if not status:
-                return internal_server_error(
-                    gettext("Could not reload the server configuration.")
+                return internal_datasource_error(
+                    gettext("Could not reload the datasource configuration.")
                 )
             else:
                 return make_json_response(data={
                     'status': True,
-                    'result': gettext('Server configuration reloaded.')
+                    'result': gettext('DataSource configuration reloaded.')
                 })
 
         else:
             return make_json_response(data={
                 'status': False,
                 'result': gettext(
-                    'Not connected to the server or the connection to the'
-                    ' server has been closed.')})
+                    'Not connected to the datasource or the connection to the'
+                    ' datasource has been closed.')})
 
     def create_restore_point(self, gid, sid):
         """
         This method will creates named restore point
 
         Args:
-            gid: Server group ID
-            sid: Server ID
+            gid: DataSource group ID
+            sid: DataSource ID
 
         Returns:
             None
@@ -1258,7 +1245,7 @@ class ServerNode(PGChildNodeView):
                         )
                     )
                 if not status:
-                    return internal_server_error(
+                    return internal_datasource_error(
                         errormsg=str(res)
                     )
 
@@ -1274,25 +1261,25 @@ class ServerNode(PGChildNodeView):
             current_app.logger.error(
                 'Named restore point creation failed ({0})'.format(str(e))
             )
-            return internal_server_error(errormsg=str(e))
+            return internal_datasource_error(errormsg=str(e))
 
     def change_password(self, gid, sid):
         """
         This function is used to change the password of the
-        Database Server.
+        Database DataSource.
 
         Args:
             gid: Group id
-            sid: Server id
+            sid: DataSource id
         """
         try:
             data = json.loads(request.form['data'], encoding='utf-8')
             crypt_key = get_crypt_key()[1]
 
-            # Fetch Server Details
-            server = Server.query.filter_by(id=sid).first()
-            if server is None:
-                return bad_request(gettext("Server not found."))
+            # Fetch DataSource Details
+            datasource = DataSource.query.filter_by(id=sid).first()
+            if datasource is None:
+                return bad_request(gettext("DataSource not found."))
 
             # Fetch User Details.
             user = User.query.filter_by(id=current_user.id).first()
@@ -1303,12 +1290,12 @@ class ServerNode(PGChildNodeView):
             conn = manager.connection()
             is_passfile = False
 
-            # If there is no password found for the server
+            # If there is no password found for the datasource
             # then check for pgpass file
-            if not server.password and not manager.password:
-                if server.passfile and \
+            if not datasource.password and not manager.password:
+                if datasource.passfile and \
                         manager.passfile and \
-                        server.passfile == manager.passfile:
+                        datasource.passfile == manager.passfile:
                     is_passfile = True
 
             # Check for password only if there is no pgpass file used
@@ -1369,7 +1356,7 @@ class ServerNode(PGChildNodeView):
                 password = pqencryptpassword(data['newPassword'], manager.user)
 
             SQL = render_template(
-                "/servers/sql/#{0}#/change_password.sql".format(
+                "/datasources/sql/#{0}#/change_password.sql".format(
                     manager.version),
                 conn=conn, _=gettext,
                 user=manager.user, encrypted_password=password)
@@ -1377,15 +1364,15 @@ class ServerNode(PGChildNodeView):
             status, res = conn.execute_scalar(SQL)
 
             if not status:
-                return internal_server_error(errormsg=res)
+                return internal_datasource_error(errormsg=res)
 
             # Store password in sqlite only if no pgpass file
             if not is_passfile:
                 password = encrypt(data['newPassword'], crypt_key)
                 # Check if old password was stored in pgadmin4 sqlite database.
                 # If yes then update that password.
-                if server.password is not None and config.ALLOW_SAVE_PASSWORD:
-                    setattr(server, 'password', password)
+                if datasource.password is not None and config.ALLOW_SAVE_PASSWORD:
+                    setattr(datasource, 'password', password)
                     db.session.commit()
                 # Also update password in connection manager.
                 manager.password = password
@@ -1400,20 +1387,20 @@ class ServerNode(PGChildNodeView):
             )
 
         except Exception as e:
-            return internal_server_error(errormsg=str(e))
+            return internal_datasource_error(errormsg=str(e))
 
     def wal_replay(self, sid, pause=True):
         """
         Utility function for wal_replay for resume/pause.
         """
-        server = Server.query.filter_by(
+        datasource = DataSource.query.filter_by(
             user_id=current_user.id, id=sid
         ).first()
 
-        if server is None:
+        if datasource is None:
             return make_json_response(
                 success=0,
-                errormsg=gettext("Could not find the required server.")
+                errormsg=gettext("Could not find the required datasource.")
             )
 
         try:
@@ -1429,7 +1416,7 @@ class ServerNode(PGChildNodeView):
 
                     status, res = conn.execute_scalar(sql)
                     if not status:
-                        return internal_server_error(
+                        return internal_datasource_error(
                             errormsg=str(res)
                         )
                 else:
@@ -1439,7 +1426,7 @@ class ServerNode(PGChildNodeView):
 
                     status, res = conn.execute_scalar(sql)
                     if not status:
-                        return internal_server_error(
+                        return internal_datasource_error(
                             errormsg=str(res)
                         )
                 return make_json_response(
@@ -1447,20 +1434,20 @@ class ServerNode(PGChildNodeView):
                     info=gettext('WAL replay paused'),
                     data={'in_recovery': True, 'wal_pause': pause}
                 )
-            return gone(errormsg=_('Please connect the server.'))
+            return gone(errormsg=_('Please connect the datasource.'))
         except Exception as e:
             current_app.logger.error(
                 'WAL replay pause/resume failed'
             )
-            return internal_server_error(errormsg=str(e))
+            return internal_datasource_error(errormsg=str(e))
 
     def resume_wal_replay(self, gid, sid):
         """
         This method will resume WAL replay
 
         Args:
-            gid: Server group ID
-            sid: Server ID
+            gid: DataSource group ID
+            sid: DataSource ID
 
         Returns:
             None
@@ -1472,8 +1459,8 @@ class ServerNode(PGChildNodeView):
         This method will pause WAL replay
 
         Args:
-            gid: Server group ID
-            sid: Server ID
+            gid: DataSource group ID
+            sid: DataSource ID
 
         Returns:
             None
@@ -1482,22 +1469,22 @@ class ServerNode(PGChildNodeView):
 
     def check_pgpass(self, gid, sid):
         """
-        This function is used to check whether server is connected
+        This function is used to check whether datasource is connected
         using pgpass file or not
 
         Args:
             gid: Group id
-            sid: Server id
+            sid: DataSource id
         """
         is_pgpass = False
-        server = Server.query.filter_by(
+        datasource = DataSource.query.filter_by(
             user_id=current_user.id, id=sid
         ).first()
 
-        if server is None:
+        if datasource is None:
             return make_json_response(
                 success=0,
-                errormsg=gettext("Could not find the required server.")
+                errormsg=gettext("Could not find the required datasource.")
             )
 
         try:
@@ -1505,13 +1492,13 @@ class ServerNode(PGChildNodeView):
             conn = manager.connection()
             if not conn.connected():
                 return gone(
-                    errormsg=_('Please connect the server.')
+                    errormsg=_('Please connect the datasource.')
                 )
 
-            if not server.password or not manager.password:
-                if server.passfile and \
+            if not datasource.password or not manager.password:
+                if datasource.passfile and \
                         manager.passfile and \
-                        server.passfile == manager.passfile:
+                        datasource.passfile == manager.passfile:
                     is_pgpass = True
             return make_json_response(
                 success=1,
@@ -1521,22 +1508,22 @@ class ServerNode(PGChildNodeView):
             current_app.logger.error(
                 'Cannot able to fetch pgpass status'
             )
-            return internal_server_error(errormsg=str(e))
+            return internal_datasource_error(errormsg=str(e))
 
-    def get_response_for_password(self, server, status, prompt_password=False,
+    def get_response_for_password(self, datasource, status, prompt_password=False,
                                   prompt_tunnel_password=False, errmsg=None):
 
-        if server.use_ssh_tunnel:
+        if datasource.use_ssh_tunnel:
             return make_json_response(
                 success=0,
                 status=status,
                 result=render_template(
-                    'servers/tunnel_password.html',
-                    server_label=server.name,
-                    username=server.username,
-                    tunnel_username=server.tunnel_username,
-                    tunnel_host=server.tunnel_host,
-                    tunnel_identity_file=server.tunnel_identity_file,
+                    'datasources/tunnel_password.html',
+                    datasource_label=datasource.name,
+                    username=datasource.username,
+                    tunnel_username=datasource.tunnel_username,
+                    tunnel_host=datasource.tunnel_host,
+                    tunnel_identity_file=datasource.tunnel_identity_file,
                     errmsg=errmsg,
                     _=gettext,
                     prompt_tunnel_password=prompt_tunnel_password,
@@ -1548,9 +1535,9 @@ class ServerNode(PGChildNodeView):
                 success=0,
                 status=status,
                 result=render_template(
-                    'servers/password.html',
-                    server_label=server.name,
-                    username=server.username,
+                    'datasources/password.html',
+                    datasource_label=datasource.name,
+                    username=datasource.username,
                     errmsg=errmsg,
                     _=gettext,
                 )
@@ -1558,7 +1545,7 @@ class ServerNode(PGChildNodeView):
 
     def clear_saved_password(self, gid, sid):
         """
-        This function is used to remove database server password stored into
+        This function is used to remove database datasource password stored into
         the pgAdmin's db file.
 
         :param gid:
@@ -1566,24 +1553,24 @@ class ServerNode(PGChildNodeView):
         :return:
         """
         try:
-            server = Server.query.filter_by(
+            datasource = DataSource.query.filter_by(
                 user_id=current_user.id, id=sid
             ).first()
 
-            if server is None:
+            if datasource is None:
                 return make_json_response(
                     success=0,
-                    info=gettext("Could not find the required server.")
+                    info=gettext("Could not find the required datasource.")
                 )
 
-            setattr(server, 'password', None)
+            setattr(datasource, 'password', None)
             db.session.commit()
         except Exception as e:
             current_app.logger.error(
                 "Unable to clear saved password.\nError: {0}".format(str(e))
             )
 
-            return internal_server_error(errormsg=str(e))
+            return internal_datasource_error(errormsg=str(e))
 
         return make_json_response(
             success=1,
@@ -1601,17 +1588,17 @@ class ServerNode(PGChildNodeView):
         :return:
         """
         try:
-            server = Server.query.filter_by(
+            datasource = DataSource.query.filter_by(
                 user_id=current_user.id, id=sid
             ).first()
 
-            if server is None:
+            if datasource is None:
                 return make_json_response(
                     success=0,
-                    info=gettext("Could not find the required server.")
+                    info=gettext("Could not find the required datasource.")
                 )
 
-            setattr(server, 'tunnel_password', None)
+            setattr(datasource, 'tunnel_password', None)
             db.session.commit()
         except Exception as e:
             current_app.logger.error(
@@ -1619,7 +1606,7 @@ class ServerNode(PGChildNodeView):
                 "\nError: {0}".format(str(e))
             )
 
-            return internal_server_error(errormsg=str(e))
+            return internal_datasource_error(errormsg=str(e))
 
         return make_json_response(
             success=1,
@@ -1628,13 +1615,13 @@ class ServerNode(PGChildNodeView):
         )
 
 
-SchemaDiffRegistry(blueprint.node_type, ServerNode)
-ServerNode.register_node_view(blueprint)
+SchemaDiffRegistry(blueprint.node_type, DataSourceNode)
+DataSourceNode.register_node_view(blueprint)
 
 
 
-class DataModule(sg.ServerGroupPluginModule):
-    NODE_TYPE = "server"
+class DataModule(sg.DataGroupPluginModule):
+    NODE_TYPE = "datasource"
     LABEL = gettext("Datas")
 
     @property
@@ -1644,20 +1631,20 @@ class DataModule(sg.ServerGroupPluginModule):
     @property
     def script_load(self):
         """
-        Load the module script for server, when any of the server-group node is
+        Load the module script for datasource, when any of the datasource-group node is
         initialized.
         """
-        return sg.ServerGroupModule.NODE_TYPE
+        return sg.DataGroupModule.NODE_TYPE
 
     @login_required
     def get_nodes(self, gid):
-        """Return a JSON document listing the server groups for the user"""
-        servers = Server.query.filter_by(user_id=current_user.id,
-                                         servergroup_id=gid)
+        """Return a JSON document listing the datasource groups for the user"""
+        datasources = DataSource.query.filter_by(user_id=current_user.id,
+                                         datagroup_id=gid)
 
         driver = get_driver(PG_DEFAULT_DRIVER)
 
-        for server in servers:
+        for datasource in datasources:
             connected = False
             manager = None
             errmsg = None
@@ -1665,7 +1652,7 @@ class DataModule(sg.ServerGroupPluginModule):
             in_recovery = None
             wal_paused = None
             try:
-                manager = driver.connection_manager(server.id)
+                manager = driver.connection_manager(datasource.id)
                 conn = manager.connection()
                 was_connected = conn.wasConnected
             except CryptKeyMissing:
@@ -1676,23 +1663,23 @@ class DataModule(sg.ServerGroupPluginModule):
                 errmsg = str(e)
 
             yield self.generate_browser_node(
-                "%d" % (server.id),
+                "%d" % (datasource.id),
                 gid,
-                server.name,
-                server_icon_and_background(connected, manager, server),
+                datasource.name,
+                datasource_icon_and_background(connected, manager, datasource),
                 True,
                 self.NODE_TYPE,
                 connected=connected,
-                server_type=manager.server_type if connected else "pg",
+                datasource_type=manager.datasource_type if connected else "pg",
                 version=manager.version,
                 db=manager.db,
                 user=manager.user_info if connected else None,
                 in_recovery=in_recovery,
                 wal_pause=wal_paused,
-                is_password_saved=True if server.password is not None
+                is_password_saved=True if datasource.password is not None
                 else False,
                 is_tunnel_password_saved=True
-                if server.tunnel_password is not None else False,
+                if datasource.tunnel_password is not None else False,
                 was_connected=was_connected,
                 errmsg=errmsg
             )
@@ -1706,12 +1693,12 @@ class DataModule(sg.ServerGroupPluginModule):
         """
         Returns a snippet of css to include in the page
         """
-        snippets = [render_template("css/servers.css")]
+        snippets = [render_template("css/datasources.css")]
 
         for submodule in self.submodules:
             snippets.extend(submodule.csssnippets)
 
-        for st in ServerType.types():
+        for st in DataSourceType.types():
             snippets.extend(st.csssnippets)
 
         return snippets
@@ -1720,23 +1707,23 @@ class DataModule(sg.ServerGroupPluginModule):
         scripts = []
 
         scripts.extend([{
-            'name': 'pgadmin.browser.server.privilege',
+            'name': 'pgadmin.browser.datasource.privilege',
             'path': url_for('%s.static' % self.name, filename='js/privilege'),
             'when': self.node_type,
             'is_template': False,
             'deps': ['pgadmin.browser.node.ui']
         }, {
-            'name': 'pgadmin.browser.server.variable',
+            'name': 'pgadmin.browser.datasource.variable',
             'path': url_for('%s.static' % self.name, filename='js/variable'),
             'when': self.node_type,
             'is_template': False
         }, {
-            'name': 'pgadmin.server.supported_servers',
-            'path': url_for('browser.index') + 'server/supported_servers',
+            'name': 'pgadmin.datasource.supported_datasources',
+            'path': url_for('browser.index') + 'datasource/supported_datasources',
             'is_template': True,
             'when': self.node_type
         }])
-        scripts.extend(sg.ServerGroupPluginModule.get_own_javascripts(self))
+        scripts.extend(sg.DataGroupPluginModule.get_own_javascripts(self))
 
         return scripts
 
@@ -1754,17 +1741,17 @@ class DataModule(sg.ServerGroupPluginModule):
 
         super(DataModule, self).register(app, options, first_registration)
 
-    # We do not have any preferences for server node.
+    # We do not have any preferences for datasource node.
     def register_preferences(self):
         """
         register_preferences
         Override it so that - it does not register the show_node preference for
-        server type.
+        datasource type.
         """
-        ServerType.register_preferences()
+        DataSourceType.register_preferences()
 
     def get_exposed_url_endpoints(self):
-        return ['NODE-server.connect_id']
+        return ['NODE-datasource.connect_id']
 
 
 class DataMenuItem(MenuItem):
@@ -1793,7 +1780,7 @@ class DataNode(PGChildNodeView):
         'dependency': [{'get': 'dependencies'}],
         'dependent': [{'get': 'dependents'}],
         'children': [{'get': 'children'}],
-        'supported_servers.js': [{}, {}, {'get': 'supported_servers'}],
+        'supported_datasources.js': [{}, {}, {'get': 'supported_datasources'}],
         'reload':
             [{'get': 'reload_configuration'}],
         'restore_point':
@@ -1855,16 +1842,16 @@ class DataNode(PGChildNodeView):
                 'sslcert', 'sslkey', 'sslrootcert', 'sslcrl', 'sslcompression'
             ]
             # Required SSL fields for SERVER mode from user
-            required_ssl_fields_server_mode = ['sslcert', 'sslkey']
+            required_ssl_fields_datasource_mode = ['sslcert', 'sslkey']
 
             for field in ssl_fields:
                 if field not in data:
-                    # In Server mode,
+                    # In DataSource mode,
                     # we will set dummy SSL certificate file path which will
-                    # prevent using default SSL certificates from web servers
+                    # prevent using default SSL certificates from web datasources
 
                     if config.SERVER_MODE and \
-                            field in required_ssl_fields_server_mode:
+                            field in required_ssl_fields_datasource_mode:
                         # Set file manager directory from preference
                         import os
                         file_extn = '.key' if field.endswith('key') else '.crt'
@@ -1883,16 +1870,16 @@ class DataNode(PGChildNodeView):
     def nodes(self, gid):
         res = []
         """
-        Return a JSON document listing the servers under this server group
+        Return a JSON document listing the datasources under this datasource group
         for the user.
         """
-        servers = Server.query.filter_by(user_id=current_user.id,
-                                         servergroup_id=gid)
+        datasources = DataSource.query.filter_by(user_id=current_user.id,
+                                         datagroup_id=gid)
 
         driver = get_driver(PG_DEFAULT_DRIVER)
 
-        for server in servers:
-            manager = driver.connection_manager(server.id)
+        for datasource in datasources:
+            manager = driver.connection_manager(datasource.id)
             conn = manager.connection()
             connected = conn.connected()
             errmsg = None
@@ -1904,57 +1891,57 @@ class DataNode(PGChildNodeView):
                 if not status:
                     connected = False
                     manager.release()
-                    errmsg = "{0} : {1}".format(server.name, result)
+                    errmsg = "{0} : {1}".format(datasource.name, result)
 
             res.append(
                 self.blueprint.generate_browser_node(
-                    "%d" % (server.id),
+                    "%d" % (datasource.id),
                     gid,
-                    server.name,
-                    server_icon_and_background(connected, manager, server),
+                    datasource.name,
+                    datasource_icon_and_background(connected, manager, datasource),
                     True,
                     self.node_type,
                     connected=connected,
-                    server_type=manager.server_type if connected else 'pg',
+                    datasource_type=manager.datasource_type if connected else 'pg',
                     version=manager.version,
                     db=manager.db,
                     user=manager.user_info if connected else None,
                     in_recovery=in_recovery,
                     wal_pause=wal_paused,
-                    is_password_saved=True if server.password is not None
+                    is_password_saved=True if datasource.password is not None
                     else False,
                     is_tunnel_password_saved=True
-                    if server.tunnel_password is not None else False,
+                    if datasource.tunnel_password is not None else False,
                     errmsg=errmsg
                 )
             )
 
         if not len(res):
             return gone(errormsg=gettext(
-                'The specified server group with id# {0} could not be found.'
+                'The specified datasource group with id# {0} could not be found.'
             ))
 
         return make_json_response(result=res)
 
     @login_required
     def node(self, gid, sid):
-        """Return a JSON document listing the server groups for the user"""
-        server = Server.query.filter_by(user_id=current_user.id,
-                                        servergroup_id=gid,
+        """Return a JSON document listing the datasource groups for the user"""
+        datasource = DataSource.query.filter_by(user_id=current_user.id,
+                                        datagroup_id=gid,
                                         id=sid).first()
 
-        if server is None:
+        if datasource is None:
             return make_json_response(
                 status=410,
                 success=0,
                 errormsg=gettext(
                     gettext(
-                        "Could not find the server with id# {0}."
+                        "Could not find the datasource with id# {0}."
                     ).format(sid)
                 )
             )
 
-        manager = get_driver(PG_DEFAULT_DRIVER).connection_manager(server.id)
+        manager = get_driver(PG_DEFAULT_DRIVER).connection_manager(datasource.id)
         conn = manager.connection()
         connected = conn.connected()
         errmsg = None
@@ -1966,50 +1953,50 @@ class DataNode(PGChildNodeView):
             if not status:
                 connected = False
                 manager.release()
-                errmsg = "{0} : {1}".format(server.name, result)
+                errmsg = "{0} : {1}".format(datasource.name, result)
 
         return make_json_response(
             result=self.blueprint.generate_browser_node(
-                "%d" % (server.id),
+                "%d" % (datasource.id),
                 gid,
-                server.name,
-                server_icon_and_background(connected, manager, server),
+                datasource.name,
+                datasource_icon_and_background(connected, manager, datasource),
                 True,
                 self.node_type,
                 connected=connected,
-                server_type=manager.server_type if connected else 'pg',
+                datasource_type=manager.datasource_type if connected else 'pg',
                 version=manager.version,
                 db=manager.db,
                 user=manager.user_info if connected else None,
                 in_recovery=in_recovery,
                 wal_pause=wal_paused,
-                is_password_saved=True if server.password is not None
+                is_password_saved=True if datasource.password is not None
                 else False,
                 is_tunnel_password_saved=True
-                if server.tunnel_password is not None else False,
+                if datasource.tunnel_password is not None else False,
                 errmsg=errmsg
             ),
         )
 
     @login_required
     def delete(self, gid, sid):
-        """Delete a server node in the settings database."""
-        servers = Server.query.filter_by(user_id=current_user.id, id=sid)
+        """Delete a datasource node in the settings database."""
+        datasources = DataSource.query.filter_by(user_id=current_user.id, id=sid)
 
-        # TODO:: A server, which is connected, cannot be deleted
-        if servers is None:
+        # TODO:: A datasource, which is connected, cannot be deleted
+        if datasources is None:
             return make_json_response(
                 status=410,
                 success=0,
                 errormsg=gettext(
-                    'The specified server could not be found.\n'
+                    'The specified datasource could not be found.\n'
                     'Does the user have permission to access the '
-                    'server?'
+                    'datasource?'
                 )
             )
         else:
             try:
-                for s in servers:
+                for s in datasources:
                     get_driver(PG_DEFAULT_DRIVER).delete_manager(s.id)
                     db.session.delete(s)
                 db.session.commit()
@@ -2027,18 +2014,18 @@ class DataNode(PGChildNodeView):
 
     @login_required
     def update(self, gid, sid):
-        """Update the server settings"""
-        server = Server.query.filter_by(
+        """Update the datasource settings"""
+        datasource = DataSource.query.filter_by(
             user_id=current_user.id, id=sid).first()
 
-        if server is None:
+        if datasource is None:
             return make_json_response(
                 status=410,
                 success=0,
-                errormsg=gettext("Could not find the required server.")
+                errormsg=gettext("Could not find the required datasource.")
             )
 
-        # Not all parameters can be modified, while the server is connected
+        # Not all parameters can be modified, while the datasource is connected
         config_param_map = {
             'name': 'name',
             'host': 'host',
@@ -2047,7 +2034,7 @@ class DataNode(PGChildNodeView):
             'db': 'maintenance_db',
             'username': 'username',
             'sslmode': 'ssl_mode',
-            'gid': 'servergroup_id',
+            'gid': 'datagroup_id',
             'comment': 'comment',
             'role': 'role',
             'db_res': 'db_res',
@@ -2109,7 +2096,7 @@ class DataNode(PGChildNodeView):
                     return forbidden(
                         errormsg=gettext(
                             "'{0}' is not allowed to modify, "
-                            "when server is connected."
+                            "when datasource is connected."
                         ).format(disp_lbl[arg])
                     )
 
@@ -2120,7 +2107,7 @@ class DataNode(PGChildNodeView):
                 # it manually to integer
                 if arg == 'sslcompression':
                     value = 1 if value else 0
-                setattr(server, config_param_map[arg], value)
+                setattr(datasource, config_param_map[arg], value)
                 idx += 1
 
         if idx == 0:
@@ -2138,34 +2125,34 @@ class DataNode(PGChildNodeView):
                 errormsg=e.message
             )
 
-        # When server is connected, we don't require to update the connection
+        # When datasource is connected, we don't require to update the connection
         # manager. Because - we don't allow to change any of the parameters,
         # which will affect the connections.
         if not conn.connected():
-            manager.update(server)
+            manager.update(datasource)
 
         return jsonify(
             node=self.blueprint.generate_browser_node(
-                "%d" % (server.id), server.servergroup_id,
-                server.name,
-                server_icon_and_background(connected, manager, server),
+                "%d" % (datasource.id), datasource.datagroup_id,
+                datasource.name,
+                datasource_icon_and_background(connected, manager, datasource),
                 True,
                 self.node_type,
                 connected=connected,
                 user=manager.user_info if connected else None,
-                server_type='pg'  # default server type
+                datasource_type='pg'  # default datasource type
             )
         )
 
     @login_required
     def list(self, gid):
         """
-        Return list of attributes of all servers.
+        Return list of attributes of all datasources.
         """
-        servers = Server.query.filter_by(
+        datasources = DataSource.query.filter_by(
             user_id=current_user.id,
-            servergroup_id=gid).order_by(Server.name)
-        sg = ServerGroup.query.filter_by(
+            datagroup_id=gid).order_by(DataSource.name)
+        sg = DataGroup.query.filter_by(
             user_id=current_user.id,
             id=gid
         ).first()
@@ -2173,26 +2160,26 @@ class DataNode(PGChildNodeView):
 
         driver = get_driver(PG_DEFAULT_DRIVER)
 
-        for server in servers:
-            manager = driver.connection_manager(server.id)
+        for datasource in datasources:
+            manager = driver.connection_manager(datasource.id)
             conn = manager.connection()
             connected = conn.connected()
 
             res.append({
-                'id': server.id,
-                'name': server.name,
-                'host': server.host,
-                'port': server.port,
-                'db': server.maintenance_db,
-                'username': server.username,
-                'gid': server.servergroup_id,
+                'id': datasource.id,
+                'name': datasource.name,
+                'host': datasource.host,
+                'port': datasource.port,
+                'db': datasource.maintenance_db,
+                'username': datasource.username,
+                'gid': datasource.datagroup_id,
                 'group-name': sg.name,
-                'comment': server.comment,
-                'role': server.role,
+                'comment': datasource.comment,
+                'role': datasource.role,
                 'connected': connected,
                 'version': manager.ver,
-                'server_type': manager.server_type if connected else 'pg',
-                'db_res': server.db_res.split(',') if server.db_res else None
+                'datasource_type': manager.datasource_type if connected else 'pg',
+                'db_res': datasource.db_res.split(',') if datasource.db_res else None
             })
 
         return ajax_response(
@@ -2201,21 +2188,21 @@ class DataNode(PGChildNodeView):
 
     @login_required
     def properties(self, gid, sid):
-        """Return list of attributes of a server"""
-        server = Server.query.filter_by(
+        """Return list of attributes of a datasource"""
+        datasource = DataSource.query.filter_by(
             user_id=current_user.id,
             id=sid).first()
 
-        if server is None:
+        if datasource is None:
             return make_json_response(
                 status=410,
                 success=0,
-                errormsg=gettext("Could not find the required server.")
+                errormsg=gettext("Could not find the required datasource.")
             )
 
-        sg = ServerGroup.query.filter_by(
+        sg = DataGroup.query.filter_by(
             user_id=current_user.id,
-            id=server.servergroup_id
+            id=datasource.datagroup_id
         ).first()
 
         driver = get_driver(PG_DEFAULT_DRIVER)
@@ -2224,56 +2211,56 @@ class DataNode(PGChildNodeView):
         conn = manager.connection()
         connected = conn.connected()
 
-        is_ssl = True if server.ssl_mode in self.SSL_MODES else False
+        is_ssl = True if datasource.ssl_mode in self.SSL_MODES else False
 
         return ajax_response(
             response={
-                'id': server.id,
-                'name': server.name,
-                'host': server.host,
-                'hostaddr': server.hostaddr,
-                'port': server.port,
-                'db': server.maintenance_db,
-                'username': server.username,
-                'gid': str(server.servergroup_id),
+                'id': datasource.id,
+                'name': datasource.name,
+                'host': datasource.host,
+                'hostaddr': datasource.hostaddr,
+                'port': datasource.port,
+                'db': datasource.maintenance_db,
+                'username': datasource.username,
+                'gid': str(datasource.datagroup_id),
                 'group-name': sg.name,
-                'comment': server.comment,
-                'role': server.role,
+                'comment': datasource.comment,
+                'role': datasource.role,
                 'connected': connected,
                 'version': manager.ver,
-                'sslmode': server.ssl_mode,
-                'server_type': manager.server_type if connected else 'pg',
-                'bgcolor': server.bgcolor,
-                'fgcolor': server.fgcolor,
-                'db_res': server.db_res.split(',') if server.db_res else None,
-                'passfile': server.passfile if server.passfile else None,
-                'sslcert': server.sslcert if is_ssl else None,
-                'sslkey': server.sslkey if is_ssl else None,
-                'sslrootcert': server.sslrootcert if is_ssl else None,
-                'sslcrl': server.sslcrl if is_ssl else None,
-                'sslcompression': True if is_ssl and server.sslcompression
+                'sslmode': datasource.ssl_mode,
+                'datasource_type': manager.datasource_type if connected else 'pg',
+                'bgcolor': datasource.bgcolor,
+                'fgcolor': datasource.fgcolor,
+                'db_res': datasource.db_res.split(',') if datasource.db_res else None,
+                'passfile': datasource.passfile if datasource.passfile else None,
+                'sslcert': datasource.sslcert if is_ssl else None,
+                'sslkey': datasource.sslkey if is_ssl else None,
+                'sslrootcert': datasource.sslrootcert if is_ssl else None,
+                'sslcrl': datasource.sslcrl if is_ssl else None,
+                'sslcompression': True if is_ssl and datasource.sslcompression
                 else False,
-                'service': server.service if server.service else None,
+                'service': datasource.service if datasource.service else None,
                 'connect_timeout':
-                    server.connect_timeout if server.connect_timeout else 0,
-                'use_ssh_tunnel': server.use_ssh_tunnel
-                if server.use_ssh_tunnel else 0,
-                'tunnel_host': server.tunnel_host if server.tunnel_host
+                    datasource.connect_timeout if datasource.connect_timeout else 0,
+                'use_ssh_tunnel': datasource.use_ssh_tunnel
+                if datasource.use_ssh_tunnel else 0,
+                'tunnel_host': datasource.tunnel_host if datasource.tunnel_host
                 else None,
-                'tunnel_port': server.tunnel_port if server.tunnel_port
+                'tunnel_port': datasource.tunnel_port if datasource.tunnel_port
                 else 22,
-                'tunnel_username': server.tunnel_username
-                if server.tunnel_username else None,
-                'tunnel_identity_file': server.tunnel_identity_file
-                if server.tunnel_identity_file else None,
-                'tunnel_authentication': server.tunnel_authentication
-                if server.tunnel_authentication else 0
+                'tunnel_username': datasource.tunnel_username
+                if datasource.tunnel_username else None,
+                'tunnel_identity_file': datasource.tunnel_identity_file
+                if datasource.tunnel_identity_file else None,
+                'tunnel_authentication': datasource.tunnel_authentication
+                if datasource.tunnel_authentication else 0
             }
         )
 
     @login_required
     def create(self, gid):
-        """Add a server node to the settings database"""
+        """Add a datasource node to the settings database"""
         required_args = [
             u'name',
             u'db',
@@ -2319,12 +2306,12 @@ class DataNode(PGChildNodeView):
         # To check ssl configuration
         is_ssl, data = self.check_ssl_fields(data)
 
-        server = None
+        datasource = None
 
         try:
-            server = Server(
+            datasource = DataSource(
                 user_id=current_user.id,
-                servergroup_id=data.get('gid', gid),
+                datagroup_id=data.get('gid', gid),
                 name=data.get('name'),
                 host=data.get('host', None),
                 hostaddr=data.get('hostaddr', None),
@@ -2352,7 +2339,7 @@ class DataNode(PGChildNodeView):
                 tunnel_authentication=data.get('tunnel_authentication', 0),
                 tunnel_identity_file=data.get('tunnel_identity_file', None)
             )
-            db.session.add(server)
+            db.session.add(datasource)
             db.session.commit()
 
             connected = False
@@ -2361,8 +2348,8 @@ class DataNode(PGChildNodeView):
 
             if 'connect_now' in data and data['connect_now']:
                 manager = get_driver(PG_DEFAULT_DRIVER).connection_manager(
-                    server.id)
-                manager.update(server)
+                    datasource.id)
+                manager.update(datasource)
                 conn = manager.connection()
 
                 have_password = False
@@ -2377,7 +2364,7 @@ class DataNode(PGChildNodeView):
                     password = encrypt(password, crypt_key)
                 elif 'passfile' in data and data["passfile"] != '':
                     passfile = data['passfile']
-                    setattr(server, 'passfile', passfile)
+                    setattr(datasource, 'passfile', passfile)
                     db.session.commit()
 
                 if 'tunnel_password' in data and data["tunnel_password"] != '':
@@ -2390,30 +2377,30 @@ class DataNode(PGChildNodeView):
                     password=password,
                     passfile=passfile,
                     tunnel_password=tunnel_password,
-                    server_types=ServerType.types()
+                    datasource_types=DataSourceType.types()
                 )
                 if hasattr(str, 'decode') and errmsg is not None:
                     errmsg = errmsg.decode('utf-8')
                 if not status:
-                    db.session.delete(server)
+                    db.session.delete(datasource)
                     db.session.commit()
                     return make_json_response(
                         status=401,
                         success=0,
                         errormsg=gettext(
-                            u"Unable to connect to server:\n\n%s" % errmsg)
+                            u"Unable to connect to datasource:\n\n%s" % errmsg)
                     )
                 else:
                     if 'save_password' in data and data['save_password'] and \
                             have_password and config.ALLOW_SAVE_PASSWORD:
-                        setattr(server, 'password', password)
+                        setattr(datasource, 'password', password)
                         db.session.commit()
 
                     if 'save_tunnel_password' in data and \
                         data['save_tunnel_password'] and \
                         have_tunnel_password and \
                             config.ALLOW_SAVE_TUNNEL_PASSWORD:
-                        setattr(server, 'tunnel_password', tunnel_password)
+                        setattr(datasource, 'tunnel_password', tunnel_password)
                         db.session.commit()
 
                     user = manager.user_info
@@ -2421,22 +2408,22 @@ class DataNode(PGChildNodeView):
 
             return jsonify(
                 node=self.blueprint.generate_browser_node(
-                    "%d" % server.id, server.servergroup_id,
-                    server.name,
-                    server_icon_and_background(connected, manager, server),
+                    "%d" % datasource.id, datasource.datagroup_id,
+                    datasource.name,
+                    datasource_icon_and_background(connected, manager, datasource),
                     True,
                     self.node_type,
                     user=user,
                     connected=connected,
-                    server_type=manager.server_type
-                    if manager and manager.server_type
+                    datasource_type=manager.datasource_type
+                    if manager and manager.datasource_type
                     else 'pg'
                 )
             )
 
         except Exception as e:
-            if server:
-                db.session.delete(server)
+            if datasource:
+                db.session.delete(datasource)
                 db.session.commit()
 
             current_app.logger.exception(e)
@@ -2462,13 +2449,13 @@ class DataNode(PGChildNodeView):
         if conn.connected():
             status, res = conn.execute_dict(
                 render_template(
-                    "/servers/sql/#{0}#/stats.sql".format(manager.version),
+                    "/datasources/sql/#{0}#/stats.sql".format(manager.version),
                     conn=conn, _=gettext
                 )
             )
 
             if not status:
-                return internal_server_error(errormsg=res)
+                return internal_datasource_error(errormsg=res)
 
             return make_json_response(data=res)
 
@@ -2486,7 +2473,7 @@ class DataNode(PGChildNodeView):
     def dependents(self, gid, sid):
         return make_json_response(data='')
 
-    def supported_servers(self, **kwargs):
+    def supported_datasources(self, **kwargs):
         """
         This property defines (if javascript) exists for this node.
         Override this property for your own logic.
@@ -2494,15 +2481,15 @@ class DataNode(PGChildNodeView):
 
         return make_response(
             render_template(
-                "servers/supported_servers.js",
-                server_types=ServerType.types()
+                "datasources/supported_datasources.js",
+                datasource_types=DataSourceType.types()
             ),
             200, {'Content-Type': 'application/javascript'}
         )
 
     def connect_status(self, gid, sid):
         """Check and return the connection status."""
-        server = Server.query.filter_by(id=sid).first()
+        datasource = DataSource.query.filter_by(id=sid).first()
         manager = get_driver(PG_DEFAULT_DRIVER).connection_manager(sid)
         conn = manager.connection()
         connected = conn.connected()
@@ -2516,15 +2503,15 @@ class DataNode(PGChildNodeView):
             if not status:
                 connected = False
                 manager.release()
-                errmsg = "{0} : {1}".format(server.name, result)
+                errmsg = "{0} : {1}".format(datasource.name, result)
 
         return make_json_response(
             data={
-                'icon': server_icon_and_background(connected, manager, server),
+                'icon': datasource_icon_and_background(connected, manager, datasource),
                 'connected': connected,
                 'in_recovery': in_recovery,
                 'wal_pause': wal_paused,
-                'server_type': manager.server_type if connected else "pg",
+                'datasource_type': manager.datasource_type if connected else "pg",
                 'user': manager.user_info if connected else None,
                 'errmsg': errmsg
             }
@@ -2534,25 +2521,25 @@ class DataNode(PGChildNodeView):
         """
         Connect the Data and return the connection object.
         Verification Process before Connection:
-            Verify requested server.
+            Verify requested datasource.
 
-            Check the server password is already been stored in the
+            Check the datasource password is already been stored in the
             database or not.
-            If Yes, connect the server and return connection.
+            If Yes, connect the datasource and return connection.
             If No, Raise HTTP error and ask for the password.
 
             In case of 'Save Password' request from user, excrypted Pasword
-            will be stored in the respected server database and
-            establish the connection OR just connect the server and do not
+            will be stored in the respected datasource database and
+            establish the connection OR just connect the datasource and do not
             store the password.
         """
         current_app.logger.info(
-            'Connection Request for server#{0}'.format(sid)
+            'Connection Request for datasource#{0}'.format(sid)
         )
 
         # Fetch Data Details
-        server = Server.query.filter_by(id=sid).first()
-        if server is None:
+        datasource = DataSource.query.filter_by(id=sid).first()
+        if datasource is None:
             return bad_request(gettext("Data not found."))
 
         if current_user and hasattr(current_user, 'id'):
@@ -2584,13 +2571,13 @@ class DataNode(PGChildNodeView):
         if not crypt_key_present:
             raise CryptKeyMissing
 
-        # If server using SSH Tunnel
-        if server.use_ssh_tunnel:
+        # If datasource using SSH Tunnel
+        if datasource.use_ssh_tunnel:
             if 'tunnel_password' not in data:
-                if server.tunnel_password is None:
+                if datasource.tunnel_password is None:
                     prompt_tunnel_password = True
                 else:
-                    tunnel_password = server.tunnel_password
+                    tunnel_password = datasource.tunnel_password
             else:
                 tunnel_password = data['tunnel_password'] \
                     if 'tunnel_password'in data else ''
@@ -2602,20 +2589,20 @@ class DataNode(PGChildNodeView):
                 try:
                     tunnel_password = encrypt(tunnel_password, crypt_key) \
                         if tunnel_password is not None else \
-                        server.tunnel_password
+                        datasource.tunnel_password
                 except Exception as e:
                     current_app.logger.exception(e)
-                    return internal_server_error(errormsg=str(e))
+                    return internal_datasource_error(errormsg=str(e))
 
         if 'password' not in data:
             conn_passwd = getattr(conn, 'password', None)
-            if conn_passwd is None and server.password is None and \
-                    server.passfile is None and server.service is None:
+            if conn_passwd is None and datasource.password is None and \
+                    datasource.passfile is None and datasource.service is None:
                 prompt_password = True
-            elif server.passfile and server.passfile != '':
-                passfile = server.passfile
+            elif datasource.passfile and datasource.passfile != '':
+                passfile = datasource.passfile
             else:
-                password = conn_passwd or server.password
+                password = conn_passwd or datasource.password
         else:
             password = data['password'] if 'password' in data else None
             save_password = data['save_password']\
@@ -2625,16 +2612,16 @@ class DataNode(PGChildNodeView):
             # password key.
             try:
                 password = encrypt(password, crypt_key) \
-                    if password is not None else server.password
+                    if password is not None else datasource.password
             except Exception as e:
                 current_app.logger.exception(e)
-                return internal_server_error(errormsg=str(e))
+                return internal_datasource_error(errormsg=str(e))
 
-        # Check do we need to prompt for the database server or ssh tunnel
+        # Check do we need to prompt for the database datasource or ssh tunnel
         # password or both. Return the password template in case password is
         # not provided, or password has not been saved earlier.
         if prompt_password or prompt_tunnel_password:
-            return self.get_response_for_password(server, 428, prompt_password,
+            return self.get_response_for_password(datasource, 428, prompt_password,
                                                   prompt_tunnel_password)
 
         status = True
@@ -2643,56 +2630,56 @@ class DataNode(PGChildNodeView):
                 password=password,
                 passfile=passfile,
                 tunnel_password=tunnel_password,
-                server_types=ServerType.types()
+                datasource_types=DataSourceType.types()
             )
         except OperationalError as e:
-            return internal_server_error(errormsg=str(e))
+            return internal_datasource_error(errormsg=str(e))
         except Exception as e:
             current_app.logger.exception(e)
             return self.get_response_for_password(
-                server, 401, True, True, getattr(e, 'message', str(e)))
+                datasource, 401, True, True, getattr(e, 'message', str(e)))
 
         if not status:
             if hasattr(str, 'decode'):
                 errmsg = errmsg.decode('utf-8')
 
             current_app.logger.error(
-                "Could not connect to server(#{0}) - '{1}'.\nError: {2}"
-                .format(server.id, server.name, errmsg)
+                "Could not connect to datasource(#{0}) - '{1}'.\nError: {2}"
+                .format(datasource.id, datasource.name, errmsg)
             )
-            return self.get_response_for_password(server, 401, True,
+            return self.get_response_for_password(datasource, 401, True,
                                                   True, errmsg)
         else:
             if save_password and config.ALLOW_SAVE_PASSWORD:
                 try:
                     # Save the encrypted password using the user's login
                     # password key.
-                    setattr(server, 'password', password)
+                    setattr(datasource, 'password', password)
                     db.session.commit()
                 except Exception as e:
                     # Release Connection
                     current_app.logger.exception(e)
-                    manager.release(database=server.maintenance_db)
+                    manager.release(database=datasource.maintenance_db)
                     conn = None
 
-                    return internal_server_error(errormsg=e.message)
+                    return internal_datasource_error(errormsg=e.message)
 
             if save_tunnel_password and config.ALLOW_SAVE_TUNNEL_PASSWORD:
                 try:
                     # Save the encrypted tunnel password.
-                    setattr(server, 'tunnel_password', tunnel_password)
+                    setattr(datasource, 'tunnel_password', tunnel_password)
                     db.session.commit()
                 except Exception as e:
                     # Release Connection
                     current_app.logger.exception(e)
-                    manager.release(database=server.maintenance_db)
+                    manager.release(database=datasource.maintenance_db)
                     conn = None
 
-                    return internal_server_error(errormsg=e.message)
+                    return internal_datasource_error(errormsg=e.message)
 
-            current_app.logger.info('Connection Established for server: \
-                %s - %s' % (server.id, server.name))
-            # Update the recovery and wal pause option for the server
+            current_app.logger.info('Connection Established for datasource: \
+                %s - %s' % (datasource.id, datasource.name))
+            # Update the recovery and wal pause option for the datasource
             # if connected successfully
             _, _, in_recovery, wal_paused =\
                 recovery_state(conn, manager.version)
@@ -2701,27 +2688,27 @@ class DataNode(PGChildNodeView):
                 success=1,
                 info=gettext("Data connected."),
                 data={
-                    'icon': server_icon_and_background(True, manager, server),
+                    'icon': datasource_icon_and_background(True, manager, datasource),
                     'connected': True,
-                    'server_type': manager.server_type,
-                    'type': manager.server_type,
+                    'datasource_type': manager.datasource_type,
+                    'type': manager.datasource_type,
                     'version': manager.version,
                     'db': manager.db,
                     'user': manager.user_info,
                     'in_recovery': in_recovery,
                     'wal_pause': wal_paused,
-                    'is_password_saved': True if server.password is not None
+                    'is_password_saved': True if datasource.password is not None
                     else False,
                     'is_tunnel_password_saved': True
-                    if server.tunnel_password is not None else False,
+                    if datasource.tunnel_password is not None else False,
                 }
             )
 
     def disconnect(self, gid, sid):
         """Disconnect the Data."""
 
-        server = Server.query.filter_by(id=sid).first()
-        if server is None:
+        datasource = DataSource.query.filter_by(id=sid).first()
+        if datasource is None:
             return bad_request(gettext("Data not found."))
 
         # Release Connection
@@ -2736,25 +2723,25 @@ class DataNode(PGChildNodeView):
                 success=1,
                 info=gettext("Data disconnected."),
                 data={
-                    'icon': server_icon_and_background(False, manager, server),
+                    'icon': datasource_icon_and_background(False, manager, datasource),
                     'connected': False
                 }
             )
 
     def reload_configuration(self, gid, sid):
-        """Reload the server configuration"""
+        """Reload the datasource configuration"""
 
-        # Reload the server configurations
+        # Reload the datasource configurations
         manager = get_driver(PG_DEFAULT_DRIVER).connection_manager(sid)
         conn = manager.connection()
 
         if conn.connected():
-            # Execute the command for reload configuration for the server
+            # Execute the command for reload configuration for the datasource
             status, rid = conn.execute_scalar("SELECT pg_reload_conf();")
 
             if not status:
-                return internal_server_error(
-                    gettext("Could not reload the server configuration.")
+                return internal_datasource_error(
+                    gettext("Could not reload the datasource configuration.")
                 )
             else:
                 return make_json_response(data={
@@ -2766,8 +2753,8 @@ class DataNode(PGChildNodeView):
             return make_json_response(data={
                 'status': False,
                 'result': gettext(
-                    'Not connected to the server or the connection to the'
-                    ' server has been closed.')})
+                    'Not connected to the datasource or the connection to the'
+                    ' datasource has been closed.')})
 
     def create_restore_point(self, gid, sid):
         """
@@ -2795,7 +2782,7 @@ class DataNode(PGChildNodeView):
                         )
                     )
                 if not status:
-                    return internal_server_error(
+                    return internal_datasource_error(
                         errormsg=str(res)
                     )
 
@@ -2811,7 +2798,7 @@ class DataNode(PGChildNodeView):
             current_app.logger.error(
                 'Named restore point creation failed ({0})'.format(str(e))
             )
-            return internal_server_error(errormsg=str(e))
+            return internal_datasource_error(errormsg=str(e))
 
     def change_password(self, gid, sid):
         """
@@ -2827,8 +2814,8 @@ class DataNode(PGChildNodeView):
             crypt_key = get_crypt_key()[1]
 
             # Fetch Data Details
-            server = Server.query.filter_by(id=sid).first()
-            if server is None:
+            datasource = DataSource.query.filter_by(id=sid).first()
+            if datasource is None:
                 return bad_request(gettext("Data not found."))
 
             # Fetch User Details.
@@ -2840,12 +2827,12 @@ class DataNode(PGChildNodeView):
             conn = manager.connection()
             is_passfile = False
 
-            # If there is no password found for the server
+            # If there is no password found for the datasource
             # then check for pgpass file
-            if not server.password and not manager.password:
-                if server.passfile and \
+            if not datasource.password and not manager.password:
+                if datasource.passfile and \
                         manager.passfile and \
-                        server.passfile == manager.passfile:
+                        datasource.passfile == manager.passfile:
                     is_passfile = True
 
             # Check for password only if there is no pgpass file used
@@ -2906,7 +2893,7 @@ class DataNode(PGChildNodeView):
                 password = pqencryptpassword(data['newPassword'], manager.user)
 
             SQL = render_template(
-                "/servers/sql/#{0}#/change_password.sql".format(
+                "/datasources/sql/#{0}#/change_password.sql".format(
                     manager.version),
                 conn=conn, _=gettext,
                 user=manager.user, encrypted_password=password)
@@ -2914,15 +2901,15 @@ class DataNode(PGChildNodeView):
             status, res = conn.execute_scalar(SQL)
 
             if not status:
-                return internal_server_error(errormsg=res)
+                return internal_datasource_error(errormsg=res)
 
             # Store password in sqlite only if no pgpass file
             if not is_passfile:
                 password = encrypt(data['newPassword'], crypt_key)
                 # Check if old password was stored in pgadmin4 sqlite database.
                 # If yes then update that password.
-                if server.password is not None and config.ALLOW_SAVE_PASSWORD:
-                    setattr(server, 'password', password)
+                if datasource.password is not None and config.ALLOW_SAVE_PASSWORD:
+                    setattr(datasource, 'password', password)
                     db.session.commit()
                 # Also update password in connection manager.
                 manager.password = password
@@ -2937,20 +2924,20 @@ class DataNode(PGChildNodeView):
             )
 
         except Exception as e:
-            return internal_server_error(errormsg=str(e))
+            return internal_datasource_error(errormsg=str(e))
 
     def wal_replay(self, sid, pause=True):
         """
         Utility function for wal_replay for resume/pause.
         """
-        server = Server.query.filter_by(
+        datasource = DataSource.query.filter_by(
             user_id=current_user.id, id=sid
         ).first()
 
-        if server is None:
+        if datasource is None:
             return make_json_response(
                 success=0,
-                errormsg=gettext("Could not find the required server.")
+                errormsg=gettext("Could not find the required datasource.")
             )
 
         try:
@@ -2966,7 +2953,7 @@ class DataNode(PGChildNodeView):
 
                     status, res = conn.execute_scalar(sql)
                     if not status:
-                        return internal_server_error(
+                        return internal_datasource_error(
                             errormsg=str(res)
                         )
                 else:
@@ -2976,7 +2963,7 @@ class DataNode(PGChildNodeView):
 
                     status, res = conn.execute_scalar(sql)
                     if not status:
-                        return internal_server_error(
+                        return internal_datasource_error(
                             errormsg=str(res)
                         )
                 return make_json_response(
@@ -2984,12 +2971,12 @@ class DataNode(PGChildNodeView):
                     info=gettext('WAL replay paused'),
                     data={'in_recovery': True, 'wal_pause': pause}
                 )
-            return gone(errormsg=_('Please connect the server.'))
+            return gone(errormsg=_('Please connect the datasource.'))
         except Exception as e:
             current_app.logger.error(
                 'WAL replay pause/resume failed'
             )
-            return internal_server_error(errormsg=str(e))
+            return internal_datasource_error(errormsg=str(e))
 
     def resume_wal_replay(self, gid, sid):
         """
@@ -3019,7 +3006,7 @@ class DataNode(PGChildNodeView):
 
     def check_pgpass(self, gid, sid):
         """
-        This function is used to check whether server is connected
+        This function is used to check whether datasource is connected
         using pgpass file or not
 
         Args:
@@ -3027,14 +3014,14 @@ class DataNode(PGChildNodeView):
             sid: Data id
         """
         is_pgpass = False
-        server = Server.query.filter_by(
+        datasource = DataSource.query.filter_by(
             user_id=current_user.id, id=sid
         ).first()
 
-        if server is None:
+        if datasource is None:
             return make_json_response(
                 success=0,
-                errormsg=gettext("Could not find the required server.")
+                errormsg=gettext("Could not find the required datasource.")
             )
 
         try:
@@ -3042,13 +3029,13 @@ class DataNode(PGChildNodeView):
             conn = manager.connection()
             if not conn.connected():
                 return gone(
-                    errormsg=_('Please connect the server.')
+                    errormsg=_('Please connect the datasource.')
                 )
 
-            if not server.password or not manager.password:
-                if server.passfile and \
+            if not datasource.password or not manager.password:
+                if datasource.passfile and \
                         manager.passfile and \
-                        server.passfile == manager.passfile:
+                        datasource.passfile == manager.passfile:
                     is_pgpass = True
             return make_json_response(
                 success=1,
@@ -3058,22 +3045,22 @@ class DataNode(PGChildNodeView):
             current_app.logger.error(
                 'Cannot able to fetch pgpass status'
             )
-            return internal_server_error(errormsg=str(e))
+            return internal_datasource_error(errormsg=str(e))
 
-    def get_response_for_password(self, server, status, prompt_password=False,
+    def get_response_for_password(self, datasource, status, prompt_password=False,
                                   prompt_tunnel_password=False, errmsg=None):
 
-        if server.use_ssh_tunnel:
+        if datasource.use_ssh_tunnel:
             return make_json_response(
                 success=0,
                 status=status,
                 result=render_template(
-                    'servers/tunnel_password.html',
-                    server_label=server.name,
-                    username=server.username,
-                    tunnel_username=server.tunnel_username,
-                    tunnel_host=server.tunnel_host,
-                    tunnel_identity_file=server.tunnel_identity_file,
+                    'datasources/tunnel_password.html',
+                    datasource_label=datasource.name,
+                    username=datasource.username,
+                    tunnel_username=datasource.tunnel_username,
+                    tunnel_host=datasource.tunnel_host,
+                    tunnel_identity_file=datasource.tunnel_identity_file,
                     errmsg=errmsg,
                     _=gettext,
                     prompt_tunnel_password=prompt_tunnel_password,
@@ -3085,9 +3072,9 @@ class DataNode(PGChildNodeView):
                 success=0,
                 status=status,
                 result=render_template(
-                    'servers/password.html',
-                    server_label=server.name,
-                    username=server.username,
+                    'datasources/password.html',
+                    datasource_label=datasource.name,
+                    username=datasource.username,
                     errmsg=errmsg,
                     _=gettext,
                 )
@@ -3095,7 +3082,7 @@ class DataNode(PGChildNodeView):
 
     def clear_saved_password(self, gid, sid):
         """
-        This function is used to remove database server password stored into
+        This function is used to remove database datasource password stored into
         the pgAdmin's db file.
 
         :param gid:
@@ -3103,24 +3090,24 @@ class DataNode(PGChildNodeView):
         :return:
         """
         try:
-            server = Server.query.filter_by(
+            datasource = DataSource.query.filter_by(
                 user_id=current_user.id, id=sid
             ).first()
 
-            if server is None:
+            if datasource is None:
                 return make_json_response(
                     success=0,
-                    info=gettext("Could not find the required server.")
+                    info=gettext("Could not find the required datasource.")
                 )
 
-            setattr(server, 'password', None)
+            setattr(datasource, 'password', None)
             db.session.commit()
         except Exception as e:
             current_app.logger.error(
                 "Unable to clear saved password.\nError: {0}".format(str(e))
             )
 
-            return internal_server_error(errormsg=str(e))
+            return internal_datasource_error(errormsg=str(e))
 
         return make_json_response(
             success=1,
@@ -3138,17 +3125,17 @@ class DataNode(PGChildNodeView):
         :return:
         """
         try:
-            server = Server.query.filter_by(
+            datasource = DataSource.query.filter_by(
                 user_id=current_user.id, id=sid
             ).first()
 
-            if server is None:
+            if datasource is None:
                 return make_json_response(
                     success=0,
-                    info=gettext("Could not find the required server.")
+                    info=gettext("Could not find the required datasource.")
                 )
 
-            setattr(server, 'tunnel_password', None)
+            setattr(datasource, 'tunnel_password', None)
             db.session.commit()
         except Exception as e:
             current_app.logger.error(
@@ -3156,7 +3143,7 @@ class DataNode(PGChildNodeView):
                 "\nError: {0}".format(str(e))
             )
 
-            return internal_server_error(errormsg=str(e))
+            return internal_datasource_error(errormsg=str(e))
 
         return make_json_response(
             success=1,

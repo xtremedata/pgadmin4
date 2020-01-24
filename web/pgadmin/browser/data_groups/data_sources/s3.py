@@ -12,11 +12,6 @@ from pgadmin.browser.data_groups.data_sources.types import DataSourceType
 
 
 class S3(DataSourceType):
-    UTILITY_PATH_LABEL = gettext("AWS S3 Data Source")
-    UTILITY_PATH_HELP = gettext(
-        "Path to the directory containing the dbX Database utility"
-        " programs (pg_dump, pg_restore etc)."
-    )
 
     def instanceOf(self, ver):
         return True
