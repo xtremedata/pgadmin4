@@ -242,7 +242,7 @@ def create():
         db.session.add(server_group)
         db.session.commit()
         # Add default data group for new user.
-        data_group = DataGroup(user_id=usr.id, name="Datas")
+        data_group = DataGroup(user_id=usr.id, name="Datas", can_delete=False)
         db.session.add(data_group)
         db.session.commit()
     except Exception as e:

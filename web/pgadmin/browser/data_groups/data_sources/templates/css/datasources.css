@@ -1,0 +1,17 @@
+.icon-datasource {
+  background-image: url('{{ url_for('NODE-datasource.static', filename='img/datasource.svg') }}') !important;
+  background-repeat: no-repeat;
+  background-size: 20px !important;
+  align-content: center;
+  vertical-align: middle;
+  height: 1.3em;
+}
+
+.icon-datasource-not-connected {
+  background-image: url('{{ url_for('NODE-datasource.static', filename='img/datasourcebad.svg') }}') !important;
+  background-repeat: no-repeat;
+  background-size: 20px !important;
+  align-content: center;
+  vertical-align: middle;
+  height: 1.3em;
+}

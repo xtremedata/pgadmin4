@@ -7,14 +7,9 @@
 #
 ##########################################################################
 
-import os
-import sys
 
-from flask import render_template
-from flask_babelex import gettext as _
-from pgadmin.utils.preferences import Preferences
-
-import config
+from flask import render_template, current_app
+from flask_babelex import gettext
 
 
 class DataSourceType(object):
@@ -53,6 +48,10 @@ class DataSourceType(object):
     def priority(self):
         return self.spriority
 
+    @property
+    def required(self):
+        return [u'name', u'ds_type']
+
     def __str__(self):
         return "Type: {0}, Description:{1}, Priority: {2}".format(
             self.stype, self.desc, self.spriority
@@ -82,6 +81,17 @@ class DataSourceType(object):
             reverse=True
         )
 
+    @classmethod
+    def type(cls, datasource_type):
+        try:
+            return cls.registry[datasource_type]
+        except KeyError:
+            current_app.logger.exception("Not implemented data source type:", e)
+
+
+    def get_manager(self):
+        return None
+
 
 # Default DataSource Type
-DataSourceType('lfs', _("Local FileSystem"), -1)
+DataSourceType('lfs', gettext("Local FileSystem"), -1)

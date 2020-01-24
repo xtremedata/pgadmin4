@@ -27,21 +27,27 @@ from pgadmin.model import db, DataGroup
 
 class DataGroupModule(BrowserPluginModule):
     NODE_TYPE = "data_group"
+    LABEL = gettext("Data Groups")
+
+    def get_dict_node(self, group):
+        return {'id': group.id, 'name': group.name}
+
+    def get_browser_node(self, group, **kwargs):
+        return self.generate_browser_node(
+                "%d" % (group.id),
+                None,
+                group.name,
+                "icon-%s" % self.node_type,
+                True,
+                self.node_type,
+                can_delete=group.can_delete,
+                **kwargs)
 
     def get_nodes(self, *arg, **kwargs):
         """Return a JSON document listing the data groups for the user"""
-        groups = DataGroup.query.filter_by(
-            user_id=current_user.id
-        ).order_by("id")
-        for idx, group in enumerate(groups):
-            yield self.generate_browser_node(
-                "%d" % (group.id), None,
-                group.name,
-                "icon-%s" % self.node_type,
-                False,
-                self.node_type,
-                can_delete=True if idx > 0 else False
-            )
+        groups = DataGroup.query.filter_by(user_id=current_user.id).order_by("id")
+        for group in groups:
+            yield self.get_browser_node(group)
 
     @property
     def node_type(self):
@@ -83,6 +89,10 @@ class DataGroupPluginModule(BrowserPluginModule):
     """
 
     @abstractmethod
+    def get_browser_node(self, obj, **kwargs):
+        pass
+
+    @abstractmethod
     def get_nodes(self, *arg, **kwargs):
         pass
 
@@ -92,21 +102,39 @@ blueprint = DataGroupModule(__name__)
 
 class DataGroupView(NodeView):
     node_type = DataGroupModule.NODE_TYPE
+
     parent_ids = []
     ids = [{'type': 'int', 'id': 'gid'}]
 
     @login_required
+    def nodes(self, gid=None):
+        """Return a JSON document listing the data groups for the user"""
+        groups = []
+
+        if gid is None:
+            groups = DataGroup.query.filter_by(user_id=current_user.id)
+        else:
+            group = DataGroup.query.filter_by(
+                    user_id=current_user.id, id=gid).first()
+            if group:
+                groups = [group]
+
+        nodes = [self.blueprint.get_browser_node(g) for g in groups]
+
+        try:
+            return make_json_response(data=(nodes[0] if gid else nodes))
+        except IndexError:
+            return gone(errormsg=gettext(
+                        "Could not find the data group {0}."
+                        ).format(gid))
+
+    def node(self, gid):
+        return self.nodes(gid)
+
+    @login_required
     def list(self):
-        res = []
-
-        for dg in DataGroup.query.filter_by(
-                user_id=current_user.id
-        ).order_by('name'):
-            res.append({
-                'id': dg.id,
-                'name': dg.name
-            })
-
+        query_res = DataGroup.query.filter_by(user_id=current_user.id).order_by('name')
+        res = [self.blueprint.get_dict_node(g) for g in query_res]
         return ajax_response(response=res, status=200)
 
     @login_required
@@ -147,7 +175,7 @@ class DataGroupView(NodeView):
             except Exception as e:
                 db.session.rollback()
                 return make_json_response(
-                    status=410, success=0, errormsg=e.message
+                    status=410, success=0, errormsg=e
                 )
 
         return make_json_response(result=request.form)
@@ -186,20 +214,10 @@ class DataGroupView(NodeView):
             except Exception as e:
                 db.session.rollback()
                 return make_json_response(
-                    status=410, success=0, errormsg=e.message
+                    status=410, success=0, errormsg=e
                 )
 
-        return jsonify(
-            node=self.blueprint.generate_browser_node(
-                gid,
-                None,
-                datagroup.name,
-                "icon-%s" % self.node_type,
-                True,
-                self.node_type,
-                can_delete=True  # This is user created hence can deleted
-            )
-        )
+        return jsonify(node=self.blueprint.get_browser_node(datagroup))
 
     @login_required
     def properties(self, gid):
@@ -241,18 +259,7 @@ class DataGroupView(NodeView):
                 data[u'id'] = dg.id
                 data[u'name'] = dg.name
 
-                return jsonify(
-                    node=self.blueprint.generate_browser_node(
-                        "%d" % dg.id,
-                        None,
-                        dg.name,
-                        "icon-%s" % self.node_type,
-                        True,
-                        self.node_type,
-                        # This is user created hence can deleted
-                        can_delete=True
-                    )
-                )
+                return jsonify(node=self.blueprint.get_browser_node(dg))
             except exc.IntegrityError:
                 db.session.rollback()
                 return bad_request(gettext(
@@ -264,13 +271,15 @@ class DataGroupView(NodeView):
                 return make_json_response(
                     status=410,
                     success=0,
-                    errormsg=e.message)
+                    errormsg=e)
 
         else:
             return make_json_response(
                 status=417,
                 success=0,
-                errormsg=gettext('No data group name was specified'))
+                errormsg=gettext(
+                    'No data group name was specified'
+                ))
 
     @login_required
     def sql(self, gid):
@@ -291,46 +300,6 @@ class DataGroupView(NodeView):
     @login_required
     def dependents(self, gid):
         return make_json_response(status=422)
-
-    @login_required
-    def nodes(self, gid=None):
-        """Return a JSON document listing the data groups for the user"""
-        nodes = []
-
-        if gid is None:
-            groups = DataGroup.query.filter_by(user_id=current_user.id)
-
-            for group in groups:
-                nodes.append(
-                    self.blueprint.generate_browser_node(
-                        "%d" % group.id,
-                        None,
-                        group.name,
-                        "icon-%s" % self.node_type,
-                        True,
-                        self.node_type
-                    )
-                )
-        else:
-            group = DataGroup.query.filter_by(user_id=current_user.id,
-                                                id=gid).first()
-            if not group:
-                return gone(
-                    errormsg=gettext("Could not find the data group.")
-                )
-
-            nodes = self.blueprint.generate_browser_node(
-                "%d" % (group.id), None,
-                group.name,
-                "icon-%s" % self.node_type,
-                True,
-                self.node_type
-            )
-
-        return make_json_response(data=nodes)
-
-    def node(self, gid):
-        return self.nodes(gid)
 
 
 DataGroupView.register_node_view(blueprint)

@@ -85,6 +85,46 @@ def is_version_in_range(sversion, min_ver, max_ver):
     return False
 
 
+
+def generate_browser_node(
+    node_id, parent_id, label, icon, inode, node_type, **kwargs):
+    """
+    Helper function to create a browser node for this particular subnode.
+
+    :param node_id:   Unique Id for each node
+    :param parent_id: Id of the parent.
+    :param label:     Label for the node
+    :param icon:      Icon for displaying along with this node on browser
+                      tree. Icon refers to a class name, it refers to.
+    :param inode:     True/False.
+                      Used by the browser tree node to check, if the
+                      current node will have children or not.
+    :param node_type: String to refer to the node type.
+    :param **kwargs:  A node can have extra information other than this
+                      data, which can be passed as key-value pair as
+                      argument here.
+                      i.e. A database, server node can have extra
+                      information like connected, or not.
+
+    Returns a dictionary object representing this node object for the
+    browser tree.
+    """
+    obj = {
+        "id": "%s/%s" % (node_type, node_id),
+        "label": label,
+        "icon": icon,
+        "inode": inode,
+        "_type": node_type,
+        "_id": node_id,
+        "_pid": parent_id,
+        "module": 'pgadmin.node.%s' % node_type
+    }
+    for key in kwargs:
+        obj.setdefault(key, kwargs[key])
+    return obj
+
+
+
 class PGChildModule(object):
     """
     class PGChildModule

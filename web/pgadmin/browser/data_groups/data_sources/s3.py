@@ -10,12 +10,32 @@
 from flask_babelex import gettext
 from pgadmin.browser.data_groups.data_sources.types import DataSourceType
 
+try:
+    from boto3 import client
+    has_boto3 = True
+except ImportError:
+    has_boto3 = False
+
 
 class S3(DataSourceType):
+    """
+    Data source type
+    
+    This data source support access to S3 buckets.
+    """
+
+    @property
+    def required(self):
+        s3_required = [u'key_name', u'key_secret']
+        return super(self).required.append(s3_required)
 
     def instanceOf(self, ver):
         return True
 
+    def get_manager(self):
+        return client('s3')
+
 
 # Default Data Source Type
-S3('S3', gettext("AWS S3 Data Source"), 0)
+if has_boto3:
+    S3('S3', gettext("AWS S3 Data Source"), 0)
