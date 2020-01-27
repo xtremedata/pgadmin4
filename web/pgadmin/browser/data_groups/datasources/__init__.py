@@ -66,7 +66,7 @@ def datasource_icon_and_background(datasource):
                 datasource.fgcolor)
 
     return 'icon-{0}{1}'.format(
-        datasource.datasource_type, datasource_background_color)
+        datasource.ds_type, datasource_background_color)
 
 
 class DataSourceModule(sg.DataGroupPluginModule):
@@ -99,7 +99,7 @@ class DataSourceModule(sg.DataGroupPluginModule):
                 None,
                 obj.name,
                 datasource_icon_and_background(obj),
-                True,
+                False,
                 self.node_type,
                 **kwargs)
 
@@ -147,17 +147,6 @@ class DataSourceModule(sg.DataGroupPluginModule):
         scripts = []
 
         scripts.extend([{
-            'name': 'pgadmin.browser.datasource.privilege',
-            'path': url_for('%s.static' % self.name, filename='js/privilege'),
-            'when': self.node_type,
-            'is_template': False,
-            'deps': ['pgadmin.browser.node.ui']
-        }, {
-            'name': 'pgadmin.browser.datasource.variable',
-            'path': url_for('%s.static' % self.name, filename='js/variable'),
-            'when': self.node_type,
-            'is_template': False
-        }, {
             'name': 'pgadmin.datasource.supported_datasources',
             'path': url_for('browser.index') + 'datasource/supported_datasources',
             'is_template': True,
@@ -285,7 +274,7 @@ class DataSourceNode(PGChildNodeView):
         # Not all parameters can be modified, while the datasource is connected
         config_param_map = {
             'name': 'name',
-            'ds_type': 'ds_type',
+            'datasource_type': 'ds_type',
             'key_name': 'key_name',
             'key_secret': 'key_secret',
             'bgcolor': 'bgcolor',
@@ -294,7 +283,7 @@ class DataSourceNode(PGChildNodeView):
 
         disp_lbl = {
             'name': gettext('name'),
-            'ds_type': gettext('Type'),
+            'datasource_type': gettext('Type'),
             'key_name': gettext('Key Name'),
             'key_secret': gettext('Key Secret'),
         }

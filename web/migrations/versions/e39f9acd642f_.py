@@ -6,8 +6,7 @@ Revises: aff1436e3c8c
 Create Date: 2020-01-24 15:45:08.144437
 
 """
-from alembic import op
-import sqlalchemy as sa
+from pgadmin.model import db
 
 
 # revision identifiers, used by Alembic.
@@ -31,18 +30,19 @@ def upgrade():
 
     db.engine.execute("""
             CREATE TABLE datasource (
-            id	INTEGER NOT NULL,
-            user_id	INTEGER NOT NULL,
-            datagroup_id	INTEGER NOT NULL,
-            name	VARCHAR(128) NOT NULL,
-            ds_type     VARCHAR(16) NOT NULL CHECK(ds_type IN ('S3')),
-            key_name	VARCHAR(128) NOT NULL,
-            key_secret	VARCHAR(128),
-            bgcolor TEXT(10),
-            fgcolor TEXT(10),
-            PRIMARY KEY(id),
-            FOREIGN KEY(user_id) REFERENCES user(id),
-            FOREIGN KEY(datagroup_id) REFERENCES datagroup(id))
+            id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            datagroup_id INTEGER NOT NULL,
+            name VARCHAR(128) NOT NULL,
+            ds_type VARCHAR(16) NOT NULL CHECK(ds_type IN ('S3')),
+            key_name VARCHAR(128) NOT NULL,
+            key_secret VARCHAR(128),
+            bgcolor VARCHAR(10),
+            fgcolor VARCHAR(10),
+            PRIMARY KEY (id),
+            FOREIGN KEY(user_id) REFERENCES "user" (id),
+            FOREIGN KEY(datagroup_id) REFERENCES "datagroup" (id),
+            UNIQUE (user_id, name))
     """)
     pass
 

@@ -14,7 +14,7 @@ define(
     return [
       {% for st in datasource_types %}
 
-      {label: '{{ st.description }}', value: '{{ st.datasource_type }}'},{% endfor %}
+      {label: '{{ st.description }}', value: '{{ st.ds_type }}'},{% endfor %}
 
       {label: gettext('Unknown'), value: ''}
     ];

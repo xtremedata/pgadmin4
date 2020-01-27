@@ -13,7 +13,7 @@ import simplejson as json
 from abc import ABCMeta, abstractmethod
 
 import six
-from flask import request, jsonify
+from flask import request, jsonify, current_app
 from flask_babelex import gettext
 from flask_security import current_user, login_required
 from pgadmin.browser import BrowserPluginModule
@@ -252,7 +252,8 @@ class DataGroupView(NodeView):
             try:
                 dg = DataGroup(
                     user_id=current_user.id,
-                    name=data[u'name'])
+                    name=data[u'name'],
+                    can_delete=True)
                 db.session.add(dg)
                 db.session.commit()
 
@@ -260,8 +261,9 @@ class DataGroupView(NodeView):
                 data[u'name'] = dg.name
 
                 return jsonify(node=self.blueprint.get_browser_node(dg))
-            except exc.IntegrityError:
+            except exc.IntegrityError as e:
                 db.session.rollback()
+                current_app.logger.exception(e)
                 return bad_request(gettext(
                     "The specified data group already exists."
                 ))

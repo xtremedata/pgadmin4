@@ -437,16 +437,26 @@ define([
                 node_(node name), node_type(node type)
                 and pass it to collection which will fetch Object Type properties.
               */
-              var gid = 'server_group' in info ? info['server_group']._id : info['data_group']._id,
-                sid = info.server._id,
-                did = info.database._id,
-                node_id = d._id,
+              var gid = null;
+              var sud = null;
+              var did = null;
 
+              if ('server_group' in info) {
+                  gid = info['server_group']._id;
+                  sid = info.server._id;
+                  did = info.database._id;
+              } else {
+                  gid = info['data_group']._id;
+                  sid = info.datasource._id;
+                  did = null;
+              }
+
+              var node_id = d._id;
                 /**
                   get node name only. used in mapping with object types defined
                   in allowed_acl.json
                  */
-                node_type = d._type.replace('coll-', '').replace(
+              var node_type = d._type.replace('coll-', '').replace(
                   'materialized_', ''
                 );
 
