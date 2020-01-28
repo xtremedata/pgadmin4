@@ -208,7 +208,9 @@ define('pgadmin.node.datasource', [
             return model.isAWS() && model.isNew();
           },
           disabled: function() {
-            return !current_user.allow_save_password;
+            if (!current_user.allow_save_password)
+              return true;
+            return false;
           },
         }],
 
