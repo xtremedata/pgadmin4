@@ -356,7 +356,6 @@ class NodeView(with_metaclass(MethodViewType, View)):
         id_url, url = cls.get_node_urls()
 
         commands = cls.generate_ops()
-        print("#### url:", id_url, ":", url, "commands:", commands)
 
         for c in commands:
             cmd = c['cmd'].replace('.', '-')

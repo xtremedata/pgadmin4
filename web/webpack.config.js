@@ -424,6 +424,7 @@ module.exports = [{
         ',pgadmin.browser.object_sql' +
         ',pgadmin.browser.bgprocess' +
         ',pgadmin.node.data_group' +
+        ',pgadmin.node.datasource' +
         ',pgadmin.node.server_group' +
         ',pgadmin.node.server' +
         ',pgadmin.node.database' +

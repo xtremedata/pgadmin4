@@ -255,6 +255,7 @@ var webpackShimConfig = {
     'pgadmin.node.sequence': path.join(__dirname, './pgadmin/browser/server_groups/servers/databases/schemas/sequences/static/js/sequence'),
     'pgadmin.node.server': path.join(__dirname, './pgadmin/browser/server_groups/servers/static/js/server'),
     'pgadmin.node.server_group': path.join(__dirname, './pgadmin/browser/server_groups/static/js/server_group'),
+    'pgadmin.node.datasource': path.join(__dirname, './pgadmin/browser/data_groups/datasources/static/js/datasource'),
     'pgadmin.node.data_group': path.join(__dirname, './pgadmin/browser/data_groups/static/js/data_group'),
     'pgadmin.node.synonym': path.join(__dirname, './pgadmin/browser/server_groups/servers/databases/schemas/synonyms/static/js/synonym'),
     'pgadmin.node.table': path.join(__dirname, './pgadmin/browser/server_groups/servers/databases/schemas/tables/static/js/table'),
@@ -267,6 +268,7 @@ var webpackShimConfig = {
     'pgadmin.node.view': path.join(__dirname, './pgadmin/browser/server_groups/servers/databases/schemas/views/static/js/view'),
     'pgadmin.preferences': path.join(__dirname, './pgadmin/preferences/static/js/preferences'),
     'pgadmin.settings': path.join(__dirname, './pgadmin/settings/static/js/settings'),
+    'pgadmin.server.supported_datasources': '/browser/datasource/supported_datasources',
     'pgadmin.server.supported_servers': '/browser/server/supported_servers',
     'pgadmin.sqleditor': path.join(__dirname, './pgadmin/tools/sqleditor/static/js/sqleditor'),
     'pgadmin.tables.js': path.join(__dirname, './pgadmin/browser/server_groups/servers/databases/schemas/tables/static/js/'),
@@ -293,6 +295,7 @@ var webpackShimConfig = {
     'pgadmin.browser.endpoints',
     'pgadmin.browser.messages',
     'pgadmin.browser.utils',
+    'pgadmin.datasource.supported_datasources',
     'pgadmin.server.supported_servers',
   ],
   // Define list of pgAdmin common libraries to bundle them separately

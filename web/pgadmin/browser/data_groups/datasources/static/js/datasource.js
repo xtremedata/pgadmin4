@@ -9,9 +9,15 @@
 
 define('pgadmin.node.datasource', [
   'sources/gettext', 'sources/url_for', 'jquery', 'underscore', 'backbone',
-  'sources/pgadmin', 'pgadmin.browser',
+  'sources/pgadmin',
+  'pgadmin.alertifyjs',
+  'pgadmin.browser',
+  'pgadmin.user_management.current_user',
+  'pgadmin.datasource.supported_datasources',
 ], function(
-  gettext, url_for, $, _, Backbone, pgAdmin, pgBrowser
+  gettext, url_for, $, _, Backbone, pgAdmin,
+  Alertify, pgBrowser,
+  current_user, supported_datasources,
 ) {
 
   if (!pgBrowser.Nodes['datasource']) {
@@ -53,8 +59,8 @@ define('pgadmin.node.datasource', [
       canDrop: true,
       dropAsRemove: true,
       dropPriority: 5,
-      hasStatistics: true,
-      hasCollectiveStatistics: true,
+      hasStatistics: false,
+      hasCollectiveStatistics: false,
       can_expand: true,
       Init: function() {
 
@@ -67,16 +73,31 @@ define('pgadmin.node.datasource', [
         pgBrowser.add_menus([{
           name: 'create_datasource_on_dg', node: 'data_group', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
-          category: 'create', priority: 1, label: gettext('DataSource...'),
+          category: 'create', priority: 1, label: gettext('Data Source...'),
           data: {action: 'create'}, icon: 'wcTabIcon icon-datasource',
         },{
           name: 'create_datasource', node: 'datasource', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
-          category: 'create', priority: 3, label: gettext('DataSource...'),
+          category: 'create', priority: 3, label: gettext('Data Source...'),
           data: {action: 'create'}, icon: 'wcTabIcon icon-datasource',
+        },{
+          name: 'clear_saved_password', node: 'datasource', module: this,
+          applies: ['object', 'context'], callback: 'clear_saved_password',
+          label: gettext('Clear Saved Password'), icon: 'fa fa-eraser',
+          priority: 7,
+          enable: function(node) {
+            if (node && node._type === 'datasource' &&
+              node.is_password_saved) {
+              return true;
+            }
+            return false;
+          },
         }]);
       },
       callbacks: {
+        beforeopen: function() {
+          return true;
+        },
         added: function(item, data) {
 
           pgBrowser.datasourceInfo = pgBrowser.datasourceInfo || {};
@@ -86,7 +107,46 @@ define('pgadmin.node.datasource', [
           pgAdmin.Browser.Node.callbacks.added.apply(this, arguments);
           return true;
         },
+
+        /* Cleat saved database server password */
+        clear_saved_password: function(args){
+          var input = args || {},
+            obj = this,
+            t = pgBrowser.tree,
+            i = input.item || t.selected(),
+            d = i && i.length == 1 ? t.itemData(i) : undefined;
+
+          if (!d)
+            return false;
+
+          Alertify.confirm(
+            gettext('Clear saved password'),
+            gettext('Are you sure you want to clear the saved password for server %s?', d.label),
+            function() {
+              $.ajax({
+                url: obj.generate_url(i, 'clear_saved_password', d, true),
+                method:'PUT',
+              })
+                .done(function(res) {
+                  if (res.success == 1) {
+                    Alertify.success(res.info);
+                    t.itemData(i).is_password_saved=res.data.is_password_saved;
+                  }
+                  else {
+                    Alertify.error(res.info);
+                  }
+                })
+                .fail(function(xhr, status, error) {
+                  Alertify.pgRespErrorNotify(xhr, error);
+                });
+            },
+            function() { return true; }
+          );
+
+          return false;
+        },
       },
+
       model: pgAdmin.Browser.Node.Model.extend({
         defaults: {
           gid: undefined,
@@ -107,44 +167,68 @@ define('pgadmin.node.datasource', [
         },
         schema: [{
           id: 'id', label: gettext('ID'), type: 'int', mode: ['properties'],
+          group: null,
         },{
           id: 'name', label: gettext('Name'), type: 'text',
           mode: ['properties', 'edit', 'create'],
+          group: null,
         },{
           id: 'gid', label: gettext('Data group'), type: 'int',
           control: 'node-list-by-id', node: 'data_group',
           mode: ['create', 'edit'], select2: {allowClear: false},
+          group: null,
         },{
-          datasource_type: 'datasource_type', label: gettext('Data source type'), type: 'text',
-          mode: ['properties', 'edit', 'create'],
+          id: 'datasource_type', label: gettext('Data source type'), type: 'options',
+          mode: ['properties', 'edit', 'create'], select2: {allowClear: false},
+          'options': supported_datasources,
+          group: null,
         },{
           id: 'bgcolor', label: gettext('Background'), type: 'color',
-          group: null, mode: ['edit', 'create'], disabled: 'isfgColorSet',
+          mode: ['edit', 'create'], disabled: 'isfgColorSet',
           deps: ['fgcolor'],
+          group: null,
         },{
           id: 'fgcolor', label: gettext('Foreground'), type: 'color',
-          group: null, mode: ['edit', 'create'], disabled: 'isConnected',
+          mode: ['edit', 'create'], disabled: 'isConnected',
+          group: null,
+        },{
+          id: 'key_name', label: gettext('AWS key name'), type: 'text',
+          mode: ['properties', 'edit', 'create'],
+          visible: 'isAWS', group: gettext('Auhentication'),
+        },{
+          id: 'key_secret', label: gettext('AWS key secret'), type: 'password',
+          mode: ['properties', 'edit', 'create'],
+          visible: 'isAWS',
+          group: gettext('Auhentication'),
+        },{
+          id: 'save_secret', controlLabel: gettext('Save secret?'), type: 'checkbox',
+          mode: ['create'],
+          group: gettext('Auhentication'),
+          visible: function(model) {
+            return model.isAWS() && model.isNew();
+          },
+          disabled: function() {
+            return !current_user.allow_save_password;
+          },
         }],
+
         validate: function() {
           return true;
         },
-        isfgColorSet: function(model) {
-          var bgcolor = model.get('bgcolor'),
-            fgcolor = model.get('fgcolor');
 
-          if(model.get('connected')) {
-            return true;
-          }
-          // If fgcolor is set and bgcolor is not set then force bgcolor
-          // to set as white
-          if(_.isUndefined(bgcolor) || _.isNull(bgcolor) || !bgcolor) {
-            if(fgcolor) {
-              model.set('bgcolor', '#ffffff');
-            }
-          }
-
-          return false;
+        isConnected: function() {
+          return true;
         },
+
+        isAws: function(model) {
+          var ds_type = model.get('datasource_type');
+          return ds_type == 'S3';
+        },
+
+        isfgColorSet: function() {
+          return true;
+        },
+
       }),
     });
   }

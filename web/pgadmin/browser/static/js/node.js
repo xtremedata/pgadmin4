@@ -234,7 +234,10 @@ define('pgadmin.browser.node', [
     ///////
     check_user_permission: function(itemData, item, data) {
       // Do not display CREATE script on server group and server node
-      if (itemData._type == 'server_group' || itemData._type == 'server' || itemData._type == 'data_group') {
+      if (itemData._type == 'server_group' 
+          || itemData._type == 'server' 
+          || itemData._type == 'data_group'
+          || itemData._type == 'datasource') {
         return false;
       }
 

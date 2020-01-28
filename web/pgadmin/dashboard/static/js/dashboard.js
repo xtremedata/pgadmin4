@@ -295,9 +295,6 @@ define('pgadmin.dashboard', [
           self.clearChartFromStore();
         }
       } else if (itemData && itemData._type) {
-        /* disable no-console */
-        console.log('##### node:', node, ', item:', item);
-        /* enable no-console */
         var treeHierarchy = node.getTreeNodeHierarchy(item),
           url = NodesDashboard.url(itemData, item, treeHierarchy);
 
@@ -628,6 +625,34 @@ define('pgadmin.dashboard', [
       self.charts_poller_int_id = setInterval(thePollingFunc, poll_interval * 1000);
     },
 
+    // Handler function to support the "Add DataSource" link
+    add_new_datasource: function() {
+      if (pgBrowser && pgBrowser.tree) {
+        var i = pgBrowser.tree.selected().length != 0 ?
+            pgBrowser.tree.selected() :
+            pgBrowser.tree.first(null, false),
+          datasourceModule = require('pgadmin.node.datasource'),
+          itemData = pgBrowser.tree.itemData(i);
+
+        while (itemData && itemData._type != 'data_group') {
+          i = pgBrowser.tree.next(i);
+          itemData = pgBrowser.tree.itemData(i);
+        }
+
+        if (!itemData) {
+          return;
+        }
+
+        if (datasourceModule) {
+          datasourceModule.callbacks.show_obj_properties.apply(
+            datasourceModule, [{
+              action: 'create',
+            }, i]
+          );
+        }
+      }
+    },
+
     // Handler function to support the "Add Server" link
     add_new_server: function() {
       if (pgBrowser && pgBrowser.tree) {
@@ -637,7 +662,7 @@ define('pgadmin.dashboard', [
           serverModule = require('pgadmin.node.server'),
           itemData = pgBrowser.tree.itemData(i);
 
-        while (itemData && itemData._type != 'server_group' && itemData._type != 'data_group') {
+        while (itemData && itemData._type != 'server_group') {
           i = pgBrowser.tree.next(i);
           itemData = pgBrowser.tree.itemData(i);
         }

@@ -9,7 +9,7 @@
 
 import simplejson as json
 import re
-import pgadmin.browser.data_groups as sg
+import pgadmin.browser.data_groups as dg
 from flask import render_template, request, make_response, jsonify, \
     current_app, url_for
 from flask_babelex import gettext
@@ -69,7 +69,7 @@ def datasource_icon_and_background(datasource):
         datasource.ds_type, datasource_background_color)
 
 
-class DataSourceModule(sg.DataGroupPluginModule):
+class DataSourceModule(dg.DataGroupPluginModule):
     NODE_TYPE = "datasource"
     LABEL = gettext("Data Sources")
 
@@ -83,7 +83,7 @@ class DataSourceModule(sg.DataGroupPluginModule):
         Load the module script for datasource, when any of the data-group node is
         initialized.
         """
-        return sg.DataGroupModule.NODE_TYPE
+        return dg.DataGroupModule.NODE_TYPE
 
     def get_dict_node(self, obj, parent):
         return {
@@ -152,7 +152,7 @@ class DataSourceModule(sg.DataGroupPluginModule):
             'is_template': True,
             'when': self.node_type
         }])
-        scripts.extend(sg.DataGroupPluginModule.get_own_javascripts(self))
+        scripts.extend(dg.DataGroupPluginModule.get_own_javascripts(self))
 
         return scripts
 
@@ -185,6 +185,21 @@ class DataSourceNode(PGChildNodeView):
 
     parent_ids = [{'type': 'int', 'id': 'gid'}]
     ids = [{'type': 'int', 'id': 'sid'}]
+    operations = dict({
+        'obj': [
+            {'get': 'properties', 'delete': 'delete', 'put': 'update'},
+            {'get': 'list', 'post': 'create'}
+        ],
+        'nodes': [{'get': 'node'}, {'get': 'nodes'}],
+        'sql': [{'get': 'sql'}],
+        'msql': [{'get': 'modified_sql'}],
+        'stats': [{'get': 'statistics'}],
+        'dependency': [{'get': 'dependencies'}],
+        'dependent': [{'get': 'dependents'}],
+        'children': [{'get': 'children'}],
+        'supported_datasources.js': [{}, {}, {'get': 'supported_datasources'}],
+        'clear_saved_password': [{'put': 'clear_saved_password'}],
+    })
 
 
     @login_required
@@ -321,12 +336,12 @@ class DataSourceNode(PGChildNodeView):
         datasources = DataSource.query.filter_by(
             user_id=current_user.id,
             datagroup_id=gid).order_by(DataSource.name)
-        sg = DataGroup.query.filter_by(
+        dg = DataGroup.query.filter_by(
             user_id=current_user.id,
             id=gid
         ).first()
 
-        res = [self.blueprint.get_dict_node(d, sg) for d in datasources]
+        res = [self.blueprint.get_dict_node(d, dg) for d in datasources]
         return ajax_response(response=res)
 
     @login_required
@@ -343,12 +358,12 @@ class DataSourceNode(PGChildNodeView):
                 errormsg=gettext("Could not find the required datasource.")
             )
 
-        sg = DataGroup.query.filter_by(
+        dg = DataGroup.query.filter_by(
             user_id=current_user.id,
             id=datasource.datagroup_id
         ).first()
 
-        return ajax_response(response=self.blueprint.get_dict_node(datasource, sg))
+        return ajax_response(response=self.blueprint.get_dict_node(datasource, dg))
 
     @login_required
     def create(self, gid):
@@ -393,7 +408,7 @@ class DataSourceNode(PGChildNodeView):
                 user_id=current_user.id,
                 datagroup_id=data.get('gid', gid),
                 name=data.get('name'),
-                ds_type=data.get('ds_type'),
+                ds_type=data.get('datasource_type'),
                 key_name=data.get('key_name'),
                 key_secret=data.get('key_secret'),
                 bgcolor=data.get('bgcolor', None),
@@ -470,7 +485,7 @@ class DataSourceNode(PGChildNodeView):
                     info=gettext("Could not find the required datasource.")
                 )
 
-            setattr(datasource, 'key_secret', None)
+            datasource.key_secret = None
             db.session.commit()
         except Exception as e:
             current_app.logger.error(
