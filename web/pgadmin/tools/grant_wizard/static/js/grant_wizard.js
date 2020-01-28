@@ -438,27 +438,27 @@ define([
                 and pass it to collection which will fetch Object Type properties.
               */
               var gid = null;
-              var sud = null;
+              var sid = null;
               var did = null;
 
               if ('server_group' in info) {
-                  gid = info['server_group']._id;
-                  sid = info.server._id;
-                  did = info.database._id;
+                gid = info['server_group']._id;
+                sid = info.server._id;
+                did = info.database._id;
               } else {
-                  gid = info['data_group']._id;
-                  sid = info.datasource._id;
-                  did = null;
+                gid = info['data_group']._id;
+                sid = info.datasource._id;
+                did = null;
               }
 
               var node_id = d._id;
-                /**
-                  get node name only. used in mapping with object types defined
-                  in allowed_acl.json
-                 */
+              /**
+                get node name only. used in mapping with object types defined
+                in allowed_acl.json
+               */
               var node_type = d._type.replace('coll-', '').replace(
-                  'materialized_', ''
-                );
+                'materialized_', ''
+              );
 
               // Fetch privileges specific to nodes
               var json_data = this.get_json_data(gid, sid, did);

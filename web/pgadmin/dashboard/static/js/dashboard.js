@@ -295,6 +295,9 @@ define('pgadmin.dashboard', [
           self.clearChartFromStore();
         }
       } else if (itemData && itemData._type) {
+        /* disable no-console */
+        console.log('##### node:', node, ', item:', item);
+        /* enable no-console */
         var treeHierarchy = node.getTreeNodeHierarchy(item),
           url = NodesDashboard.url(itemData, item, treeHierarchy);
 

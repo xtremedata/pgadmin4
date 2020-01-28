@@ -8,7 +8,7 @@
 ##########################################################################
 
 from flask_babelex import gettext
-from pgadmin.browser.data_groups.data_sources.types import DataSourceType
+from pgadmin.browser.data_groups.datasources.types import DataSourceType
 
 try:
     from boto3 import client

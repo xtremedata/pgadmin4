@@ -10,11 +10,8 @@
 define('pgadmin.node.datasource', [
   'sources/gettext', 'sources/url_for', 'jquery', 'underscore', 'backbone',
   'sources/pgadmin', 'pgadmin.browser',
-  'pgadmin.datasource.supported_datasources', 'pgadmin.user_management.current_user',
-  'pgadmin.alertifyjs', 'pgadmin.backform',
 ], function(
-  gettext, url_for, $, _, Backbone, pgAdmin, pgBrowser,
-  supported_datasources, current_user, Alertify, Backform
+  gettext, url_for, $, _, Backbone, pgAdmin, pgBrowser
 ) {
 
   if (!pgBrowser.Nodes['datasource']) {
@@ -45,7 +42,7 @@ define('pgadmin.node.datasource', [
         }
 
         return null;
-      }
+      },
     });
 
     pgAdmin.Browser.Nodes['datasource'] = pgAdmin.Browser.Node.extend({
@@ -88,7 +85,7 @@ define('pgadmin.node.datasource', [
           // Call added method of node.js
           pgAdmin.Browser.Node.callbacks.added.apply(this, arguments);
           return true;
-        }
+        },
       },
       model: pgAdmin.Browser.Node.Model.extend({
         defaults: {
@@ -97,7 +94,7 @@ define('pgadmin.node.datasource', [
           name: '',
           datasource_type: '',
           key_name: undefined,
-          key_secret: undefined
+          key_secret: undefined,
         },
         // Default values!
         initialize: function(attrs, args) {
@@ -147,7 +144,7 @@ define('pgadmin.node.datasource', [
           }
 
           return false;
-        }
+        },
       }),
     });
   }
