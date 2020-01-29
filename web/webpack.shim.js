@@ -268,7 +268,7 @@ var webpackShimConfig = {
     'pgadmin.node.view': path.join(__dirname, './pgadmin/browser/server_groups/servers/databases/schemas/views/static/js/view'),
     'pgadmin.preferences': path.join(__dirname, './pgadmin/preferences/static/js/preferences'),
     'pgadmin.settings': path.join(__dirname, './pgadmin/settings/static/js/settings'),
-    'pgadmin.server.supported_datasources': '/browser/datasource/supported_datasources',
+    'pgadmin.datasource.supported_datasources': '/browser/datasource/supported_datasources',
     'pgadmin.server.supported_servers': '/browser/server/supported_servers',
     'pgadmin.sqleditor': path.join(__dirname, './pgadmin/tools/sqleditor/static/js/sqleditor'),
     'pgadmin.tables.js': path.join(__dirname, './pgadmin/browser/server_groups/servers/databases/schemas/tables/static/js/'),

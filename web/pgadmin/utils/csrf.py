@@ -29,6 +29,7 @@ class _PGCSRFProtect(CSRFProtect):
             'flask_security.views.logout',
             'pgadmin.tools.translations',
             app.blueprints['redirects'],
+            'pgadmin.browser.data_groups.datasources.supported_datasources-js',
             'pgadmin.browser.server_groups.servers.supported_servers-js',
             'pgadmin.tools.datagrid.initialize_query_tool',
             'pgadmin.tools.datagrid.panel',

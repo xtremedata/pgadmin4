@@ -12,9 +12,9 @@ define(
   ['sources/gettext'],
   function(gettext) {
     return [
-      {% for st in datasource_types %}
+      {% for dst in datasource_types %}
 
-      {label: '{{ st.description }}', value: '{{ st.datasource_type }}'},{% endfor %}
+      {label: '{{ dst.description }}', value: '{{ dst.datasource_type }}'},{% endfor %}
 
       {label: gettext('Unknown'), value: ''}
     ];
