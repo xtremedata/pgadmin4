@@ -1,0 +1,19 @@
+.pg-icon-bucket {
+  background-image: url('{{ url_for('NODE-bucket.static', filename='img/bucket.svg') }}') !important;
+  background-repeat: no-repeat;
+  background-size: 20px !important;
+  align-content: center;
+  vertical-align: middle;
+  height: 1.3em;
+}
+
+.icon-bucket-not-connected {
+  background-image: url('{{ url_for('NODE-bucket.static', filename='img/bucketbad.svg') }}') !important;
+  border-radius: 10px;
+  background-size: 20px !important;
+  background-repeat: no-repeat;
+  vertical-align: middle;
+  align-content: center;
+  height: 1.3em;
+
+}

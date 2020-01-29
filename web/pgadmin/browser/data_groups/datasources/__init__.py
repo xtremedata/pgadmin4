@@ -20,7 +20,6 @@ from pgadmin.utils.ajax import make_json_response, bad_request, forbidden, \
     make_response as ajax_response, internal_server_error, unauthorized, gone
 from pgadmin.utils.crypto import encrypt, decrypt, pqencryptpassword
 from pgadmin.utils.menu import MenuItem
-from pgadmin.tools.sqleditor.utils.query_history import QueryHistory
 from pgadmin.utils.master_password import get_crypt_key
 from pgadmin.utils.exception import CryptKeyMissing
 
@@ -261,8 +260,6 @@ class DataSourceNode(PGChildNodeView):
                 for s in datasources:
                     db.session.delete(s)
                 db.session.commit()
-
-                QueryHistory.clear_history(current_user.id, sid)
 
             except Exception as e:
                 current_app.logger.exception(e)

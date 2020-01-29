@@ -197,6 +197,7 @@ define('pgadmin.node.datasource', [
           visible: 'isAWS', group: gettext('Auhentication'),
         },{
           id: 'key_secret', label: gettext('AWS key secret'), type: 'password',
+          control: 'input',
           mode: ['properties', 'edit', 'create'],
           visible: 'isAWS',
           group: gettext('Auhentication'),
@@ -205,7 +206,7 @@ define('pgadmin.node.datasource', [
           mode: ['create'],
           group: gettext('Auhentication'),
           visible: function(model) {
-            return model.isAWS() && model.isNew();
+            return model.get('datasource_type') == 'S3' && model.isNew();
           },
           disabled: function() {
             if (!current_user.allow_save_password)

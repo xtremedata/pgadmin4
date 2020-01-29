@@ -94,4 +94,4 @@ class DataSourceType(object):
 
 
 # Default DataSource Type
-DataSourceType('lfs', gettext("Local FileSystem"), -1)
+DataSourceType('lfs', gettext("Local File System"), -1)

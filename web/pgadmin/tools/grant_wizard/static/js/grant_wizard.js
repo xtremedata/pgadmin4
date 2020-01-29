@@ -460,11 +460,6 @@ define([
                 'materialized_', ''
               );
 
-              /* eslint-disable no-console */
-              console.log('##### gid:', gid, ', sid:', sid, ', did:', did, ', node_id:', node_id, ', node_type:', node_type, ', info:', info);
-              /* eslint-enable no-console */
-
-
               // Fetch privileges specific to nodes
               var json_data = this.get_json_data(gid, sid, did);
               var privDict = JSON.parse(json_data.responseText);

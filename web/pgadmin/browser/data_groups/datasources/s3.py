@@ -38,4 +38,4 @@ class S3(DataSourceType):
 
 # Default Data Source Type
 if has_boto3:
-    S3('S3', gettext("AWS S3 Data Source"), 0)
+    S3('S3', gettext("AWS S3"), 0)
