@@ -448,7 +448,7 @@ define([
               } else {
                 gid = info['data_group']._id;
                 sid = info.datasource._id;
-                did = null;
+                did = info.backet._id;
               }
 
               var node_id = d._id;

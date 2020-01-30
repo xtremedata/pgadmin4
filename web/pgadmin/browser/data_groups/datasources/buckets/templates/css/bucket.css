@@ -1,4 +1,4 @@
-.pg-icon-bucket {
+.icon-bucket {
   background-image: url('{{ url_for('NODE-bucket.static', filename='img/bucket.svg') }}') !important;
   background-repeat: no-repeat;
   background-size: 20px !important;

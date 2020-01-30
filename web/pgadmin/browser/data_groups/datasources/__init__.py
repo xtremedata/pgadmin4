@@ -98,7 +98,7 @@ class DataSourceModule(dg.DataGroupPluginModule):
                 None,
                 obj.name,
                 datasource_icon_and_background(obj),
-                False,
+                True,
                 self.node_type,
                 **kwargs)
 
@@ -237,7 +237,7 @@ class DataSourceNode(PGChildNodeView):
                 )
             )
 
-        return make_json_response(result=self.blueprint(datasource))
+        return make_json_response(result=self.blueprint.get_browser_node(datasource))
 
     @login_required
     def delete(self, gid, sid):
