@@ -7,52 +7,18 @@
 #
 ##########################################################################
 
-import simplejson as json
-import re
-import pgadmin.browser.data_groups as dg
 from flask import render_template, request, make_response, jsonify, \
     current_app, url_for
 from flask_babelex import gettext
 from flask_security import current_user, login_required
-from pgadmin.browser.data_groups.datasources.types import DataSourceType
-from pgadmin.browser.utils import PGChildNodeView
+from pgadmin.browser.utils import PGChildNodeView, PGChildNodeModule
 from pgadmin.utils.ajax import make_json_response, bad_request, forbidden, \
     make_response as ajax_response, internal_server_error, unauthorized, gone
-from pgadmin.utils.crypto import encrypt, decrypt, pqencryptpassword
-from pgadmin.utils.menu import MenuItem
-from pgadmin.utils.master_password import get_crypt_key
-from pgadmin.utils.exception import CryptKeyMissing
-
-from pgadmin.model import db, DataSource, DataGroup
+import pgadmin.browser.data_groups.folders.buckets as buckets
 
 
-
-def datasource_icon_and_background(datasource):
-    """
-
-    Args:
-        is_connected: Flag to check if datasource is connected
-        datasource: Sever object
-
-    Returns:
-        DataSource Icon CSS class
-    """
-    datasource_background_color = ''
-    if datasource and datasource.bgcolor:
-        datasource_background_color = ' {0}'.format(
-            datasource.bgcolor)
-        # If user has set font color also
-        if datasource.fgcolor:
-            datasource_background_color = '{0} {1}'.format(
-                datasource_background_color,
-                datasource.fgcolor)
-
-    return 'icon-{0}{1}'.format(
-        datasource.ds_type, datasource_background_color)
-
-
-class DataSourceModule(dg.DataGroupPluginModule):
-    NODE_TYPE = "datasource"
+class FolderModule(PGChildNodeModule):
+    NODE_TYPE = "folder"
     LABEL = gettext("Data Sources")
 
     @property
@@ -62,25 +28,22 @@ class DataSourceModule(dg.DataGroupPluginModule):
     @property
     def script_load(self):
         """
-        Load the module script for datasource, when any of the data-group node is
+        Load the module script for folder, when any of the data-group node is
         initialized.
         """
-        return dg.DataGroupModule.NODE_TYPE
+        return buckets.BucketModule.NODE_TYPE
 
     def get_dict_node(self, obj, parent):
         return {
-            'id': obj.id, 
-            'name': obj.name,
-            'group-id': parent.id,
-            'group-name': parent.name,
-            'datasource_type': obj.ds_type }
+            'name': obj.name
+        }
 
     def get_browser_node(self, obj, **kwargs):
         return self.generate_browser_node(
-                "%d" % (obj.id),
+                "%d" % (obj['Name']),
                 None,
                 obj.name,
-                datasource_icon_and_background(obj),
+                folder_icon_and_background(obj),
                 True,
                 self.node_type,
                 **kwargs)
@@ -90,21 +53,21 @@ class DataSourceModule(dg.DataGroupPluginModule):
         """
         Return a JSON document listing the data sources for the user
         """
-        datasources = DataSource.query.filter_by(user_id=current_user.id,
+        folders = Folder.query.filter_by(user_id=current_user.id,
                                          datagroup_id=gid)
 
-        for datasource in datasources:
+        for folder in folders:
             connected = False
             manager = None
             errmsg = None
             try:
-                manager = DataSourceType.type(datasource.ds_type).get_manager() # !!! temp
+                manager = FolderType.type(folder.ds_type).get_manager() # !!! temp
             except Exception as e:
                 # !!!
                 current_app.logger.exception(e)
                 errmsg = str(e)
 
-            yield self.get_browser_node(datasource, errmsg=errmsg)
+            yield self.get_browser_node(folder, errmsg=errmsg)
 
     @property
     def jssnippets(self):
@@ -115,12 +78,12 @@ class DataSourceModule(dg.DataGroupPluginModule):
         """
         Returns a snippet of css to include in the page
         """
-        snippets = [render_template("css/datasources.css")]
+        snippets = [render_template("css/folders.css")]
 
         for submodule in self.submodules:
             snippets.extend(submodule.csssnippets)
 
-        for st in DataSourceType.types():
+        for st in FolderType.types():
             snippets.extend(st.csssnippets)
 
         return snippets
@@ -129,8 +92,8 @@ class DataSourceModule(dg.DataGroupPluginModule):
         scripts = []
 
         scripts.extend([{
-            'name': 'pgadmin.datasource.supported_datasources',
-            'path': url_for('browser.index') + 'datasource/supported_datasources',
+            'name': 'pgadmin.folder.supported_folders',
+            'path': url_for('browser.index') + 'folder/supported_folders',
             'is_template': True,
             'when': self.node_type
         }])
@@ -139,31 +102,24 @@ class DataSourceModule(dg.DataGroupPluginModule):
         return scripts
 
 
-    # We do not have any preferences for datasource node.
+    # We do not have any preferences for folder node.
     def register_preferences(self):
         """
         register_preferences
         Override it so that - it does not register the show_node preference for
-        datasource type.
+        folder type.
         """
         pass
 
 
 
-
-class DataSourceMenuItem(MenuItem):
-    def __init__(self, **kwargs):
-        kwargs.setdefault("type", DataSourceModule.NODE_TYPE)
-        super(DataSourceMenuItem, self).__init__(**kwargs)
-
-
-blueprint = DataSourceModule(__name__)
+blueprint = FolderModule(__name__)
 
 
 
 
-class DataSourceNode(PGChildNodeView):
-    node_type = DataSourceModule.NODE_TYPE
+class FolderNode(PGChildNodeView):
+    node_type = FolderModule.NODE_TYPE
 
     parent_ids = [{'type': 'int', 'id': 'gid'}]
     ids = [{'type': 'int', 'id': 'sid'}]
@@ -179,7 +135,7 @@ class DataSourceNode(PGChildNodeView):
         'dependency': [{'get': 'dependencies'}],
         'dependent': [{'get': 'dependents'}],
         'children': [{'get': 'children'}],
-        'supported_datasources.js': [{}, {}, {'get': 'supported_datasources'}],
+        'supported_folders.js': [{}, {}, {'get': 'supported_folders'}],
         'clear_saved_password': [{'put': 'clear_saved_password'}],
     })
 
@@ -187,12 +143,12 @@ class DataSourceNode(PGChildNodeView):
     @login_required
     def nodes(self, gid):
         """
-        Return a JSON document listing the datasources under this data group
+        Return a JSON document listing the folders under this data group
         for the user.
         """
-        datasources = DataSource.query.filter_by(user_id=current_user.id,
+        folders = Folder.query.filter_by(user_id=current_user.id,
                                          datagroup_id=gid)
-        res = [self.blueprint.get_browser_node(obj) for obj in datasources]
+        res = [self.blueprint.get_browser_node(obj) for obj in folders]
 
         if not len(res):
             return gone(errormsg=gettext(
@@ -204,43 +160,43 @@ class DataSourceNode(PGChildNodeView):
 
     @login_required
     def node(self, gid, sid):
-        """Return a JSON document listing the datasource groups for the user"""
-        datasource = DataSource.query.filter_by(user_id=current_user.id,
+        """Return a JSON document listing the folder groups for the user"""
+        folder = Folder.query.filter_by(user_id=current_user.id,
                                         datagroup_id=gid,
                                         id=sid).first()
 
-        if datasource is None:
+        if folder is None:
             return make_json_response(
                 status=410,
                 success=0,
                 errormsg=gettext(
                     gettext(
-                        "Could not find the datasource with id# {0}."
+                        "Could not find the folder with id# {0}."
                     ).format(sid)
                 )
             )
 
-        return make_json_response(result=self.blueprint.get_browser_node(datasource))
+        return make_json_response(result=self.blueprint.get_browser_node(folder))
 
     @login_required
     def delete(self, gid, sid):
-        """Delete a datasource node in the settings database."""
-        datasources = DataSource.query.filter_by(user_id=current_user.id, id=sid)
+        """Delete a folder node in the settings database."""
+        folders = Folder.query.filter_by(user_id=current_user.id, id=sid)
 
-        # TODO:: A datasource, which is connected, cannot be deleted
-        if datasources is None:
+        # TODO:: A folder, which is connected, cannot be deleted
+        if folders is None:
             return make_json_response(
                 status=410,
                 success=0,
                 errormsg=gettext(
                     'The specified data source could not be found.\n'
                     'Does the user have permission to access the '
-                    'datasource?'
+                    'folder?'
                 )
             )
         else:
             try:
-                for s in datasources:
+                for s in folders:
                     db.session.delete(s)
                 db.session.commit()
 
@@ -255,21 +211,21 @@ class DataSourceNode(PGChildNodeView):
 
     @login_required
     def update(self, gid, sid):
-        """Update the datasource settings"""
-        datasource = DataSource.query.filter_by(
+        """Update the folder settings"""
+        folder = Folder.query.filter_by(
             user_id=current_user.id, id=sid).first()
 
-        if datasource is None:
+        if folder is None:
             return make_json_response(
                 status=410,
                 success=0,
-                errormsg=gettext("Could not find the required datasource.")
+                errormsg=gettext("Could not find the required folder.")
             )
 
-        # Not all parameters can be modified, while the datasource is connected
+        # Not all parameters can be modified, while the folder is connected
         config_param_map = {
             'name': 'name',
-            'datasource_type': 'ds_type',
+            'folder_type': 'ds_type',
             'key_name': 'key_name',
             'key_secret': 'key_secret',
             'bgcolor': 'bgcolor',
@@ -278,7 +234,7 @@ class DataSourceNode(PGChildNodeView):
 
         disp_lbl = {
             'name': gettext('name'),
-            'datasource_type': gettext('Type'),
+            'folder_type': gettext('Type'),
             'key_name': gettext('Key Name'),
             'key_secret': gettext('Key Secret'),
         }
@@ -290,7 +246,7 @@ class DataSourceNode(PGChildNodeView):
         for arg in config_param_map:
             if arg in data:
                 value = data[arg]
-                setattr(datasource, config_param_map[arg], value)
+                setattr(folder, config_param_map[arg], value)
                 idx += 1
 
         if idx == 0:
@@ -306,48 +262,48 @@ class DataSourceNode(PGChildNodeView):
                 success=0,
                 errormsg=e)
 
-        return jsonify(node=self.blueprint.get_browser_node(datasource))
+        return jsonify(node=self.blueprint.get_browser_node(folder))
 
     @login_required
     def list(self, gid):
         """
-        Return list of attributes of all datasources.
+        Return list of attributes of all folders.
         """
-        datasources = DataSource.query.filter_by(
+        folders = Folder.query.filter_by(
             user_id=current_user.id,
-            datagroup_id=gid).order_by(DataSource.name)
+            datagroup_id=gid).order_by(Folder.name)
         dg = DataGroup.query.filter_by(
             user_id=current_user.id,
             id=gid
         ).first()
 
-        res = [self.blueprint.get_dict_node(d, dg) for d in datasources]
+        res = [self.blueprint.get_dict_node(d, dg) for d in folders]
         return ajax_response(response=res)
 
     @login_required
     def properties(self, gid, sid):
-        """Return list of attributes of a datasource"""
-        datasource = DataSource.query.filter_by(
+        """Return list of attributes of a folder"""
+        folder = Folder.query.filter_by(
             user_id=current_user.id,
             id=sid).first()
 
-        if datasource is None:
+        if folder is None:
             return make_json_response(
                 status=410,
                 success=0,
-                errormsg=gettext("Could not find the required datasource.")
+                errormsg=gettext("Could not find the required folder.")
             )
 
         dg = DataGroup.query.filter_by(
             user_id=current_user.id,
-            id=datasource.datagroup_id
+            id=folder.datagroup_id
         ).first()
 
-        return ajax_response(response=self.blueprint.get_dict_node(datasource, dg))
+        return ajax_response(response=self.blueprint.get_dict_node(folder, dg))
 
     @login_required
     def create(self, gid):
-        """Add a datasource node to the settings database"""
+        """Add a folder node to the settings database"""
         data = request.form if request.form else json.loads(
             request.data, encoding='utf-8'
         )
@@ -358,7 +314,7 @@ class DataSourceNode(PGChildNodeView):
             raise CryptKeyMissing
 
         # Generic required fields
-        required_args = DataSourceType.types().first().required()
+        required_args = FolderType.types().first().required()
         for arg in required_args:
             if arg not in data:
                 return make_json_response(
@@ -370,7 +326,7 @@ class DataSourceNode(PGChildNodeView):
                 )
 
         # Specific required fields
-        required_args = DataSourceType.type(data.get('ds_type'))
+        required_args = FolderType.type(data.get('ds_type'))
         for arg in required_args:
             if arg not in data:
                 return make_json_response(
@@ -381,27 +337,27 @@ class DataSourceNode(PGChildNodeView):
                     )
                 )
 
-        datasource = None
+        folder = None
 
         try:
-            datasource = DataSource(
+            folder = Folder(
                 user_id=current_user.id,
                 datagroup_id=data.get('gid', gid),
                 name=data.get('name'),
-                ds_type=data.get('datasource_type'),
+                ds_type=data.get('folder_type'),
                 key_name=data.get('key_name'),
                 key_secret=data.get('key_secret'),
                 bgcolor=data.get('bgcolor', None),
                 fgcolor=data.get('fgcolor', None),
                 service=data.get('service', None))
-            db.session.add(datasource)
+            db.session.add(folder)
             db.session.commit()
 
-            return jsonify(node=self.blueprint.get_browser_node(datasource))
+            return jsonify(node=self.blueprint.get_browser_node(folder))
 
         except Exception as e:
-            if datasource:
-                db.session.delete(datasource)
+            if folder:
+                db.session.delete(folder)
                 db.session.commit()
 
             current_app.logger.exception(e)
@@ -431,7 +387,7 @@ class DataSourceNode(PGChildNodeView):
     def dependents(self, gid, sid):
         return make_json_response(status=422)
 
-    def supported_datasources(self, **kwargs):
+    def supported_folders(self, **kwargs):
         """
         This property defines (if javascript) exists for this node.
         Override this property for your own logic.
@@ -439,15 +395,15 @@ class DataSourceNode(PGChildNodeView):
 
         return make_response(
             render_template(
-                "datasources/supported_datasources.js",
-                datasource_types=DataSourceType.types()
+                "folders/supported_folders.js",
+                folder_types=FolderType.types()
             ),
             200, {'Content-Type': 'application/javascript'}
         )
 
     def clear_saved_password(self, gid, sid):
         """
-        This function is used to remove database datasource password stored into
+        This function is used to remove database folder password stored into
         the pgAdmin's db file.
 
         :param gid:
@@ -455,17 +411,17 @@ class DataSourceNode(PGChildNodeView):
         :return:
         """
         try:
-            datasource = DataSource.query.filter_by(
+            folder = Folder.query.filter_by(
                 user_id=current_user.id, id=sid
             ).first()
 
-            if datasource is None:
+            if folder is None:
                 return make_json_response(
                     success=0,
-                    info=gettext("Could not find the required datasource.")
+                    info=gettext("Could not find the required folder.")
                 )
 
-            datasource.key_secret = None
+            folder.key_secret = None
             db.session.commit()
         except Exception as e:
             current_app.logger.error(
@@ -481,4 +437,4 @@ class DataSourceNode(PGChildNodeView):
         )
 
 
-DataSourceNode.register_node_view(blueprint)
+FolderNode.register_node_view(blueprint)
