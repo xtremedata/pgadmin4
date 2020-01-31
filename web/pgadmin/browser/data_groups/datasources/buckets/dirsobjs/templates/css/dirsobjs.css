@@ -1,5 +1,5 @@
-.icon-folder {
-  background-image: url('{{ url_for('NODE-folder.static', filename='img/folder.svg') }}') !important;
+.icon-dirobj {
+  background-image: url('{{ url_for('NODE-dirobj.static', filename='img/dirobj.svg') }}') !important;
   background-repeat: no-repeat;
   background-size: 20px !important;
   align-content: center;
@@ -7,8 +7,8 @@
   height: 1.3em;
 }
 
-.icon-folder-not-connected {
-  background-image: url('{{ url_for('NODE-folder.static', filename='img/folderbad.svg') }}') !important;
+.icon-dirobj-not-connected {
+  background-image: url('{{ url_for('NODE-dirobj.static', filename='img/dirobjbad.svg') }}') !important;
   background-repeat: no-repeat;
   background-size: 20px !important;
   align-content: center;

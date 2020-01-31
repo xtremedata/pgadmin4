@@ -14,11 +14,11 @@ from flask_security import current_user, login_required
 from pgadmin.browser.utils import PGChildNodeView, PGChildNodeModule
 from pgadmin.utils.ajax import make_json_response, bad_request, forbidden, \
     make_response as ajax_response, internal_server_error, unauthorized, gone
-import pgadmin.browser.data_groups.folders.buckets as buckets
+import pgadmin.browser.data_groups.dirsobjs.buckets as buckets
 
 
-class FolderModule(PGChildNodeModule):
-    NODE_TYPE = "folder"
+class DirObjModule(PGChildNodeModule):
+    NODE_TYPE = "dirobj"
     LABEL = gettext("Data Sources")
 
     @property
@@ -28,7 +28,7 @@ class FolderModule(PGChildNodeModule):
     @property
     def script_load(self):
         """
-        Load the module script for folder, when any of the data-group node is
+        Load the module script for dirobj, when any of the data-group node is
         initialized.
         """
         return buckets.BucketModule.NODE_TYPE
@@ -43,7 +43,7 @@ class FolderModule(PGChildNodeModule):
                 "%d" % (obj['Name']),
                 None,
                 obj.name,
-                folder_icon_and_background(obj),
+                dirobj_icon_and_background(obj),
                 True,
                 self.node_type,
                 **kwargs)
@@ -53,21 +53,21 @@ class FolderModule(PGChildNodeModule):
         """
         Return a JSON document listing the data sources for the user
         """
-        folders = Folder.query.filter_by(user_id=current_user.id,
+        dirsobjs = DirObj.query.filter_by(user_id=current_user.id,
                                          datagroup_id=gid)
 
-        for folder in folders:
+        for dirobj in dirsobjs:
             connected = False
             manager = None
             errmsg = None
             try:
-                manager = FolderType.type(folder.ds_type).get_manager() # !!! temp
+                manager = DirObjType.type(dirobj.ds_type).get_manager() # !!! temp
             except Exception as e:
                 # !!!
                 current_app.logger.exception(e)
                 errmsg = str(e)
 
-            yield self.get_browser_node(folder, errmsg=errmsg)
+            yield self.get_browser_node(dirobj, errmsg=errmsg)
 
     @property
     def jssnippets(self):
@@ -78,12 +78,12 @@ class FolderModule(PGChildNodeModule):
         """
         Returns a snippet of css to include in the page
         """
-        snippets = [render_template("css/folders.css")]
+        snippets = [render_template("css/dirsobjs.css")]
 
         for submodule in self.submodules:
             snippets.extend(submodule.csssnippets)
 
-        for st in FolderType.types():
+        for st in DirObjType.types():
             snippets.extend(st.csssnippets)
 
         return snippets
@@ -92,8 +92,8 @@ class FolderModule(PGChildNodeModule):
         scripts = []
 
         scripts.extend([{
-            'name': 'pgadmin.folder.supported_folders',
-            'path': url_for('browser.index') + 'folder/supported_folders',
+            'name': 'pgadmin.dirobj.supported_dirsobjs',
+            'path': url_for('browser.index') + 'dirobj/supported_dirsobjs',
             'is_template': True,
             'when': self.node_type
         }])
@@ -102,24 +102,24 @@ class FolderModule(PGChildNodeModule):
         return scripts
 
 
-    # We do not have any preferences for folder node.
+    # We do not have any preferences for dirobj node.
     def register_preferences(self):
         """
         register_preferences
         Override it so that - it does not register the show_node preference for
-        folder type.
+        dirobj type.
         """
         pass
 
 
 
-blueprint = FolderModule(__name__)
+blueprint = DirObjModule(__name__)
 
 
 
 
-class FolderNode(PGChildNodeView):
-    node_type = FolderModule.NODE_TYPE
+class DirObjNode(PGChildNodeView):
+    node_type = DirObjModule.NODE_TYPE
 
     parent_ids = [{'type': 'int', 'id': 'gid'}]
     ids = [{'type': 'int', 'id': 'sid'}]
@@ -135,7 +135,7 @@ class FolderNode(PGChildNodeView):
         'dependency': [{'get': 'dependencies'}],
         'dependent': [{'get': 'dependents'}],
         'children': [{'get': 'children'}],
-        'supported_folders.js': [{}, {}, {'get': 'supported_folders'}],
+        'supported_dirsobjs.js': [{}, {}, {'get': 'supported_dirsobjs'}],
         'clear_saved_password': [{'put': 'clear_saved_password'}],
     })
 
@@ -143,12 +143,12 @@ class FolderNode(PGChildNodeView):
     @login_required
     def nodes(self, gid):
         """
-        Return a JSON document listing the folders under this data group
+        Return a JSON document listing the dirsobjs under this data group
         for the user.
         """
-        folders = Folder.query.filter_by(user_id=current_user.id,
+        dirsobjs = DirObj.query.filter_by(user_id=current_user.id,
                                          datagroup_id=gid)
-        res = [self.blueprint.get_browser_node(obj) for obj in folders]
+        res = [self.blueprint.get_browser_node(obj) for obj in dirsobjs]
 
         if not len(res):
             return gone(errormsg=gettext(
@@ -160,43 +160,43 @@ class FolderNode(PGChildNodeView):
 
     @login_required
     def node(self, gid, sid):
-        """Return a JSON document listing the folder groups for the user"""
-        folder = Folder.query.filter_by(user_id=current_user.id,
+        """Return a JSON document listing the dirobj groups for the user"""
+        dirobj = DirObj.query.filter_by(user_id=current_user.id,
                                         datagroup_id=gid,
                                         id=sid).first()
 
-        if folder is None:
+        if dirobj is None:
             return make_json_response(
                 status=410,
                 success=0,
                 errormsg=gettext(
                     gettext(
-                        "Could not find the folder with id# {0}."
+                        "Could not find the dirobj with id# {0}."
                     ).format(sid)
                 )
             )
 
-        return make_json_response(result=self.blueprint.get_browser_node(folder))
+        return make_json_response(result=self.blueprint.get_browser_node(dirobj))
 
     @login_required
     def delete(self, gid, sid):
-        """Delete a folder node in the settings database."""
-        folders = Folder.query.filter_by(user_id=current_user.id, id=sid)
+        """Delete a dirobj node in the settings database."""
+        dirsobjs = DirObj.query.filter_by(user_id=current_user.id, id=sid)
 
-        # TODO:: A folder, which is connected, cannot be deleted
-        if folders is None:
+        # TODO:: A dirobj, which is connected, cannot be deleted
+        if dirsobjs is None:
             return make_json_response(
                 status=410,
                 success=0,
                 errormsg=gettext(
                     'The specified data source could not be found.\n'
                     'Does the user have permission to access the '
-                    'folder?'
+                    'dirobj?'
                 )
             )
         else:
             try:
-                for s in folders:
+                for s in dirsobjs:
                     db.session.delete(s)
                 db.session.commit()
 
@@ -211,21 +211,21 @@ class FolderNode(PGChildNodeView):
 
     @login_required
     def update(self, gid, sid):
-        """Update the folder settings"""
-        folder = Folder.query.filter_by(
+        """Update the dirobj settings"""
+        dirobj = DirObj.query.filter_by(
             user_id=current_user.id, id=sid).first()
 
-        if folder is None:
+        if dirobj is None:
             return make_json_response(
                 status=410,
                 success=0,
-                errormsg=gettext("Could not find the required folder.")
+                errormsg=gettext("Could not find the required dirobj.")
             )
 
-        # Not all parameters can be modified, while the folder is connected
+        # Not all parameters can be modified, while the dirobj is connected
         config_param_map = {
             'name': 'name',
-            'folder_type': 'ds_type',
+            'dirobj_type': 'ds_type',
             'key_name': 'key_name',
             'key_secret': 'key_secret',
             'bgcolor': 'bgcolor',
@@ -234,7 +234,7 @@ class FolderNode(PGChildNodeView):
 
         disp_lbl = {
             'name': gettext('name'),
-            'folder_type': gettext('Type'),
+            'dirobj_type': gettext('Type'),
             'key_name': gettext('Key Name'),
             'key_secret': gettext('Key Secret'),
         }
@@ -246,7 +246,7 @@ class FolderNode(PGChildNodeView):
         for arg in config_param_map:
             if arg in data:
                 value = data[arg]
-                setattr(folder, config_param_map[arg], value)
+                setattr(dirobj, config_param_map[arg], value)
                 idx += 1
 
         if idx == 0:
@@ -262,48 +262,48 @@ class FolderNode(PGChildNodeView):
                 success=0,
                 errormsg=e)
 
-        return jsonify(node=self.blueprint.get_browser_node(folder))
+        return jsonify(node=self.blueprint.get_browser_node(dirobj))
 
     @login_required
     def list(self, gid):
         """
-        Return list of attributes of all folders.
+        Return list of attributes of all dirsobjs.
         """
-        folders = Folder.query.filter_by(
+        dirsobjs = DirObj.query.filter_by(
             user_id=current_user.id,
-            datagroup_id=gid).order_by(Folder.name)
+            datagroup_id=gid).order_by(DirObj.name)
         dg = DataGroup.query.filter_by(
             user_id=current_user.id,
             id=gid
         ).first()
 
-        res = [self.blueprint.get_dict_node(d, dg) for d in folders]
+        res = [self.blueprint.get_dict_node(d, dg) for d in dirsobjs]
         return ajax_response(response=res)
 
     @login_required
     def properties(self, gid, sid):
-        """Return list of attributes of a folder"""
-        folder = Folder.query.filter_by(
+        """Return list of attributes of a dirobj"""
+        dirobj = DirObj.query.filter_by(
             user_id=current_user.id,
             id=sid).first()
 
-        if folder is None:
+        if dirobj is None:
             return make_json_response(
                 status=410,
                 success=0,
-                errormsg=gettext("Could not find the required folder.")
+                errormsg=gettext("Could not find the required dirobj.")
             )
 
         dg = DataGroup.query.filter_by(
             user_id=current_user.id,
-            id=folder.datagroup_id
+            id=dirobj.datagroup_id
         ).first()
 
-        return ajax_response(response=self.blueprint.get_dict_node(folder, dg))
+        return ajax_response(response=self.blueprint.get_dict_node(dirobj, dg))
 
     @login_required
     def create(self, gid):
-        """Add a folder node to the settings database"""
+        """Add a dirobj node to the settings database"""
         data = request.form if request.form else json.loads(
             request.data, encoding='utf-8'
         )
@@ -314,7 +314,7 @@ class FolderNode(PGChildNodeView):
             raise CryptKeyMissing
 
         # Generic required fields
-        required_args = FolderType.types().first().required()
+        required_args = DirObjType.types().first().required()
         for arg in required_args:
             if arg not in data:
                 return make_json_response(
@@ -326,7 +326,7 @@ class FolderNode(PGChildNodeView):
                 )
 
         # Specific required fields
-        required_args = FolderType.type(data.get('ds_type'))
+        required_args = DirObjType.type(data.get('ds_type'))
         for arg in required_args:
             if arg not in data:
                 return make_json_response(
@@ -337,27 +337,27 @@ class FolderNode(PGChildNodeView):
                     )
                 )
 
-        folder = None
+        dirobj = None
 
         try:
-            folder = Folder(
+            dirobj = DirObj(
                 user_id=current_user.id,
                 datagroup_id=data.get('gid', gid),
                 name=data.get('name'),
-                ds_type=data.get('folder_type'),
+                ds_type=data.get('dirobj_type'),
                 key_name=data.get('key_name'),
                 key_secret=data.get('key_secret'),
                 bgcolor=data.get('bgcolor', None),
                 fgcolor=data.get('fgcolor', None),
                 service=data.get('service', None))
-            db.session.add(folder)
+            db.session.add(dirobj)
             db.session.commit()
 
-            return jsonify(node=self.blueprint.get_browser_node(folder))
+            return jsonify(node=self.blueprint.get_browser_node(dirobj))
 
         except Exception as e:
-            if folder:
-                db.session.delete(folder)
+            if dirobj:
+                db.session.delete(dirobj)
                 db.session.commit()
 
             current_app.logger.exception(e)
@@ -387,7 +387,7 @@ class FolderNode(PGChildNodeView):
     def dependents(self, gid, sid):
         return make_json_response(status=422)
 
-    def supported_folders(self, **kwargs):
+    def supported_dirsobjs(self, **kwargs):
         """
         This property defines (if javascript) exists for this node.
         Override this property for your own logic.
@@ -395,46 +395,11 @@ class FolderNode(PGChildNodeView):
 
         return make_response(
             render_template(
-                "folders/supported_folders.js",
-                folder_types=FolderType.types()
+                "dirsobjs/supported_dirsobjs.js",
+                dirobj_types=DirObjType.types()
             ),
             200, {'Content-Type': 'application/javascript'}
         )
 
-    def clear_saved_password(self, gid, sid):
-        """
-        This function is used to remove database folder password stored into
-        the pgAdmin's db file.
 
-        :param gid:
-        :param sid:
-        :return:
-        """
-        try:
-            folder = Folder.query.filter_by(
-                user_id=current_user.id, id=sid
-            ).first()
-
-            if folder is None:
-                return make_json_response(
-                    success=0,
-                    info=gettext("Could not find the required folder.")
-                )
-
-            folder.key_secret = None
-            db.session.commit()
-        except Exception as e:
-            current_app.logger.error(
-                "Unable to clear saved password.\nError: {0}".format(str(e))
-            )
-
-            return internal_server_error(errormsg=str(e))
-
-        return make_json_response(
-            success=1,
-            info=gettext("The saved password cleared successfully."),
-            data={'is_password_saved': False}
-        )
-
-
-FolderNode.register_node_view(blueprint)
+DirObjNode.register_node_view(blueprint)

@@ -7,7 +7,7 @@
 //
 //////////////////////////////////////////////////////////////
 
-define('pgadmin.node.folder', [
+define('pgadmin.node.dirobj', [
   'sources/gettext', 'sources/url_for', 'jquery', 'underscore', 'backbone',
   'sources/pgadmin',
   'pgadmin.alertifyjs',
@@ -19,13 +19,13 @@ define('pgadmin.node.folder', [
   current_user,
 ) {
 
-  if (!pgBrowser.Nodes['folder']) {
+  if (!pgBrowser.Nodes['dirobj']) {
 
-    pgAdmin.Browser.Nodes['folder'] = pgAdmin.Browser.Node.extend({
+    pgAdmin.Browser.Nodes['dirobj'] = pgAdmin.Browser.Node.extend({
       parent_type: 'bucket',
-      type: 'folder',
-      dialogHelp: url_for('help.static', {'filename': 'folder_dialog.html'}),
-      label: gettext('Folder'),
+      type: 'dirobj',
+      dialogHelp: url_for('help.static', {'filename': 'dirobj_dialog.html'}),
+      label: gettext('Object'),
       canDrop: false,
       dropAsRemove: false,
       dropPriority: 5,
@@ -47,8 +47,8 @@ define('pgadmin.node.folder', [
         },
         added: function(item, data) {
 
-          pgBrowser.folderInfo = pgBrowser.folderInfo || {};
-          pgBrowser.folderInfo[data._id] = _.extend({}, data);
+          pgBrowser.dirobjInfo = pgBrowser.dirobjInfo || {};
+          pgBrowser.dirobjInfo[data._id] = _.extend({}, data);
 
           // Call added method of node.js
           pgAdmin.Browser.Node.callbacks.added.apply(this, arguments);
@@ -82,5 +82,5 @@ define('pgadmin.node.folder', [
     });
   }
 
-  return pgBrowser.Nodes['folder'];
+  return pgBrowser.Nodes['dirobj'];
 });
