@@ -24,13 +24,14 @@ define('pgadmin.node.dirobj', [
     pgAdmin.Browser.Nodes['dirobj'] = pgAdmin.Browser.Node.extend({
       parent_type: 'bucket',
       type: 'dirobj',
-      dialogHelp: url_for('help.static', {'filename': 'dirobj_dialog.html'}),
       label: gettext('Object'),
-      canDrop: false,
-      dropAsRemove: false,
-      dropPriority: 5,
+      dialogHelp: url_for('help.static', {'filename': 'dirobj_dialog.html'}),
+      hasSQL: false,
+      hasDepends: false,
       hasStatistics: false,
       hasCollectiveStatistics: false,
+      canDrop: false,
+      can_create_bucket: false,
       can_expand: true,
       Init: function() {
 
@@ -66,7 +67,7 @@ define('pgadmin.node.dirobj', [
           var isNew = (_.size(attrs) === 0);
 
           if (isNew) {
-            this.set({'gid': args.node_info['data_group']._id});
+            this.set({'bid': args.node_info['bucket']._id});
           }
           pgAdmin.Browser.Node.Model.prototype.initialize.apply(this, arguments);
         },
@@ -80,10 +81,6 @@ define('pgadmin.node.dirobj', [
           'options': supported_dirsobjs,
           group: null,
         }],
-
-        validate: function() {
-          return true;
-        },
       }),
     });
   }

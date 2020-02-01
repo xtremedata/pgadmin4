@@ -30,16 +30,15 @@ define('pgadmin.node.bucket', [
     pgBrowser.Nodes['bucket'] = pgBrowser.Node.extend({
       parent_type: 'datasource',
       type: 'bucket',
-      sqlAlterHelp: 'sql-alterbucket.html',
-      sqlCreateHelp: 'sql-createbucket.html',
+      label: gettext('Bucket'),
       dialogHelp: url_for('help.static', {'filename': 'bucket_dialog.html'}),
       hasSQL: false,
       hasDepends: false,
       hasStatistics: false,
-      canDrop: function(node) {
-        return node.canDrop;
-      },
-      label: gettext('Bucket'),
+      hasCollectiveStatistics: false,
+      canDrop: false,
+      can_create_bucket: false,
+      can_expand: true,
       node_image: function() {
         return 'icon-bucket';
       },
@@ -50,7 +49,6 @@ define('pgadmin.node.bucket', [
 
         this.initialized = true;
       },
-      can_create_bucket: false,
       callbacks: {
 
         /* Connect the bucket (if not connected), before opening this node */
