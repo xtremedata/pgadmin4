@@ -12,11 +12,13 @@ from flask import render_template, current_app
 from flask_babelex import gettext
 
 
-class DirobjType(object):
+class DirObjType(object):
     """
-    Dirobj Type
+    DirObj Type
 
-    Create an instance of this class to define new type of the data source support,
+    Create an instance of this class to define new type of the S3 bucket object
+    to support.
+
     In order to define new type of instance, you may want to override this
     class with overriden function - instanceOf for type checking for
     identification based on the version.
@@ -27,10 +29,9 @@ class DirobjType(object):
         self.stype = dirobj_type
         self.desc = description
         self.spriority = priority
-        self.utility_path = None
 
-        assert (dirobj_type not in DirobjType.registry)
-        DirobjType.registry[dirobj_type] = self
+        assert (dirobj_type not in DirObjType.registry)
+        DirObjType.registry[dirobj_type] = self
 
     @property
     def icon(self):
@@ -50,14 +51,14 @@ class DirobjType(object):
 
     @property
     def required(self):
-        return [u'name', u'ds_type']
+        return [u'name', u'do_type']
 
     def __str__(self):
         return "Type: {0}, Description:{1}, Priority: {2}".format(
             self.stype, self.desc, self.spriority
         )
 
-    def instanceOf(self, version):
+    def instanceOf(self, obj):
         return True
 
     @property
@@ -76,7 +77,7 @@ class DirobjType(object):
     @classmethod
     def types(cls):
         return sorted(
-            DirobjType.registry.values(),
+            DirObjType.registry.values(),
             key=lambda x: x.priority,
             reverse=True
         )
@@ -85,7 +86,7 @@ class DirobjType(object):
     def type(cls, dirobj_type):
         try:
             return cls.registry[dirobj_type]
-        except KeyError:
+        except KeyError as e:
             current_app.logger.exception("Not implemented data source type:", e)
 
 
@@ -93,5 +94,72 @@ class DirobjType(object):
         return None
 
 
-# Default Dirobj Type
-DirobjType('folder', gettext("Folder"), -1)
+
+
+
+class FolderType(DirObjType):
+    
+    def instanceOf(self, obj):
+        try:
+            return str(obj['Key']).endswith('/') and obj['Size'] == 0
+        except KeyError:
+            return False
+        except Exception as e:
+            current_app.logger.exception("Failed to test S3 object for folder type:", e)
+            return False
+
+
+
+
+
+class FileType(DirObjType):
+    
+    def instanceOf(self, obj):
+        try:
+            return not str(obj['Key']).endswith('/') and obj['Size'] > 0
+        except KeyError:
+            return False
+        except Exception as e:
+            current_app.logger.exception("Failed to test S3 object for file type:", e)
+            return False
+
+
+
+
+
+class CSVType(FileType):
+    
+    def instanceOf(self, obj):
+        try:
+            return super().instanceOf(obj) and str(obj['Key']).lower().endswith('.csv')
+        except KeyError:
+            return False
+        except Exception as e:
+            current_app.logger.exception("Failed to test S3 object for CSV type:", e)
+            return False
+
+
+
+
+
+class ParquetType(FileType):
+    
+    def instanceOf(self, obj):
+        try:
+            return super().instanceOf(obj) and str(obj['Key']).lower().endswith('.par')
+        except KeyError:
+            return False
+        except Exception as e:
+            current_app.logger.exception("Failed to test S3 object for parquet type:", e)
+            return False
+
+
+
+
+
+# Default DirObj Type
+DirObjType('object', gettext("Object"), -1)
+FolderType('folder', gettext("Folder"), 0)
+FileType('file', gettext("File"), 1)
+CSVType('csv', gettext("CSV"), 2)
+ParquetType('parquet', gettext("Parquet"), 3)

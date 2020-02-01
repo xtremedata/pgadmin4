@@ -85,7 +85,7 @@ class DataSourceType(object):
     def type(cls, datasource_type):
         try:
             return cls.registry[datasource_type]
-        except KeyError:
+        except KeyError as e:
             current_app.logger.exception("Not implemented data source type:", e)
 
 

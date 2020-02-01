@@ -12,11 +12,11 @@ define('pgadmin.node.dirobj', [
   'sources/pgadmin',
   'pgadmin.alertifyjs',
   'pgadmin.browser',
-  'pgadmin.user_management.current_user',
+  'pgadmin.dirobj.supported_dirsobjs',
 ], function(
   gettext, url_for, $, _, Backbone, pgAdmin,
   Alertify, pgBrowser,
-  current_user,
+  supported_dirsobjs,
 ) {
 
   if (!pgBrowser.Nodes['dirobj']) {
@@ -59,6 +59,7 @@ define('pgadmin.node.dirobj', [
       model: pgAdmin.Browser.Node.Model.extend({
         defaults: {
           name: '',
+          do_type: undefined,
         },
         // Default values!
         initialize: function(attrs, args) {
@@ -72,6 +73,11 @@ define('pgadmin.node.dirobj', [
         schema: [{
           id: 'name', label: gettext('Name'), type: 'text',
           mode: ['properties', 'edit', 'create'],
+          group: null,
+        },{
+          id: 'do_type', label: gettext('Type'), type: 'options',
+          mode: ['properties'], select2: {allowClear: false},
+          'options': supported_dirsobjs,
           group: null,
         }],
 

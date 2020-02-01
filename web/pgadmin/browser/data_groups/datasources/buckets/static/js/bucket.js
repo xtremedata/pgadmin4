@@ -71,7 +71,7 @@ define('pgadmin.node.bucket', [
         },
       },
       model: pgBrowser.Node.Model.extend({
-        idAttribute: 'did',
+        idAttribute: 'bid',
         defaults: {
           name: undefined,
           owner: undefined,
@@ -109,18 +109,6 @@ define('pgadmin.node.bucket', [
           disabled: function(m) { return !m.isNew(); }, url: 'get_encodings',
           control: 'node-ajax-options', cache_level: 'datasource',
         }],
-        validate: function() {
-          var name = this.get('name');
-          if (_.isUndefined(name) || _.isNull(name) ||
-            String(name).replace(/^\s+|\s+$/g, '') == '') {
-            var msg = gettext('Name cannot be empty.');
-            this.errorModel.set('name', msg);
-            return msg;
-          } else {
-            this.errorModel.unset('name');
-          }
-          return null;
-        },
       }),
     });
 

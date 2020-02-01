@@ -426,7 +426,7 @@ module.exports = [{
         ',pgadmin.node.data_group' +
         ',pgadmin.node.datasource' +
         ',pgadmin.node.bucket' +
-        ',pgadmin.node.folder' +
+        ',pgadmin.node.dirobj' +
         ',pgadmin.node.server_group' +
         ',pgadmin.node.server' +
         ',pgadmin.node.database' +

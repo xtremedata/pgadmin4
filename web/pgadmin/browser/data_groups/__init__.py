@@ -133,7 +133,8 @@ class DataGroupView(NodeView):
 
     @login_required
     def list(self):
-        query_res = DataGroup.query.filter_by(user_id=current_user.id).order_by('name')
+        query_res = DataGroup.query.filter_by(
+                user_id=current_user.id).order_by('name')
         res = [self.blueprint.get_dict_node(g) for g in query_res]
         return ajax_response(response=res, status=200)
 

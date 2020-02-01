@@ -94,16 +94,7 @@ class DataSourceModule(dg.DataGroupPluginModule):
                                          datagroup_id=gid)
 
         for datasource in datasources:
-            connected = False
-            manager = None
             errmsg = None
-            try:
-                manager = DataSourceType.type(datasource.ds_type).get_manager() # !!! temp
-            except Exception as e:
-                # !!!
-                current_app.logger.exception(e)
-                errmsg = str(e)
-
             yield self.get_browser_node(datasource, errmsg=errmsg)
 
     @property
@@ -134,7 +125,7 @@ class DataSourceModule(dg.DataGroupPluginModule):
             'is_template': True,
             'when': self.node_type
         }])
-        scripts.extend(dg.DataGroupPluginModule.get_own_javascripts(self))
+        scripts.extend(super().get_own_javascripts())
 
         return scripts
 

@@ -11,13 +11,17 @@
 
 from functools import wraps
 from boto3 import client
+from abc import ABCMeta, abstractmethod
 
+import six
 import simplejson as json
+
 from flask import render_template, current_app, request, jsonify
 from flask_babelex import gettext as _
 from flask_security import current_user
 
 import pgadmin.browser.data_groups.datasources as datasource
+from pgadmin.browser import BrowserPluginModule
 from pgadmin.browser.collection import CollectionNodeModule
 from pgadmin.browser.utils import NodeView
 from pgadmin.utils.ajax import \
@@ -99,6 +103,22 @@ class BucketModule(CollectionNodeModule):
 
 
 
+@six.add_metaclass(ABCMeta)
+class BucketPluginModule(BrowserPluginModule):
+    """
+    Base class for data group plugins.
+    """
+
+    @abstractmethod
+    def get_browser_node(self, obj, **kwargs):
+        pass
+
+    @abstractmethod
+    def get_nodes(self, *arg, **kwargs):
+        pass
+
+
+
 blueprint = BucketModule(__name__)
 
 
@@ -111,7 +131,7 @@ class BucketView(NodeView):
         {'type': 'int', 'id': 'sid'}
     ]
     ids = [
-        {'type': 'int', 'id': 'did'}
+        {'type': 'int', 'id': 'bid'}
     ]
 
     operations = dict({
@@ -181,14 +201,14 @@ class BucketView(NodeView):
 
 
 
-    def node(self, gid, sid, did):
+    def node(self, gid, sid, bid):
         try:
             buckets = self.list_buckets(gid, sid)
         except Exception as e:
             return internal_server_error(errormsg=e)
         else:
             for b in buckets:
-                if b['Name'] == did:
+                if b['Name'] == bid:
                     return make_json_response(
                             data=self.blueprint.get_browser_node(gid, sid, b),
                             status=200)
@@ -197,14 +217,14 @@ class BucketView(NodeView):
 
 
 
-    def properties(self, gid, sid, did):
+    def properties(self, gid, sid, bid):
         try:
-            bucket_acl = client('s3').get_bucket_acl(Bucket=did)
+            bucket_acl = client('s3').get_bucket_acl(Bucket=bid)
         except Exception as e:
             return internal_server_error(errormsg=e)
         else:
             return ajax_response(
-                    response=convert_bucket_acl_to_props(did, bucket_acl),
+                    response=convert_bucket_acl_to_props(bid, bucket_acl),
                     status=200)
 
 
