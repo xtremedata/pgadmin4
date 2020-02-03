@@ -26,6 +26,8 @@ class DirObjModule(buckets.BucketPluginModule):
     NODE_TYPE = "dirobj"
     LABEL = gettext("Objects")
 
+
+
     @property
     def node_type(self):
         return self.NODE_TYPE
@@ -84,7 +86,7 @@ class DirObjModule(buckets.BucketPluginModule):
 
 
     @login_required
-    def get_nodes(self, gid, sid, bid):
+    def get_nodes(self, gid, sid, bid, oid=None):
         """
         Return a JSON document listing the data sources for the user
         """
@@ -92,7 +94,7 @@ class DirObjModule(buckets.BucketPluginModule):
         s3 = client('s3')
         pg = s3.get_paginator('list_objects')
 
-        for res in pg.paginate(Bucket=bid):
+        for res in pg.paginate(Bucket=bid, Prefix=oid):
             errmsg = None
             if res['ResponseMetadata']['HTTPStatusCode'] == 200:
                 for o in res['Contents']: 
@@ -170,21 +172,23 @@ class DirObjNode(NodeView):
     })
 
 
-
-    def get_children_nodes(self, gid, sid, bid, oid, **kwargs):
-        """ Returns dependent S3 bucket objects.
-        """
-        
-
-
-
-    def list_dirsobjs(self, gid, sid, bid):
+    def list_dirsobjs(self, gid, sid, bid, oid=None):
         try:
-            response = client('s3').list_objects(Bucket=bid)
+            response = client('s3').list_objects(Bucket=bid, Prefix=oid)
         except Exception as e:
             raise 
         else:
             return response['Contents']
+
+
+
+    def get_children_nodes(self, gid, sid, bid, oid, **kwargs):
+        """ Returns dependent S3 bucket objects.
+        """
+
+        res = self.list_dirsobjs(gid, sid, bid, oid)
+        return [self.blueprint.get_nodes(gid, sid, bid, oid, **kwargs) for o in res]
+
 
 
 
