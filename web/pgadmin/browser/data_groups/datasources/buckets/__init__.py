@@ -37,7 +37,7 @@ from .utils import convert_bucket_acl_to_props
 
 class BucketModule(CollectionNodeModule):
     NODE_TYPE = 'bucket'
-    COLLECTION_LABEL = _("Bucket")
+    COLLECTION_LABEL = _("Buckets")
 
     def __init__(self, *args, **kwargs):
         self.min_ver = None
@@ -131,7 +131,7 @@ class BucketView(NodeView):
         {'type': 'int', 'id': 'sid'}
     ]
     ids = [
-        {'type': 'int', 'id': 'bid'}
+        {'type': 'string', 'id': 'bid'}
     ]
 
     operations = dict({

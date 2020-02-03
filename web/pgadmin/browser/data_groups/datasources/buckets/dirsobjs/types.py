@@ -26,7 +26,7 @@ class DirObjType(object):
     registry = dict()
 
     def __init__(self, dirobj_type, description, priority):
-        self.stype = dirobj_type
+        self.do_type = dirobj_type
         self.desc = description
         self.spriority = priority
 
@@ -35,11 +35,11 @@ class DirObjType(object):
 
     @property
     def icon(self):
-        return "%s.svg" % self.stype.lower()
+        return "%s.svg" % self.do_type.lower()
 
     @property
     def dirobj_type(self):
-        return self.stype
+        return self.do_type
 
     @property
     def description(self):
@@ -55,7 +55,7 @@ class DirObjType(object):
 
     def __str__(self):
         return "Type: {0}, Description:{1}, Priority: {2}".format(
-            self.stype, self.desc, self.spriority
+            self.do_type, self.desc, self.spriority
         )
 
     def instanceOf(self, obj):
@@ -69,7 +69,7 @@ class DirObjType(object):
         return [
             render_template(
                 "css/dirobj_type.css",
-                dirobj_type=self.stype,
+                dirobj_type=self.do_type,
                 icon=self.icon
             )
         ]

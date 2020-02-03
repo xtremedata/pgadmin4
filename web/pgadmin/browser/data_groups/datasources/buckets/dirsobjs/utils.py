@@ -7,7 +7,29 @@
 #
 ##########################################################################
 
+
+from os import path
+
+from .types import DirObjType
+
+
+
+
 """Object helper utilities"""
+
+
+
+def _dirobj_type(dirobj):
+    """ Returns dir/obj type.
+    """
+    def_type = None
+    for ot in DirObjType.types():
+        if ot.priority < 0:
+            def_type = ot
+        elif ot.instanceOf(dirobj):
+            return ot
+
+    return def_type
 
 
 
@@ -30,7 +52,7 @@ def convert_dirobj_acl_to_props(dirobj_id, dirobj_acl):
 
 
 
-def dirobj_icon_and_background(dirobj):
+def dirobj_icon_and_background(dirobj, do_type=None):
     """
 
     Args:
@@ -40,15 +62,27 @@ def dirobj_icon_and_background(dirobj):
     Returns:
         DataSource Icon CSS class
     """
-    dirobj_background_color = ''
-    if dirobj and dirobj.bgcolor:
-        dirobj_background_color = ' {0}'.format(
-            dirobj.bgcolor)
-        # If user has set font color also
-        if dirobj.fgcolor:
-            dirobj_background_color = '{0} {1}'.format(
-                dirobj_background_color,
-                dirobj.fgcolor)
 
-    return 'icon-{0}{1}'.format(
-        dirobj.do_type, dirobj_background_color)
+    return 'icon-{0}'.format(do_type if do_type else _dirobj_type(dirobj).dirobj_type)
+
+
+
+
+
+def get_dirobj_props(dirobj):
+    """ Returns basic S3 object's properties.
+        Properties:
+        - id
+        - name (key)
+        - type
+        - icon name
+        - size
+        - is leaf
+    """
+
+    key = dirobj['Key']
+    do_type = _dirobj_type(dirobj).dirobj_type
+    icon = dirobj_icon_and_background(dirobj, do_type=do_type)
+    size = dirobj['Size']
+    is_leaf = not key.endswith(path.sep)
+    return (key, key, do_type, icon, size, is_leaf)

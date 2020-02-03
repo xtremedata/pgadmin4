@@ -13,18 +13,18 @@ from flask import render_template, request, make_response, jsonify, \
     current_app, url_for
 from flask_babelex import gettext
 from flask_security import current_user, login_required
-from pgadmin.browser.utils import PGChildNodeView
+from pgadmin.browser.utils import NodeView
 from pgadmin.utils.ajax import make_json_response, bad_request, forbidden, \
     make_response as ajax_response, internal_server_error, unauthorized, gone
 import pgadmin.browser.data_groups.datasources.buckets as buckets
 
 from .types import DirObjType
-from .utils import dirobj_icon_and_background, convert_dirobj_acl_to_props
+from .utils import get_dirobj_props, convert_dirobj_acl_to_props
 
 
 class DirObjModule(buckets.BucketPluginModule):
     NODE_TYPE = "dirobj"
-    LABEL = gettext("Objests")
+    LABEL = gettext("Objects")
 
     @property
     def node_type(self):
@@ -59,18 +59,27 @@ class DirObjModule(buckets.BucketPluginModule):
 
 
     def get_dict_node(self, obj, parent):
+        do_id, name, do_type, icon, size, is_leaf = get_dirobj_props(obj)
         return {
-            'name': obj['Name']
+            'id': do_id,
+            'name': name,
+            'type': do_type,
+            'size': size,
+            'leaf': is_leaf
         }
 
     def get_browser_node(self, gid, sid, bid, obj, **kwargs):
+        do_id, name, do_type, icon, size, is_leaf = get_dirobj_props(obj)
         return self.generate_browser_node(
-                "%d" % (obj['Name']),
+                "%s" % (do_id),
                 None,
-                obj['Name'],
-                dirobj_icon_and_background(obj),
+                name,
+                icon,
                 True,
                 self.node_type,
+                do_type=do_type,
+                size=size,
+                is_leaf=is_leaf,
                 **kwargs)
 
 
@@ -85,7 +94,7 @@ class DirObjModule(buckets.BucketPluginModule):
 
         for res in pg.paginate(Bucket=bid):
             errmsg = None
-            if res['HTTPStatusCode'] == 200:
+            if res['ResponseMetadata']['HTTPStatusCode'] == 200:
                 for o in res['Contents']: 
                     yield self.get_browser_node(gid, sid, bid, o, errmsg=errmsg)
 
@@ -121,16 +130,16 @@ blueprint = DirObjModule(__name__)
 
 
 
-class DirObjNode(PGChildNodeView):
+class DirObjNode(NodeView):
     node_type = DirObjModule.NODE_TYPE
 
     parent_ids = [
         {'type': 'int', 'id': 'gid'},
         {'type': 'int', 'id': 'sid'},
-        {'type': 'int', 'id': 'bid'}
+        {'type': 'string', 'id': 'bid'}
     ]
     ids = [
-        {'type': 'int', 'id': 'oid'}
+        {'type': 'string', 'id': 'oid'}
     ]
 
     operations = dict({
@@ -159,6 +168,13 @@ class DirObjNode(PGChildNodeView):
             {}, {}, {'get': 'supported_dirsobjs'}
         ],
     })
+
+
+
+    def get_children_nodes(self, gid, sid, bid, oid, **kwargs):
+        """ Returns dependent S3 bucket objects.
+        """
+        
 
 
 
@@ -210,7 +226,7 @@ class DirObjNode(PGChildNodeView):
             return internal_server_error(errormsg=e)
         else:
             for o in dirsobjs:
-                if o['Name'] == oid:
+                if o['Key'] == oid:
                     return make_json_response(
                             data=self.blueprint.get_browser_node(gid, sid, bid, o),
                             status=200)

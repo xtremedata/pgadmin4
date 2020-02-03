@@ -58,9 +58,11 @@ define('pgadmin.node.dirobj', [
       },
 
       model: pgAdmin.Browser.Node.Model.extend({
+        idAttribute: 'oid',
         defaults: {
           name: '',
           do_type: undefined,
+          size: undefined,
         },
         // Default values!
         initialize: function(attrs, args) {
@@ -79,6 +81,10 @@ define('pgadmin.node.dirobj', [
           id: 'do_type', label: gettext('Type'), type: 'options',
           mode: ['properties'], select2: {allowClear: false},
           'options': supported_dirsobjs,
+          group: null,
+        },{
+          id: 'size', label: gettext('Size'), type: 'int',
+          mode: ['properties'],
           group: null,
         }],
       }),
