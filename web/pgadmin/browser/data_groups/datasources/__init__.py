@@ -15,7 +15,7 @@ from flask import render_template, request, make_response, jsonify, \
 from flask_babelex import gettext
 from flask_security import current_user, login_required
 from pgadmin.browser.data_groups.datasources.types import DataSourceType
-from pgadmin.browser.utils import PGChildNodeView
+from pgadmin.browser.utils import NodeView
 from pgadmin.utils.ajax import make_json_response, bad_request, forbidden, \
     make_response as ajax_response, internal_server_error, unauthorized, gone
 from pgadmin.utils.crypto import encrypt, decrypt, pqencryptpassword
@@ -153,7 +153,7 @@ blueprint = DataSourceModule(__name__)
 
 
 
-class DataSourceNode(PGChildNodeView):
+class DataSourceNode(NodeView):
     node_type = DataSourceModule.NODE_TYPE
 
     parent_ids = [{'type': 'int', 'id': 'gid'}]

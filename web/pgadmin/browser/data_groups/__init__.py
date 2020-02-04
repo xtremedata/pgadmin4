@@ -29,8 +29,10 @@ class DataGroupModule(BrowserPluginModule):
     NODE_TYPE = "data_group"
     LABEL = gettext("Data Groups")
 
+
     def get_dict_node(self, group):
         return {'id': group.id, 'name': group.name}
+
 
     def get_browser_node(self, group, **kwargs):
         return self.generate_browser_node(
@@ -43,11 +45,32 @@ class DataGroupModule(BrowserPluginModule):
                 can_delete=group.can_delete,
                 **kwargs)
 
-    def get_nodes(self, *arg, **kwargs):
+
+    def _get_nodes(self, gid, **kwargs):
         """Return a JSON document listing the data groups for the user"""
-        groups = DataGroup.query.filter_by(user_id=current_user.id).order_by("id")
-        for group in groups:
+        if gid:
+            groups = DataGroup.query.filter_by(user_id=current_user.id, id=gid).first()
+        else:
+            groups = DataGroup.query.filter_by(user_id=current_user.id).order_by("id")
+
+        if groups:
+            for group in groups:
+                yield group
+
+
+    def get_nodes(self, gid=None, **kwargs):
+        """Return a JSON document listing the data groups for the user"""
+
+        for group in self._get_nodes(gid, **kwargs):
             yield self.get_browser_node(group)
+
+
+    def get_dict_nodes(self, gid=None, **kwargs):
+        """ Returns a list of dictionaries with properties of matching nodes.
+        """
+        for group in self._get_nodes(gid, **kwargs):
+            yield self.get_dict_node(group)
+
 
     @property
     def node_type(self):
@@ -58,6 +81,7 @@ class DataGroupModule(BrowserPluginModule):
         """
         return self.NODE_TYPE
 
+
     @property
     def script_load(self):
         """
@@ -65,6 +89,7 @@ class DataGroupModule(BrowserPluginModule):
         Load the data-group javascript module on loading of browser module.
         """
         return None
+
 
     def register_preferences(self):
         """
@@ -76,10 +101,16 @@ class DataGroupModule(BrowserPluginModule):
         pass
 
 
+
+
+
 class DataGroupMenuItem(MenuItem):
     def __init__(self, **kwargs):
         kwargs.setdefault("type", DataGroupModule.NODE_TYPE)
         super(DataGroupMenuItem, self).__init__(**kwargs)
+
+
+
 
 
 @six.add_metaclass(ABCMeta)
@@ -97,7 +128,11 @@ class DataGroupPluginModule(BrowserPluginModule):
         pass
 
 
+
 blueprint = DataGroupModule(__name__)
+
+
+
 
 
 class DataGroupView(NodeView):
@@ -109,20 +144,16 @@ class DataGroupView(NodeView):
     @login_required
     def nodes(self, gid=None):
         """Return a JSON document listing the data groups for the user"""
-        groups = []
+        nodes = None
+        groups = [g for g in self.blueprint.get_nodes(gid)]
 
         if gid is None:
-            groups = DataGroup.query.filter_by(user_id=current_user.id)
-        else:
-            group = DataGroup.query.filter_by(
-                    user_id=current_user.id, id=gid).first()
-            if group:
-                groups = [group]
-
-        nodes = [self.blueprint.get_browser_node(g) for g in groups]
+            nodes = groups
+        elif groups:
+            nodes = groups[0]
 
         try:
-            return make_json_response(data=(nodes[0] if gid else nodes))
+            return make_json_response(data=nodes)
         except IndexError:
             return gone(errormsg=gettext(
                         "Could not find the data group {0}."
@@ -133,10 +164,9 @@ class DataGroupView(NodeView):
 
     @login_required
     def list(self):
-        query_res = DataGroup.query.filter_by(
-                user_id=current_user.id).order_by('name')
-        res = [self.blueprint.get_dict_node(g) for g in query_res]
-        return ajax_response(response=res, status=200)
+        groups = [g for g in self.blueprint.get_dict_nodes()]
+        groups.sort_by('name')
+        return ajax_response(response=groups, status=200)
 
     @login_required
     def delete(self, gid):

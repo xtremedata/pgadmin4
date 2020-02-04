@@ -7,7 +7,8 @@
 #
 ##########################################################################
 
-from boto3 import client
+from boto3 import client, resource as boto3_resource
+from botocore.exceptions import HTTPClientError
 
 from flask import render_template, request, make_response, jsonify, \
     current_app, url_for
@@ -19,7 +20,7 @@ from pgadmin.utils.ajax import make_json_response, bad_request, forbidden, \
 import pgadmin.browser.data_groups.datasources.buckets as buckets
 
 from .types import DirObjType
-from .utils import get_dirobj_props, convert_dirobj_acl_to_props
+from .utils import convert_dirobj_to_dict, convert_s3dirobj_to_dirobj, is_child
 
 
 class DirObjModule(buckets.BucketPluginModule):
@@ -32,6 +33,8 @@ class DirObjModule(buckets.BucketPluginModule):
     def node_type(self):
         return self.NODE_TYPE
 
+
+
     @property
     def script_load(self):
         """
@@ -40,9 +43,13 @@ class DirObjModule(buckets.BucketPluginModule):
         """
         return buckets.BucketModule.NODE_TYPE
 
+
+
     @property
     def jssnippets(self):
         return []
+
+
 
     @property
     def csssnippets(self):
@@ -60,29 +67,80 @@ class DirObjModule(buckets.BucketPluginModule):
         return snippets
 
 
-    def get_dict_node(self, obj, parent):
-        do_id, name, do_type, icon, size, is_leaf = get_dirobj_props(obj)
-        return {
-            'id': do_id,
-            'name': name,
-            'type': do_type,
-            'size': size,
-            'leaf': is_leaf
-        }
+
+    def _get_dict_node(self, obj):
+        return convert_dirobj_to_dict(obj)
+
+
 
     def get_browser_node(self, gid, sid, bid, obj, **kwargs):
-        do_id, name, do_type, icon, size, is_leaf = get_dirobj_props(obj)
+        obj_dict = self._get_dict_node(obj)
         return self.generate_browser_node(
-                "%s" % (do_id),
+                "%s" % obj_dict['id'],
                 None,
-                name,
-                icon,
-                True,
+                obj_dict['name'],
+                obj_dict['icon'],
+                False if obj_dict['is_leaf'] else True,
                 self.node_type,
-                do_type=do_type,
-                size=size,
-                is_leaf=is_leaf,
+                is_leaf=obj_dict['is_leaf'],
+                do_type=obj_dict['do_type'],
+                size=obj_dict['size'],
                 **kwargs)
+
+
+
+    def _get_node(self, gid, sid, bid, oid):
+        try:
+            s3 = boto3_resource('s3')
+            return s3.Object(bid, oid).load()
+        except HTTPClientError:
+            raise KeyError(oid)
+        except Exception as e:
+            return internal_server_error(errormsg=e)
+
+
+
+    def _get_nodes(self, gid, sid, bid, oid=None):
+        """
+        """
+        errmsg = None
+        if oid is None:
+            oid = ''
+
+        s3 = client('s3')
+        #pg = s3.get_paginator('list_objects_v2')
+        res = s3.list_objects_v2(Bucket=bid, Prefix=oid)
+        if res['ResponseMetadata']['HTTPStatusCode'] == 200:
+            return [o for o in res['Contents'] if is_child(o, gid, sid, bid, oid)]
+        else:
+            raise KeyError(bid)
+
+
+
+    @login_required
+    def get_dict_node(self, gid, sid, bid, oid):
+        """
+        """
+        return self._get_dict_node(convert_s3dirobj_to_dirobj(self._get_node(gid, sid, bid, oid)))
+
+
+
+    @login_required
+    def get_node(self, gid, sid, bid, oid):
+        """
+        """
+        return self.get_browser_node(gid, sid, bid,
+                convert_s3dirobj_to_dirobj(self._get_node(gid, sid, bid, oid)))
+
+
+
+
+    @login_required
+    def get_dict_nodes(self, gid, sid, bid, oid=None):
+        """
+        """
+        return [self._get_dict_node(obj) for obj in self._get_nodes(gid, sid, bid, oid)]
+
 
 
     @login_required
@@ -90,15 +148,9 @@ class DirObjModule(buckets.BucketPluginModule):
         """
         Return a JSON document listing the data sources for the user
         """
-
-        s3 = client('s3')
-        pg = s3.get_paginator('list_objects')
-
-        for res in pg.paginate(Bucket=bid, Prefix=oid):
-            errmsg = None
-            if res['ResponseMetadata']['HTTPStatusCode'] == 200:
-                for o in res['Contents']: 
-                    yield self.get_browser_node(gid, sid, bid, o, errmsg=errmsg)
+        errmsg = None
+        for o in self._get_nodes(gid, sid, bid, oid):
+            yield self.get_browser_node(gid, sid, bid, o, errmsg=errmsg)
 
 
 
@@ -116,6 +168,7 @@ class DirObjModule(buckets.BucketPluginModule):
         return scripts
 
 
+
     # We do not have any preferences for dirobj node.
     def register_preferences(self):
         """
@@ -127,7 +180,10 @@ class DirObjModule(buckets.BucketPluginModule):
 
 
 
+
+
 blueprint = DirObjModule(__name__)
+
 
 
 
@@ -141,7 +197,7 @@ class DirObjNode(NodeView):
         {'type': 'string', 'id': 'bid'}
     ]
     ids = [
-        {'type': 'string', 'id': 'oid'}
+        {'type': 'path', 'id': 'oid'}
     ]
 
     operations = dict({
@@ -172,82 +228,61 @@ class DirObjNode(NodeView):
     })
 
 
-    def list_dirsobjs(self, gid, sid, bid, oid=None):
-        try:
-            response = client('s3').list_objects(Bucket=bid, Prefix=oid)
-        except Exception as e:
-            raise 
-        else:
-            return response['Contents']
-
-
 
     def get_children_nodes(self, gid, sid, bid, oid, **kwargs):
         """ Returns dependent S3 bucket objects.
         """
-
-        res = self.list_dirsobjs(gid, sid, bid, oid)
-        return [self.blueprint.get_nodes(gid, sid, bid, oid, **kwargs) for o in res]
+        return [o for o in self.blueprint.get_nodes(gid, sid, bid, oid, **kwargs)]
 
 
 
 
-    def list(self, gid, sid, bid):
+    def list(self, gid, sid, bid, oid=None):
         try:
-            dirsobjs = self.list_dirsobjs(gid, sid, bid)
+            dirsobjs = self.blueprint.get_dict_nodes(gid, sid, bid, oid)
         except Exception as e:
             return internal_server_error(errormsg=e)
         else:
-            return ajax_response(
-                    response=dirsobjs,
-                    status=200)
+            return ajax_response(response=dirsobjs, status=200)
 
 
 
-    def get_nodes(self, gid, sid, bid):
+    def get_nodes(self, gid, sid, bid, oid=None):
         try:
-            dirsobjs = self.list_dirsobjs(gid, sid, bid)
+            return [o for o in self.blueprint.get_nodes(gid, sid, bid, oid)]
         except Exception as e:
             return internal_server_error(errormsg=e)
-        else:
-            return [self.blueprint.get_browser_node(gid, sid, bid, o) for o in dirsobjs]
 
 
 
-    def nodes(self, gid, sid, bid):
-        res = self.get_nodes(gid, sid, bid)
-
-        return make_json_response(
-            data=res,
-            status=200)
+    def nodes(self, gid, sid, bid, oid=None):
+        dirsobjs = self.get_nodes(gid, sid, bid, oid)
+        return make_json_response(data=dirsobjs, status=200)
 
 
 
     def node(self, gid, sid, bid, oid):
         try:
-            dirsobjs = self.list_dirsobjs(gid, sid, bid)
+            dirobj = self.blueprint.get_node(gid, sid, bid, oid)
+        except KeyError:
+            return gone(errormsg=gettext("Could not find the object."))
         except Exception as e:
             return internal_server_error(errormsg=e)
         else:
-            for o in dirsobjs:
-                if o['Key'] == oid:
-                    return make_json_response(
-                            data=self.blueprint.get_browser_node(gid, sid, bid, o),
-                            status=200)
+            return make_json_response(data=dirobj, status=200)
 
-            return gone(errormsg=gettext("Could not find the object."))
 
 
 
     def properties(self, gid, sid, bid, oid):
         try:
-            dirobj_acl = client('s3').get_object_acl(Bucket=bid, Key=oid)
+            dirobj = self.blueprint.get_dict_node(gid, sid, bid, oid)
         except Exception as e:
             return internal_server_error(errormsg=e)
         else:
-            return ajax_response(
-                    response=convert_dirobj_acl_to_props(bid, dirobj_acl),
-                    status=200)
+            return ajax_response(response=dirobj, status=200)
+
+
 
     @login_required
     def sql(self, gid, sid):
