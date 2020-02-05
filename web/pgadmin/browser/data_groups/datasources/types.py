@@ -24,9 +24,9 @@ class DataSourceType(object):
     registry = dict()
 
     def __init__(self, datasource_type, description, priority):
-        self.stype = datasource_type
+        self._type = datasource_type
         self.desc = description
-        self.spriority = priority
+        self._priority = priority
         self.utility_path = None
 
         assert (datasource_type not in DataSourceType.registry)
@@ -34,11 +34,11 @@ class DataSourceType(object):
 
     @property
     def icon(self):
-        return "%s.svg" % self.stype.lower()
+        return "%s.svg" % self._type.lower()
 
     @property
     def datasource_type(self):
-        return self.stype
+        return self._type
 
     @property
     def description(self):
@@ -46,7 +46,7 @@ class DataSourceType(object):
 
     @property
     def priority(self):
-        return self.spriority
+        return self._priority
 
     @property
     def required(self):
@@ -54,10 +54,10 @@ class DataSourceType(object):
 
     def __str__(self):
         return "Type: {0}, Description:{1}, Priority: {2}".format(
-            self.stype, self.desc, self.spriority
+            self._type, self.desc, self._priority
         )
 
-    def instanceOf(self, version):
+    def instanceOf(self, obj):
         return True
 
     @property
@@ -68,7 +68,7 @@ class DataSourceType(object):
         return [
             render_template(
                 "css/datasource_type.css",
-                datasource_type=self.stype,
+                datasource_type=self._type,
                 icon=self.icon
             )
         ]

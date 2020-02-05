@@ -349,7 +349,7 @@ class DataSourceNode(NodeView):
             raise CryptKeyMissing
 
         # Generic required fields
-        required_args = DataSourceType.types().first().required()
+        required_args = DataSourceType.types()[0].required()
         for arg in required_args:
             if arg not in data:
                 return make_json_response(
@@ -383,8 +383,7 @@ class DataSourceNode(NodeView):
                 key_name=data.get('key_name'),
                 key_secret=data.get('key_secret'),
                 bgcolor=data.get('bgcolor', None),
-                fgcolor=data.get('fgcolor', None),
-                service=data.get('service', None))
+                fgcolor=data.get('fgcolor', None))
             db.session.add(datasource)
             db.session.commit()
 

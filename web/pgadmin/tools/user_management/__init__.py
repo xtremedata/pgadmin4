@@ -25,7 +25,8 @@ from pgadmin.utils.ajax import make_response as ajax_response, \
 from pgadmin.utils.csrf import pgCSRFProtect
 
 from pgadmin.model import db, Role, User, UserPreference, Server, \
-    ServerGroup, Process, Setting
+    ServerGroup, Process, Setting, \
+    DataGroup, DataSource
 
 # set template path for sql scripts
 MODULE_NAME = 'user_management'
@@ -289,6 +290,10 @@ def delete(uid):
         ServerGroup.query.filter_by(user_id=uid).delete()
 
         Process.query.filter_by(user_id=uid).delete()
+
+        DataSource.query.filter_by(user_id=uid).delete()
+
+        DataGroup.query.filter_by(user_id=uid).delete()
 
         # Finally delete user
         db.session.delete(usr)

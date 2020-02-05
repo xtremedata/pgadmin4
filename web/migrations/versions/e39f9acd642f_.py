@@ -30,22 +30,26 @@ def upgrade():
 
     db.engine.execute("""
             CREATE TABLE datasource (
-            id INTEGER NOT NULL,
-            user_id INTEGER NOT NULL,
-            datagroup_id INTEGER NOT NULL,
-            name VARCHAR(128) NOT NULL,
-            ds_type VARCHAR(16) NOT NULL CHECK(ds_type IN ('S3')),
-            key_name VARCHAR(128) NOT NULL,
-            key_secret VARCHAR(128),
-            bgcolor VARCHAR(10),
-            fgcolor VARCHAR(10),
-            PRIMARY KEY (id),
-            FOREIGN KEY(user_id) REFERENCES "user" (id),
-            FOREIGN KEY(datagroup_id) REFERENCES "datagroup" (id),
-            UNIQUE (user_id, name))
+                id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                datagroup_id INTEGER NOT NULL,
+                name VARCHAR(128) NOT NULL,
+                ds_type VARCHAR(16) NOT NULL CHECK(ds_type IN ('S3')),
+                key_name VARCHAR(128) NOT NULL,
+                key_secret VARCHAR(128),
+                bgcolor VARCHAR(10),
+                fgcolor VARCHAR(10),
+                PRIMARY KEY (id),
+                FOREIGN KEY(user_id) REFERENCES "user" (id),
+                FOREIGN KEY(datagroup_id) REFERENCES "datagroup" (id),
+                UNIQUE (user_id, name))
     """)
-    pass
+    db.engine.execute("""
+INSERT INTO "datagroup"
+VALUES(1, 1, 'Datas', 0)
+""")
 
 
 def downgrade():
-    pass
+    op.drop_table('datasource')
+    op.drop_table('datagroup')

@@ -27,9 +27,9 @@ class S3(DataSourceType):
     @property
     def required(self):
         s3_required = [u'key_name', u'key_secret']
-        return super(self).required.append(s3_required)
+        return super().required.append(s3_required)
 
-    def instanceOf(self, ver):
+    def instanceOf(self, obj):
         return True
 
     def get_manager(self):
