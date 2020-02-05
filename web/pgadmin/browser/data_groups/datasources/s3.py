@@ -23,6 +23,8 @@ class S3(DataSourceType):
     
     This data source support access to S3 buckets.
     """
+    ID = 'S3'
+    AWS_ID = 's3'
 
     @property
     def required(self):
@@ -33,9 +35,9 @@ class S3(DataSourceType):
         return True
 
     def get_manager(self):
-        return client('s3')
+        return client(self.AWS_ID)
 
 
 # Default Data Source Type
 if has_boto3:
-    S3('S3', gettext("AWS S3"), 0)
+    S3(S3.ID, gettext("AWS S3"), 0)

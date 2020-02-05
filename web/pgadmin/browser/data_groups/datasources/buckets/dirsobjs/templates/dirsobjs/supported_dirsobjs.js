@@ -12,9 +12,9 @@ define(
   ['sources/gettext'],
   function(gettext) {
     return [
-      {% for dot in dirobj_types %}
+      {% for dot in do_types %}
 
-      {label: '{{ dot.description }}', value: '{{ dot.dirobj_type }}'},{% endfor %}
+      {label: '{{ dot.description }}', value: '{{ dot.do_type }}'},{% endfor %}
 
       {label: gettext('Unknown'), value: ''}
     ];

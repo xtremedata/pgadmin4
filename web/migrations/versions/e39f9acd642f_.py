@@ -35,7 +35,7 @@ def upgrade():
                 datagroup_id INTEGER NOT NULL,
                 name VARCHAR(128) NOT NULL,
                 ds_type VARCHAR(16) NOT NULL CHECK(ds_type IN ('S3')),
-                key_name VARCHAR(128) NOT NULL,
+                key_name VARCHAR(128),
                 key_secret VARCHAR(128),
                 bgcolor VARCHAR(10),
                 fgcolor VARCHAR(10),

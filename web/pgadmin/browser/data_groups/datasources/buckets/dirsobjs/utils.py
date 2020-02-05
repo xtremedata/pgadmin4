@@ -62,6 +62,7 @@ def convert_dirobj_to_dict(dirobj):
     do_type = _dirobj_type(dirobj).dirobj_type
     icon = dirobj_icon_and_background(dirobj, do_type=do_type)
     is_leaf = not key.endswith(path.sep)
+    is_root_flag = is_root(dirobj, key)
     name = path.basename(key) if is_leaf else path.basename(key[:-1]),
     size = dirobj['Size']
     try:
@@ -80,6 +81,8 @@ def convert_dirobj_to_dict(dirobj):
         'size': size,
         'do_type': do_type,
         'is_leaf': is_leaf,
+        'is_root': is_root_flag,
+        'parent_id': bucket if is_root_flag else path.dirname(key),
         'bucket': bucket,
         'mtime': mtime
     }

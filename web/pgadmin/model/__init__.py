@@ -111,12 +111,15 @@ class DataSource(db.Model):
             db.String(16), 
             db.CheckConstraint("ds_type IN ('S3')"),
             nullable=False)
+    pfx = db.Column(
+            db.String(16), 
+            nullable=True)
     key_name = db.Column(
             db.String(128),
-            nullable=False)
+            nullable=True)
     key_secret = db.Column(
             db.String(256),
-            nullable=False)
+            nullable=True)
     bgcolor = db.Column(
             db.Text(10),
             nullable=True)

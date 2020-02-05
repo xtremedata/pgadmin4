@@ -13,6 +13,14 @@ to start a web server."""
 
 import os
 import sys
+import logging
+
+try:
+    from boto3 import set_stream_logger as boto_set_stream_logger
+except ImportError:
+    has_boto = False
+else:
+    has_boto = True
 
 if sys.version_info[0] >= 3:
     import builtins
@@ -44,6 +52,8 @@ from pgadmin.utils import u, fs_encoding, file_quote
 if config.DEBUG:
     from pgadmin.utils.javascript.javascript_bundler import \
         JavascriptBundler, JsState
+    if has_boto:
+        boto_set_stream_logger('', logging.DEBUG)
 
 # Get the config database schema version. We store this in pgadmin.model
 # as it turns out that putting it in the config files isn't a great idea

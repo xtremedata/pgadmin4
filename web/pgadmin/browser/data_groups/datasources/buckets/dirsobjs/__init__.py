@@ -75,14 +75,18 @@ class DirObjModule(buckets.BucketPluginModule):
 
     def get_browser_node(self, gid, sid, bid, obj, **kwargs):
         obj_dict = self._get_dict_node(obj)
+        is_root = obj_dict['is_root']
+        is_leaf = obj_dict['is_leaf']
+        parent_id = obj_dict['parent_id']
         return self.generate_browser_node(
                 "%s" % obj_dict['id'],
-                None,
+                parent_id,
                 obj_dict['name'],
                 obj_dict['icon'],
-                False if obj_dict['is_leaf'] else True,
+                False if is_leaf else True,
                 self.node_type,
-                is_leaf=obj_dict['is_leaf'],
+                is_leaf=is_leaf,
+                is_root=is_root,
                 do_type=obj_dict['do_type'],
                 size=obj_dict['size'],
                 **kwargs)
@@ -95,8 +99,6 @@ class DirObjModule(buckets.BucketPluginModule):
             return s3.Object(bid, oid).load()
         except HTTPClientError:
             raise KeyError(oid)
-        except Exception as e:
-            return internal_server_error(errormsg=e)
 
 
 
@@ -274,6 +276,7 @@ class DirObjNode(NodeView):
 
 
 
+    @login_required
     def properties(self, gid, sid, bid, oid):
         try:
             dirobj = self.blueprint.get_dict_node(gid, sid, bid, oid)
@@ -313,7 +316,7 @@ class DirObjNode(NodeView):
         return make_response(
             render_template(
                 "dirsobjs/supported_dirsobjs.js",
-                dirobj_types=DirObjType.types()
+                do_types=DirObjType.types()
             ),
             200, {'Content-Type': 'application/javascript'}
         )

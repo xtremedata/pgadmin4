@@ -55,7 +55,7 @@ define('pgadmin.node.datasource', [
       parent_type: 'data_group',
       type: 'datasource',
       dialogHelp: url_for('help.static', {'filename': 'datasource_dialog.html'}),
-      label: gettext('DataSource'),
+      label: gettext('Data Source'),
       canDrop: true,
       dropAsRemove: true,
       dropPriority: 5,
@@ -78,16 +78,16 @@ define('pgadmin.node.datasource', [
         },{
           name: 'create_datasource', node: 'datasource', module: this,
           applies: ['object', 'context'], callback: 'show_obj_properties',
-          category: 'create', priority: 3, label: gettext('Data Source...'),
+          category: 'create', priority: 2, label: gettext('Data Source...'),
           data: {action: 'create'}, icon: 'wcTabIcon icon-datasource',
         },{
-          name: 'clear_saved_password', node: 'datasource', module: this,
-          applies: ['object', 'context'], callback: 'clear_saved_password',
-          label: gettext('Clear Saved Password'), icon: 'fa fa-eraser',
-          priority: 7,
+          name: 'clear_saved_authentication', node: 'datasource', module: this,
+          applies: ['object', 'context'], callback: 'clear_saved_authentication',
+          label: gettext('Clear Saved Authentication'), icon: 'fa fa-eraser',
+          priority: 3,
           enable: function(node) {
             if (node && node._type === 'datasource' &&
-              node.is_password_saved) {
+              node.is_auth_saved) {
               return true;
             }
             return false;
@@ -108,8 +108,8 @@ define('pgadmin.node.datasource', [
           return true;
         },
 
-        /* Cleat saved database server password */
-        clear_saved_password: function(args){
+        /* Cleat saved data source authentication */
+        clear_saved_authentication: function(args){
           var input = args || {},
             obj = this,
             t = pgBrowser.tree,
@@ -124,13 +124,13 @@ define('pgadmin.node.datasource', [
             gettext('Are you sure you want to clear the saved password for server %s?', d.label),
             function() {
               $.ajax({
-                url: obj.generate_url(i, 'clear_saved_password', d, true),
+                url: obj.generate_url(i, 'clear_saved_authentication', d, true),
                 method:'PUT',
               })
                 .done(function(res) {
                   if (res.success == 1) {
                     Alertify.success(res.info);
-                    t.itemData(i).is_password_saved=res.data.is_password_saved;
+                    t.itemData(i).is_auth_saved=res.data.is_auth_saved;
                   }
                   else {
                     Alertify.error(res.info);
@@ -153,6 +153,7 @@ define('pgadmin.node.datasource', [
           id: undefined,
           name: '',
           datasource_type: '',
+          pfx: undefined,
           key_name: undefined,
           key_secret: undefined,
         },
@@ -191,6 +192,10 @@ define('pgadmin.node.datasource', [
           id: 'fgcolor', label: gettext('Foreground'), type: 'color',
           mode: ['edit', 'create'], disabled: 'isConnected',
           group: null,
+        },{
+          id: 'pfx', label: gettext('Object Prefix'), type: 'text',
+          mode: ['properties', 'edit', 'create'],
+          visible: 'isAWS', group: gettext('Filter'),
         },{
           id: 'key_name', label: gettext('AWS key name'), type: 'text',
           mode: ['properties', 'edit', 'create'],

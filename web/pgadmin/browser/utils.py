@@ -313,6 +313,7 @@ class NodeView(with_metaclass(MethodViewType, View)):
                 str(self.__class__.__name__)
             )
 
+        print("###### args:", args, ", kw:", kwargs)
         has_args, has_id = self.check_args(**kwargs)
 
         assert (

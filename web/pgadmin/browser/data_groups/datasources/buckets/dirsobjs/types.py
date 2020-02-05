@@ -28,7 +28,7 @@ class DirObjType(object):
     def __init__(self, dirobj_type, description, priority):
         self.do_type = dirobj_type
         self.desc = description
-        self.spriority = priority
+        self._priority = priority
 
         assert (dirobj_type not in DirObjType.registry)
         DirObjType.registry[dirobj_type] = self
@@ -47,7 +47,7 @@ class DirObjType(object):
 
     @property
     def priority(self):
-        return self.spriority
+        return self._priority
 
     @property
     def required(self):
@@ -55,7 +55,7 @@ class DirObjType(object):
 
     def __str__(self):
         return "Type: {0}, Description:{1}, Priority: {2}".format(
-            self.do_type, self.desc, self.spriority
+            self.do_type, self.desc, self._priority
         )
 
     def instanceOf(self, obj):
@@ -158,7 +158,7 @@ class ParquetType(FileType):
 
 
 # Default DirObj Type
-DirObjType('object', gettext("Object"), -1)
+DirObjType('dirobj', gettext("Object"), -1)
 FolderType('folder', gettext("Folder"), 0)
 FileType('file', gettext("File"), 1)
 CSVType('csv', gettext("CSV"), 2)

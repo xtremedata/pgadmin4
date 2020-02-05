@@ -21,6 +21,8 @@ class DataSourceType(object):
     class with overriden function - instanceOf for type checking for
     identification based on the version.
     """
+    ID = 'LFS'
+
     registry = dict()
 
     def __init__(self, datasource_type, description, priority):
@@ -94,4 +96,4 @@ class DataSourceType(object):
 
 
 # Default DataSource Type
-DataSourceType('lfs', gettext("Local File System"), -1)
+DataSourceType(DataSourceType.ID, gettext("Local File System"), -1)

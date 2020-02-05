@@ -51,13 +51,18 @@ def datasource_icon_and_background(datasource):
         datasource.ds_type, datasource_background_color)
 
 
+
+
+
 class DataSourceModule(dg.DataGroupPluginModule):
     NODE_TYPE = "datasource"
     LABEL = gettext("Data Sources")
 
+
     @property
     def node_type(self):
         return self.NODE_TYPE
+
 
     @property
     def script_load(self):
@@ -67,39 +72,57 @@ class DataSourceModule(dg.DataGroupPluginModule):
         """
         return dg.DataGroupModule.NODE_TYPE
 
+
     def get_dict_node(self, obj, parent):
         return {
             'id': obj.id, 
             'name': obj.name,
+            'pfx': obj.pfx,
             'group-id': parent.id,
             'group-name': parent.name,
             'datasource_type': obj.ds_type }
 
+
+    def get_node(self, gid, sid):
+        return DataSource.query.filter_by(
+                user_id=current_user.id,
+                datagroup_id=gid,
+                id=sid).first()
+
+
+    def _get_nodes(self, gid):
+        return DataSource.query.filter_by(
+                user_id=current_user.id,
+                datagroup_id=gid)
+
+
     def get_browser_node(self, obj, **kwargs):
         return self.generate_browser_node(
                 "%d" % (obj.id),
-                None,
+                obj.datagroup_id,
                 obj.name,
                 datasource_icon_and_background(obj),
                 True,
                 self.node_type,
+                datasource_type=obj.ds_type,
+                pfx=obj.pfx,
                 **kwargs)
+
 
     @login_required
     def get_nodes(self, gid):
         """
         Return a JSON document listing the data sources for the user
         """
-        datasources = DataSource.query.filter_by(user_id=current_user.id,
-                                         datagroup_id=gid)
-
-        for datasource in datasources:
-            errmsg = None
+        for datasource in self._get_nodes(gid):
+            errmsg = None # placeholder for future error detection
             yield self.get_browser_node(datasource, errmsg=errmsg)
+
 
     @property
     def jssnippets(self):
         return []
+
 
     @property
     def csssnippets(self):
@@ -115,6 +138,7 @@ class DataSourceModule(dg.DataGroupPluginModule):
             snippets.extend(st.csssnippets)
 
         return snippets
+
 
     def get_own_javascripts(self):
         scripts = []
@@ -163,15 +187,25 @@ class DataSourceNode(NodeView):
             {'get': 'properties', 'delete': 'delete', 'put': 'update'},
             {'get': 'list', 'post': 'create'}
         ],
-        'nodes': [{'get': 'node'}, {'get': 'nodes'}],
-        'sql': [{'get': 'sql'}],
-        'msql': [{'get': 'modified_sql'}],
-        'stats': [{'get': 'statistics'}],
-        'dependency': [{'get': 'dependencies'}],
-        'dependent': [{'get': 'dependents'}],
-        'children': [{'get': 'children'}],
-        'supported_datasources.js': [{}, {}, {'get': 'supported_datasources'}],
-        'clear_saved_password': [{'put': 'clear_saved_password'}],
+        'nodes': [
+            {'get': 'node'}, 
+            {'get': 'nodes'}],
+        'sql': [
+            {'get': 'sql'}],
+        'msql': [
+            {'get': 'modified_sql'}],
+        'stats': [
+            {'get': 'statistics'}],
+        'dependency': [
+            {'get': 'dependencies'}],
+        'dependent': [
+            {'get': 'dependents'}],
+        'children': [
+            {'get': 'children'}],
+        'supported_datasources.js': [
+            {}, {}, {'get': 'supported_datasources'}],
+        'clear_saved_authentication': [
+            {'put': 'clear_saved_authentication'}],
     })
 
 
@@ -181,24 +215,20 @@ class DataSourceNode(NodeView):
         Return a JSON document listing the datasources under this data group
         for the user.
         """
-        datasources = DataSource.query.filter_by(user_id=current_user.id,
-                                         datagroup_id=gid)
-        res = [self.blueprint.get_browser_node(obj) for obj in datasources]
+        datasources = [ds for ds in self.blueprint.get_nodes(gid)]
 
-        if not len(res):
+        if not datasources:
             return gone(errormsg=gettext(
                 'The specified data group with id# {0} could not be found.').format(gid))
 
-        return make_json_response(result=res)
+        return make_json_response(result=datasources)
 
 
 
     @login_required
     def node(self, gid, sid):
         """Return a JSON document listing the datasource groups for the user"""
-        datasource = DataSource.query.filter_by(user_id=current_user.id,
-                                        datagroup_id=gid,
-                                        id=sid).first()
+        datasource = self.blueprint.get_node(gid, sid)
 
         if datasource is None:
             return make_json_response(
@@ -247,8 +277,7 @@ class DataSourceNode(NodeView):
     @login_required
     def update(self, gid, sid):
         """Update the datasource settings"""
-        datasource = DataSource.query.filter_by(
-            user_id=current_user.id, id=sid).first()
+        datasource = self.blueprint.get_node(gid, sid)
 
         if datasource is None:
             return make_json_response(
@@ -261,6 +290,7 @@ class DataSourceNode(NodeView):
         config_param_map = {
             'name': 'name',
             'datasource_type': 'ds_type',
+            'pfx': 'pfx',
             'key_name': 'key_name',
             'key_secret': 'key_secret',
             'bgcolor': 'bgcolor',
@@ -270,6 +300,7 @@ class DataSourceNode(NodeView):
         disp_lbl = {
             'name': gettext('name'),
             'datasource_type': gettext('Type'),
+            'pfx' : gettext('Objects Prefix'),
             'key_name': gettext('Key Name'),
             'key_secret': gettext('Key Secret'),
         }
@@ -318,9 +349,7 @@ class DataSourceNode(NodeView):
     @login_required
     def properties(self, gid, sid):
         """Return list of attributes of a datasource"""
-        datasource = DataSource.query.filter_by(
-            user_id=current_user.id,
-            id=sid).first()
+        datasource = self.blueprint.get_node(gid, sid)
 
         if datasource is None:
             return make_json_response(
@@ -362,17 +391,19 @@ class DataSourceNode(NodeView):
                     )
 
         # Specific required fields
-        required_args = DataSourceType.type(data.get('ds_type')).required
-        if required_args:
-            for arg in required_args:
-                if arg not in data:
-                    return make_json_response(
-                        status=410,
-                        success=0,
-                        errormsg=gettext(
-                            "Could not find the required parameter (%s)." % arg
+        ds = DataSourceType.type(data.get('datasource_type'))
+        if ds:
+            required_args = ds.required
+            if required_args:
+                for arg in required_args:
+                    if arg not in data:
+                        return make_json_response(
+                            status=410,
+                            success=0,
+                            errormsg=gettext(
+                                "Could not find the required parameter (%s)." % arg
+                            )
                         )
-                    )
 
         datasource = None
 
@@ -382,6 +413,7 @@ class DataSourceNode(NodeView):
                 datagroup_id=data.get('gid', gid),
                 name=data.get('name'),
                 ds_type=data.get('datasource_type'),
+                pfx=data.get('pfx'),
                 key_name=data.get('key_name'),
                 key_secret=data.get('key_secret'),
                 bgcolor=data.get('bgcolor', None),
@@ -447,9 +479,7 @@ class DataSourceNode(NodeView):
         :return:
         """
         try:
-            datasource = DataSource.query.filter_by(
-                user_id=current_user.id, id=sid
-            ).first()
+            datasource = self.blueprint.get_node(gid, sid)
 
             if datasource is None:
                 return make_json_response(
