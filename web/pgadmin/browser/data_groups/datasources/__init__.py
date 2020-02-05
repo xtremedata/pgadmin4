@@ -349,28 +349,30 @@ class DataSourceNode(NodeView):
             raise CryptKeyMissing
 
         # Generic required fields
-        required_args = DataSourceType.types()[0].required()
-        for arg in required_args:
-            if arg not in data:
-                return make_json_response(
-                    status=410,
-                    success=0,
-                    errormsg=gettext(
-                        "Could not find the required parameter (%s)." % arg
+        required_args = DataSourceType.types()[0].required
+        if required_args:
+            for arg in required_args:
+                if arg not in data:
+                    return make_json_response(
+                        status=410,
+                        success=0,
+                        errormsg=gettext(
+                            "Could not find the required parameter (%s)." % arg
+                        )
                     )
-                )
 
         # Specific required fields
-        required_args = DataSourceType.type(data.get('ds_type'))
-        for arg in required_args:
-            if arg not in data:
-                return make_json_response(
-                    status=410,
-                    success=0,
-                    errormsg=gettext(
-                        "Could not find the required parameter (%s)." % arg
+        required_args = DataSourceType.type(data.get('ds_type')).required
+        if required_args:
+            for arg in required_args:
+                if arg not in data:
+                    return make_json_response(
+                        status=410,
+                        success=0,
+                        errormsg=gettext(
+                            "Could not find the required parameter (%s)." % arg
+                        )
                     )
-                )
 
         datasource = None
 
