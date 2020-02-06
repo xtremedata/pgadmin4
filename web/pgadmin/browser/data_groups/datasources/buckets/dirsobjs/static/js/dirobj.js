@@ -8,16 +8,20 @@
 //////////////////////////////////////////////////////////////
 
 define('pgadmin.node.dirobj', [
-  'sources/gettext', 'sources/url_for', 'jquery', 'underscore', 'backbone',
+  'sources/gettext',
+  'sources/url_for',
+  'jquery',
+  'underscore',
+  'backbone',
   'sources/pgadmin',
-  'pgadmin.alertifyjs',
   'pgadmin.browser',
   'pgadmin.dirobj.supported_dirsobjs',
 ], function(
-  gettext, url_for, $, _, Backbone, pgAdmin,
-  Alertify, pgBrowser,
-  supported_dirsobjs,
-) {
+  gettext, url_for, $, _,
+  Backbone,
+  pgAdmin,
+  pgBrowser,
+  supported_dirsobjs) {
 
   if (!pgBrowser.Nodes['dirobj']) {
 
@@ -31,6 +35,7 @@ define('pgadmin.node.dirobj', [
       hasStatistics: false,
       hasCollectiveStatistics: false,
       canDrop: false,
+      canEdit: false,
       can_create_bucket: false,
       can_expand: true,
       Init: function() {

@@ -131,8 +131,11 @@ class DirObjModule(buckets.BucketPluginModule):
     def get_node(self, gid, sid, bid, oid):
         """
         """
-        return self.get_browser_node(gid, sid, bid,
-                convert_s3dirobj_to_dirobj(self._get_node(gid, sid, bid, oid)))
+        try:
+            return self.get_browser_node(gid, sid, bid,
+                    convert_s3dirobj_to_dirobj(self._get_node(gid, sid, bid, oid)))
+        except Exception as e:
+            return { errmsg: e }
 
 
 

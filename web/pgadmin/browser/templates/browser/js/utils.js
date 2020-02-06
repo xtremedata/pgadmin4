@@ -49,7 +49,8 @@ define('pgadmin.browser.utils',
   var unsupported_nodes = pgAdmin.unsupported_nodes = [
      'server_group', 'server', 'coll-tablespace', 'tablespace',
      'coll-role', 'role', 'coll-resource_group', 'resource_group',
-     'coll-database', 'data_group', 'datasource'
+     'coll-database', 'data_group', 'datasource', 
+     'coll-bucket', 'bucket', 'dirobj',
   ];
 
   pgBrowser.utils = {

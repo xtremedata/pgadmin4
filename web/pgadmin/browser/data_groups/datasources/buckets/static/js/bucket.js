@@ -37,6 +37,7 @@ define('pgadmin.node.bucket', [
       hasStatistics: false,
       hasCollectiveStatistics: false,
       canDrop: false,
+      canEdit: false,
       can_create_bucket: false,
       can_expand: true,
       node_image: function() {
