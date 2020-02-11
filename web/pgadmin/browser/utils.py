@@ -358,28 +358,24 @@ class NodeView(with_metaclass(MethodViewType, View)):
         commands = cls.generate_ops()
 
         for c in commands:
+            url_rule = None
+            view_func = None
             cmd = c['cmd'].replace('.', '-')
             if c['with_id']:
-                blueprint.add_url_rule(
-                    '/{0}{1}'.format(
-                        c['cmd'], id_url if c['req'] else url
-                    ),
-                    view_func=cls.as_view(
-                        '{0}{1}'.format(
-                            cmd, '_id' if c['req'] else ''
-                        ),
-                        cmd=c['cmd']
-                    ),
-                    methods=c['methods']
-                )
+                url_rule = '/{0}{1}'.format(
+                        c['cmd'], id_url if c['req'] else url)
+                view_func = cls.as_view(
+                        '{0}{1}'.format(cmd, '_id' if c['req'] else ''),
+                        cmd=c['cmd'])
             else:
-                blueprint.add_url_rule(
-                    '/{0}'.format(c['cmd']),
-                    view_func=cls.as_view(
-                        cmd, cmd=c['cmd']
-                    ),
-                    methods=c['methods']
-                )
+                url_rule = '/{0}'.format(c['cmd'])
+                view_func = cls.as_view(cmd, cmd=c['cmd'])
+
+            blueprint.add_url_rule(
+                    url_rule, 
+                    view_func=view_func, 
+                    methods=c['methods'])
+
 
     def children(self, *args, **kwargs):
         """Build a list of treeview nodes from the child nodes."""

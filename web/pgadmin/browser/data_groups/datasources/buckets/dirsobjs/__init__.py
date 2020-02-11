@@ -8,7 +8,7 @@
 ##########################################################################
 
 from boto3 import client, resource as boto3_resource
-from botocore.exceptions import HTTPClientError
+from botocore.exceptions import HTTPClientError, ClientError
 
 from flask import render_template, request, make_response, jsonify, \
     current_app, url_for
@@ -96,9 +96,17 @@ class DirObjModule(buckets.BucketPluginModule):
     def _get_node(self, gid, sid, bid, oid):
         try:
             s3 = boto3_resource('s3')
-            return s3.Object(bid, oid).load()
-        except HTTPClientError:
-            raise KeyError(oid)
+            o = s3.Object(bid, oid)
+            o.load()
+            return o
+        except (HTTPClientError, ClientError) as e:
+            try:
+                if e.response['ResponseMetadata']['HTTPStatusCode'] == 404:
+                    raise KeyError(oid)
+            except:
+                raise e
+            else:
+                raise
 
 
 
@@ -131,11 +139,10 @@ class DirObjModule(buckets.BucketPluginModule):
     def get_node(self, gid, sid, bid, oid):
         """
         """
-        try:
-            return self.get_browser_node(gid, sid, bid,
-                    convert_s3dirobj_to_dirobj(self._get_node(gid, sid, bid, oid)))
-        except Exception as e:
-            return { errmsg: e }
+        n = self._get_node(gid, sid, bid, oid)
+        n1 = convert_s3dirobj_to_dirobj(n)
+        return self.get_browser_node(gid, sid, bid,
+                convert_s3dirobj_to_dirobj(self._get_node(gid, sid, bid, oid)))
 
 
 
@@ -246,23 +253,25 @@ class DirObjNode(NodeView):
         try:
             dirsobjs = self.blueprint.get_dict_nodes(gid, sid, bid, oid)
         except Exception as e:
-            return internal_server_error(errormsg=e)
+            return internal_server_error(errormsg=str(e))
         else:
             return ajax_response(response=dirsobjs, status=200)
 
 
 
     def get_nodes(self, gid, sid, bid, oid=None):
-        try:
-            return [o for o in self.blueprint.get_nodes(gid, sid, bid, oid)]
-        except Exception as e:
-            return internal_server_error(errormsg=e)
+        return [o for o in self.blueprint.get_nodes(gid, sid, bid, oid)]
 
 
 
     def nodes(self, gid, sid, bid, oid=None):
-        dirsobjs = self.get_nodes(gid, sid, bid, oid)
-        return make_json_response(data=dirsobjs, status=200)
+        try:
+            dirsobjs = self.get_nodes(gid, sid, bid, oid)
+        except Exception as e:
+            current_app.logger.exception(e)
+            return internal_server_error(errormsg=str(e))
+        else:
+            return make_json_response(data=dirsobjs, status=200)
 
 
 
@@ -272,7 +281,8 @@ class DirObjNode(NodeView):
         except KeyError:
             return gone(errormsg=gettext("Could not find the object."))
         except Exception as e:
-            return internal_server_error(errormsg=e)
+            current_app.logger.exception(e)
+            return internal_server_error(errormsg=str(e))
         else:
             return make_json_response(data=dirobj, status=200)
 
@@ -284,7 +294,8 @@ class DirObjNode(NodeView):
         try:
             dirobj = self.blueprint.get_dict_node(gid, sid, bid, oid)
         except Exception as e:
-            return internal_server_error(errormsg=e)
+            current_app.logger.exception(e)
+            return internal_server_error(errormsg=str(e))
         else:
             return ajax_response(response=dirobj, status=200)
 

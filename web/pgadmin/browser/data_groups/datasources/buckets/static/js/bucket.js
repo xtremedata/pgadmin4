@@ -96,7 +96,7 @@ define('pgadmin.node.bucket', [
           mode: ['properties'], disabled: true,
         },{
           id: 'access', label: gettext('Privileges'), 
-          editable: false, type: 'text',
+          editable: false, type: 'text', url_with_id: true,
           control: 'node-ajax-options', url: 'get_bucket_acl', cache_level: 'server',
           group: gettext('Security'), mode: ['properties'], disabled: true,
         }],

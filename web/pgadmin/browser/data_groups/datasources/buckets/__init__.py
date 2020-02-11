@@ -174,7 +174,6 @@ class BucketView(NodeView):
             {'get': 'children'}
         ],
         'get_bucket_acl': [
-            {'get': 'get_bucket_acl'},
             {'get': 'get_bucket_acl'}
         ],
     })
@@ -194,7 +193,7 @@ class BucketView(NodeView):
         try:
             buckets, owner = self._list_buckets(gid, sid)
         except Exception as e:
-            return internal_server_error(errormsg=e)
+            return internal_server_error(errormsg=str(e))
         else:
             for b in buckets:
                 if b['Name'] == bid:
@@ -219,7 +218,7 @@ class BucketView(NodeView):
         try:
             buckets, owner = self._list_buckets(gid, sid)
         except Exception as e:
-            return internal_server_error(errormsg=e)
+            return internal_server_error(errormsg=str(e))
         else:
             return ajax_response(
                     response=[self.blueprint.get_dict_node(gid, sid, b, owner) for b in buckets],
@@ -228,18 +227,19 @@ class BucketView(NodeView):
 
 
     def get_nodes(self, gid, sid):
-        try:
-            buckets, owner = self._list_buckets(gid, sid)
-        except Exception as e:
-            return internal_server_error(errormsg=e)
-        else:
-            return [self.blueprint.get_browser_node(gid, sid, b, owner) for b in buckets]
+        buckets, owner = self._list_buckets(gid, sid)
+        return [self.blueprint.get_browser_node(gid, sid, b, owner) for b in buckets]
 
 
 
     def nodes(self, gid, sid):
-        res = self.get_nodes(gid, sid)
-        return make_json_response(data=res, status=200)
+        try:
+            res = self.get_nodes(gid, sid)
+        except Exception as e:
+            current_app.logger.exception(e)
+            return internal_server_error(errormsg=str(e))
+        else:
+            return make_json_response(data=res, status=200)
 
 
 
@@ -249,7 +249,8 @@ class BucketView(NodeView):
         except KeyError:
             return gone(errormsg=_("Could not find the bucket."))
         except Exception as e:
-            return internal_server_error(errormsg=e)
+            current_app.logger.exception(e)
+            return internal_server_error(errormsg=str(e))
         else:
             return make_json_response(
                     data=self.blueprint.get_browser_dict_node(gid, sid, bucket),
@@ -261,7 +262,8 @@ class BucketView(NodeView):
         try:
             bucket_acl = self._get_bucket_acl(gid, sid, bid)
         except Exception as e:
-            return internal_server_error(errormsg=e)
+            current_app.logger.exception(e)
+            return internal_server_error(errormsg=str(e))
         else:
             return ajax_response(response=bucket_acl, status=200)
 
@@ -274,7 +276,8 @@ class BucketView(NodeView):
             bucket_acl = self._get_bucket_acl(gid, sid, bid)
             bucket_acl.update(bucket)
         except Exception as e:
-            return internal_server_error(errormsg=e)
+            current_app.logger.exception(e)
+            return internal_server_error(errormsg=str(e))
         else:
             return ajax_response(response=bucket_acl, status=200)
 
