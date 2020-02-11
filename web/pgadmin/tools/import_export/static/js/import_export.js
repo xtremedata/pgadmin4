@@ -42,21 +42,103 @@ define([
       null_string: undefined,
       columns: null,
       icolumns: [],
+      server_group: undefined,
+      server: undefined,
       database: undefined,
       schema: undefined,
       table: undefined,
+      data_group: undefined,
+      datasource: undefined,
+      bucket: undefined,
+      dirobj: undefined,
     },
     schema: [{
       id: 'is_import',
       label: gettext('Import/Export'),
       cell: 'switch',
       type: 'switch',
-      group: gettext('Options'),
+      group: gettext('Source/Destination'),
       options: {
         'onText': gettext('Import'),
         'offText': gettext('Export'),
         width: '65',
       },
+    }, { /* data source/destination selection panel */
+      type: 'nested',
+      control: 'fieldset',
+      label: 'Data',
+      group: gettext('Source/Destination'),
+      schema: [{ /* data group selection */
+        id: 'data_group',
+        label: gettext('Data Group'),
+        cell: 'string',
+        type: 'select2',
+        control: Backform.NodeListByNameControl,
+        node: 'data_group',
+        placeholder: gettext('Select data group ...'),
+        group: gettext('Data'),
+        select2: {
+          allowClear: false,
+          width: '100%',
+        },
+      }, { /* data selection */
+        id: 'data_source',
+        label: gettext('Data'),
+        cell: 'string',
+        type: 'select2',
+        control: Backform.NodeListByNameControl,
+        node: 'datasource',
+        /*url: node.generate_url.apply(this.datasource, 
+          [this.datasource, 'nodes',  ]),*/
+        url: 'nodes/1',
+        placeholder: gettext('Select data ...'),
+        group: gettext('Data'),
+        disabled: function() {
+          return this.data_group == null;
+        },
+        select2: {
+          allowClear: false,
+          width: '100%',
+        },
+      }],
+    }, { /* server source/destination selection panel */
+      type: 'nested',
+      control: 'fieldset',
+      label: 'Server',
+      group: gettext('Source/Destination'),
+      schema: [{ /* data group selection */
+        id: 'server_group',
+        label: gettext('Server Group'),
+        cell: 'string',
+        type: 'select2',
+        control: Backform.NodeListByNameControl,
+        node: 'data_group',
+        placeholder: gettext('Select server group ...'),
+        group: gettext('Server'),
+        select2: {
+          allowClear: false,
+          width: '100%',
+        },
+      }, { /* data selection */
+        id: 'server',
+        label: gettext('Server'),
+        cell: 'string',
+        type: 'select2',
+        control: Backform.NodeListByNameControl,
+        node: 'server',
+        placeholder: gettext('Select server ...'),
+        group: gettext('Server'),
+        disabled: function() {
+          return this.server_group == null;
+        },
+        select2: {
+          allowClear: false,
+          width: '100%',
+        },
+        validate: function() {
+          return this.load_server_preferences(this.server);
+        },
+      }],
     }, {
       type: 'nested',
       control: 'fieldset',
@@ -70,7 +152,7 @@ define([
         control: Backform.FileControl,
         group: gettext('File Info'),
         dialog_type: 'select_file',
-        supp_types: ['csv', 'txt', '*'],
+        supp_types: ['csv', 'txt', 'par', '*'],
         visible: 'importing',
       }, { /* create file control for export */
         id: 'filename',
@@ -80,7 +162,7 @@ define([
         control: Backform.FileControl,
         group: gettext('File Info'),
         dialog_type: 'create_file',
-        supp_types: ['csv', 'txt', '*'],
+        supp_types: ['csv', 'txt', 'par', '*'],
         visible: 'exporting',
       }, {
         id: 'format',
@@ -399,49 +481,44 @@ define([
 
       this.initialized = true;
 
-      // Initialize the context menu to display the import options when user open the context menu for table
+      // Initialize the context menu to display the import options when user
+      // open the context menu for table or data source
+      var import_nodes = ['table', 'bucket', 'dirobj'];
       pgBrowser.add_menus([{
         name: 'import',
-        node: 'table',
         module: this,
-        applies: ['tools', 'context'],
+        applies: ['tools'],
         callback: 'callback_import_export',
         category: 'import',
         priority: 10,
         label: gettext('Import/Export...'),
         icon: 'fa fa-shopping-cart',
         enable: supportedNodes.enabled.bind(
-          null, pgBrowser.treeMenu, ['table']
+          null, pgBrowser.treeMenu, import_nodes
         ),
       }]);
+      for (var n_name of import_nodes) {
+        pgBrowser.add_menus([{
+          name: 'import',
+          node: n_name,
+          module: this,
+          applies: ['context'],
+          callback: 'callback_import_export',
+          category: 'import',
+          priority: 10,
+          label: gettext('Import/Export...'),
+          icon: 'fa fa-shopping-cart',
+          enable: supportedNodes.enabled.bind(
+            null, pgBrowser.treeMenu, [n_name]
+          ),
+        }]);
+      }
     },
 
     /*
-      Open the dialog for the import functionality
-    */
-    callback_import_export: function(args, item) {
-      var i = item || pgBrowser.tree.selected(),
-        server_data = null;
-
-      while (i) {
-        var node_data = pgBrowser.tree.itemData(i);
-        if (node_data._type == 'server') {
-          server_data = node_data;
-          break;
-        }
-
-        if (pgBrowser.tree.hasParent(i)) {
-          i = $(pgBrowser.tree.parent(i));
-        } else {
-          Alertify.alert(gettext('Please select server or child node from tree.'));
-          break;
-        }
-      }
-
-      if (!server_data) {
-        return;
-      }
-
+     * Loads db server preferences
+     */
+    load_server_preferences: function(server_data) {
       var module = 'paths',
         preference_name = 'pg_bin_dir',
         msg = gettext('Please configure the PostgreSQL Binary Path in the Preferences dialog.');
@@ -450,6 +527,10 @@ define([
         server_data.server_type == 'ppas') {
         preference_name = 'ppas_bin_dir';
         msg = gettext('Please configure the EDB Advanced Server Binary Path in the Preferences dialog.');
+      } else if ((server_data.type && server_data.type == 'dbx') ||
+        server_data.server_type == 'dbx') {
+        preference_name = 'dbx_bin_dir';
+        msg = gettext('Please configure the dbX Binary Path in the Preferences dialog.');
       }
 
       var preference = pgBrowser.get_preference(module, preference_name);
@@ -457,11 +538,45 @@ define([
       if (preference) {
         if (!preference.value) {
           Alertify.alert(gettext('Configuration required'), msg);
-          return;
+          return false;
         }
       } else {
         Alertify.alert(gettext('Failed to load preference %s of module %s', preference_name, module));
+        return false;
+      }
+
+      return true;
+    },
+
+    /*
+      Open the dialog for the import functionality
+    */
+    callback_import_export: function(args, item) {
+      var i = item || pgBrowser.tree.selected(),
+        source_data = null;
+
+      while (i) {
+        var node_data = pgBrowser.tree.itemData(i);
+        if (node_data._type in ['server','datasource']) {
+          source_data = node_data;
+          break;
+        }
+
+        if (pgBrowser.tree.hasParent(i)) {
+          i = $(pgBrowser.tree.parent(i));
+        } else {
+          Alertify.alert(gettext('Please select server/data or child node from tree.'));
+          break;
+        }
+      }
+
+      if (!source_data) {
         return;
+      }
+
+
+      if (source_data.module == 'pgadmin.node.server') {
+        this.load_server_preferences(source_data);
       }
 
       var t = pgBrowser.tree;
@@ -671,7 +786,7 @@ define([
       }
 
       const baseUrl = url_for('import_export.utility_exists', {
-        'sid': server_data._id,
+        'sid': source_data._id,
       });
 
       // Check psql utility exists or not.
