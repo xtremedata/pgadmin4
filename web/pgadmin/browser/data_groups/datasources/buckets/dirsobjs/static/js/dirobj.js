@@ -78,6 +78,7 @@ define('pgadmin.node.dirobj', [
           name: '',
           do_type: undefined,
           size: undefined,
+          mtime: undefined,
         },
         // Default values!
         initialize: function(attrs, args) {
@@ -90,15 +91,20 @@ define('pgadmin.node.dirobj', [
         },
         schema: [{
           id: 'name', label: gettext('Name'), type: 'text',
-          mode: ['properties', 'edit', 'create'],
+          mode: ['properties', 'edit', 'create'], editable: false,
           group: null,
         },{
           id: 'do_type', label: gettext('Type'), type: 'options',
           mode: ['properties'], select2: {allowClear: false},
-          'options': supported_dirsobjs,
+          'options': supported_dirsobjs, editable: false,
           group: null,
         },{
           id: 'size', label: gettext('Size'), type: 'int',
+          mode: ['properties'], editable: false,
+          group: null,
+        },{
+          id: 'mtime', label: gettext('Modification Time'),
+          editable: false, type: 'datetime', cell: 'datetime',
           mode: ['properties'],
           group: null,
         }],
