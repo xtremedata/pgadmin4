@@ -86,6 +86,7 @@ define([
         label: gettext('Data'),
         cell: 'string',
         type: 'select2',
+        deps: ['data_group'],
         control: Backform.NodeListByNameControl,
         node: 'datasource',
         /*url: node.generate_url.apply(this.datasource, 
@@ -93,8 +94,14 @@ define([
         url: 'nodes/1',
         placeholder: gettext('Select data ...'),
         group: gettext('Data'),
-        disabled: function() {
-          return this.data_group == null;
+        disabled: function(model) {
+          var data_group = model.get('data_group');
+          if (data_group == null) {
+            return true;
+          } else {
+            this.url = 'nodes/{0}'.format(data_group._id);
+            return false;
+          }
         },
         select2: {
           allowClear: false,
@@ -124,12 +131,14 @@ define([
         label: gettext('Server'),
         cell: 'string',
         type: 'select2',
+        deps: ['server_group'],
         control: Backform.NodeListByNameControl,
         node: 'server',
         placeholder: gettext('Select server ...'),
         group: gettext('Server'),
-        disabled: function() {
-          return this.server_group == null;
+        disabled: function(model) {
+          var server_group = model.get('server_group');
+          return server_group == null;
         },
         select2: {
           allowClear: false,
@@ -553,11 +562,12 @@ define([
     */
     callback_import_export: function(args, item) {
       var i = item || pgBrowser.tree.selected(),
-        source_data = null;
+        source_data = null,
+        root_nodes = ['server_group', 'data_group'];
 
       while (i) {
         var node_data = pgBrowser.tree.itemData(i);
-        if (node_data._type in ['server','datasource']) {
+        if (root_nodes.includes(node_data._type)) {
           source_data = node_data;
           break;
         }
