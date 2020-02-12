@@ -26,6 +26,47 @@ define([
   if (pgAdmin.Tools.import_utility)
     return pgAdmin.Tools.import_utility;
 
+
+  // Import Export Node List Control with preserving node ID
+  var ImExNodeListByNameControl = Backform.NodeListByNameControl.extend({
+    defaults: _.extend({}, Backform.NodeListByNameControl.prototype.defaults, {
+      transform: function(rows) {
+        var self = this,
+          node = self.field.get('schema_node'),
+          res = [],
+          map = {},
+          filter = self.field.get('filter') || function() {
+            return true;
+          };
+
+        filter = filter.bind(self);
+
+        _.each(rows, function(r) {
+          if (filter(r)) {
+            var l = (_.isFunction(node['node_label']) ?
+                (node['node_label']).apply(node, [r, self.model, self]) :
+                r.label),
+              image = (_.isFunction(node['node_image']) ?
+                (node['node_image']).apply(
+                  node, [r, self.model, self]
+                ) :
+                (node['node_image'] || ('icon-' + node.type)));
+
+            map[r.label] = r._id;
+            res.push({
+              'value': r.label,
+              'image': image,
+              'label': l,
+            });
+          }
+        });
+
+        self.model.attributes.name_id_map[self.field.attributes.name] = map;
+        return res;
+      },
+    }),
+  });
+
   // Main model for Import/Export functionality
   var ImportExportModel = Backbone.Model.extend({
     defaults: {
@@ -51,6 +92,7 @@ define([
       datasource: undefined,
       bucket: undefined,
       dirobj: undefined,
+      name_id_map: {},
     },
     schema: [{
       id: 'is_import',
@@ -73,7 +115,7 @@ define([
         label: gettext('Data Group'),
         cell: 'string',
         type: 'select2',
-        control: Backform.NodeListByNameControl,
+        control: ImExNodeListByNameControl,
         node: 'data_group',
         placeholder: gettext('Select data group ...'),
         group: gettext('Data'),
@@ -82,26 +124,39 @@ define([
           width: '100%',
         },
       }, { /* data selection */
-        id: 'data_source',
+        id: 'datasource',
         label: gettext('Data'),
         cell: 'string',
         type: 'select2',
         deps: ['data_group'],
-        control: Backform.NodeListByNameControl,
+        control: ImExNodeListByNameControl,
         node: 'datasource',
         /*url: node.generate_url.apply(this.datasource, 
           [this.datasource, 'nodes',  ]),*/
-        url: 'nodes/1',
+        url: 'nodes',
         placeholder: gettext('Select data ...'),
         group: gettext('Data'),
         disabled: function(model) {
-          var data_group = model.get('data_group');
-          if (data_group == null) {
-            return true;
-          } else {
-            this.url = 'nodes/{0}'.format(data_group._id);
-            return false;
+          var data_group = model.get('data_group'),
+            name_id_map = model.get('name_id_map'),
+            data_group_id = undefined;
+          model.errorModel.clear();
+          if (data_group) {
+            try {
+              data_group_id = name_id_map[this.deps[0]][data_group];
+              if (data_group_id) {
+                var tmp_url = `nodes/${data_group_id}`;
+                if (tmp_url != this.url) {
+                  this.url = tmp_url;
+                  /*this.control.fetch_options(true); !!!*/
+                }
+                return false;
+              }
+            } catch (err) {
+              model.errorModel.set('datasource', gettext('Error or invalid data group selected'));
+            }
           }
+          return true;
         },
         select2: {
           allowClear: false,

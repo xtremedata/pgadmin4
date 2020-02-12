@@ -117,12 +117,7 @@ define([
           width: 'style',
         },
       }),
-      initialize: function() {
-        /*
-         * Initialization from the original control.
-         */
-        Backform.Select2Control.prototype.initialize.apply(this, arguments);
-
+      fetch_options: function(force) {
         /*
          * We're about to fetch the options required for this control.
          */
@@ -157,7 +152,7 @@ define([
            * If yes - use that, and do not bother about fetching it again,
            * and use it.
            */
-          var data = cache_node.cache(node.type + '#' + url, node_info, cache_level);
+          var data = force ? undefined : cache_node.cache(node.type + '#' + url, node_info, cache_level);
 
           if (this.field.get('version_compatible') &&
             (_.isUndefined(data) || _.isNull(data))) {
@@ -197,6 +192,17 @@ define([
             self.field.set('options', data);
           }
         }
+      },
+      initialize: function() {
+        /*
+         * Initialization from the original control.
+         */
+        Backform.Select2Control.prototype.initialize.apply(this, arguments);
+
+        /*
+         * We're about to fetch the options required for this control.
+         */
+        this.fetch_options(false);
       },
     });
 

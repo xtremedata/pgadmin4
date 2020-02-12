@@ -251,7 +251,7 @@
       this.listenTo(this.model, "change:" + name, this.render);
 
       // Listen for the field in the error model for any change
-      if (this.model.errorModel instanceof Backbone.Model)
+      if (this.model && this.model.errorModel instanceof Backbone.Model)
         this.listenTo(this.model.errorModel, "change:" + name, this.updateInvalid);
     },
     formatter: ControlFormatter,
