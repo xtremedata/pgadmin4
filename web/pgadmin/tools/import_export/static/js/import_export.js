@@ -31,24 +31,23 @@ define([
   var ImExNodeListByNameControl = Backform.NodeListByNameControl.extend({
     defaults: _.extend({}, Backform.NodeListByNameControl.prototype.defaults, {
       transform: function(rows) {
-        var self = this,
-          node = self.field.get('schema_node'),
+        var node = this.field.get('schema_node'),
           res = [],
           map = {},
-          filter = self.field.get('filter') || function() {
+          filter = this.field.get('filter') || function() {
             return true;
           };
 
-        filter = filter.bind(self);
+        filter = filter.bind(this);
 
         _.each(rows, function(r) {
           if (filter(r)) {
             var l = (_.isFunction(node['node_label']) ?
-                (node['node_label']).apply(node, [r, self.model, self]) :
+                (node['node_label']).apply(node, [r, this.model, this]) :
                 r.label),
               image = (_.isFunction(node['node_image']) ?
                 (node['node_image']).apply(
-                  node, [r, self.model, self]
+                  node, [r, this.model, this]
                 ) :
                 (node['node_image'] || ('icon-' + node.type)));
 
@@ -61,8 +60,13 @@ define([
           }
         });
 
-        self.model.attributes.name_id_map[self.field.attributes.name] = map;
+        this.model.attributes.name_id_map[this.field.attributes.name] = map;
         return res;
+      },
+
+      render: function() {
+        this.fetch_data(true);
+        return Backform.NodeListByNameControl.prototype.render.apply(this, arguments);
       },
     }),
   });
@@ -148,12 +152,11 @@ define([
                 var tmp_url = `nodes/${data_group_id}`;
                 if (tmp_url != this.url) {
                   this.url = tmp_url;
-                  /*this.control.fetch_options(true); !!!*/
                 }
                 return false;
               }
             } catch (err) {
-              model.errorModel.set('datasource', gettext('Error or invalid data group selected'));
+              model.errorModel.set('datasource', gettext('Error or invalid data group selected:'));
             }
           }
           return true;

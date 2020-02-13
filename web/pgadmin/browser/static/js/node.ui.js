@@ -110,6 +110,7 @@ define([
       defaults: _.extend(Backform.Select2Control.prototype.defaults, {
         url: undefined,
         transform: undefined,
+        force_fetch: false,
         url_with_id: false,
         select2: {
           allowClear: true,
@@ -117,14 +118,50 @@ define([
           width: 'style',
         },
       }),
-      fetch_options: function(force) {
+
+      /**
+       * Checks if it's OK to cache fetched options.
+       * Objects with dependencies in general should not cache - there is no use.
+       */
+      can_cache_options: function() {
+        var deps = this.field.get('deps');
+        return !deps || deps.length == 0;
+      },
+
+      /**
+       * Checks if it's OK to fetch options, i.e. all dependent objects are initialized.
+       * e.g. 'datasource' depend on 'data_group' being selected
+       */
+      can_fetch_data: function() {
+        if (this.can_cache_options())
+          return true;
+
+        var deps = this.field.get('deps'),
+          node_info = this.field.get('node_info');
+
+        for (var dep of deps) {
+          if (!node_info)
+            return false;
+
+          if (!node_info[dep])
+            return false;
+        }
+        return true;
+      },
+
+      /**
+       * Fetches options from server or from cache.
+       */
+      fetch_data: function(force) {
         /*
          * We're about to fetch the options required for this control.
          */
         var self = this,
           url = self.field.get('url') || self.defaults.url,
           m = self.model.top || self.model,
-          url_jump_after_node = self.field.get('url_jump_after_node') || null;
+          url_jump_after_node = self.field.get('url_jump_after_node') || null,
+          can_cache = this.can_cache_options(),
+          data = undefined;
 
         // Hmm - we found the url option.
         // That means - we needs to fetch the options from that node.
@@ -139,20 +176,22 @@ define([
             cache_level,
             cache_node = this.field.get('cache_node');
 
-          cache_node = (cache_node && pgAdmin.Browser.Nodes[cache_node]) || node;
+          if (can_cache) {
+            cache_node = (cache_node && pgAdmin.Browser.Nodes[cache_node]) || node;
 
-          if (this.field.has('cache_level')) {
-            cache_level = this.field.get('cache_level');
-          } else {
-            cache_level = cache_node.cache_level(node_info, with_id);
+            if (this.field.has('cache_level')) {
+              cache_level = this.field.get('cache_level');
+            } else {
+              cache_level = cache_node.cache_level(node_info, with_id);
+            }
+
+            /*
+             * We needs to check, if we have already cached data for this url.
+             * If yes - use that, and do not bother about fetching it again,
+             * and use it.
+             */
+            data = force ? undefined : cache_node.cache(node.type + '#' + url, node_info, cache_level);
           }
-
-          /*
-           * We needs to check, if we have already cached data for this url.
-           * If yes - use that, and do not bother about fetching it again,
-           * and use it.
-           */
-          var data = force ? undefined : cache_node.cache(node.type + '#' + url, node_info, cache_level);
 
           if (this.field.get('version_compatible') &&
             (_.isUndefined(data) || _.isNull(data))) {
@@ -162,11 +201,11 @@ define([
               url: full_url,
             })
               .done(function(res) {
-              /*
-               * We will cache this data for short period of time for avoiding
-               * same calls.
-               */
-                data = cache_node.cache(node.type + '#' + url, node_info, cache_level, res.data);
+                /*
+                 * We will cache this data for short period of time for avoiding
+                 * same calls.
+                 */
+                data = can_cache ? cache_node.cache(node.type + '#' + url, node_info, cache_level, res.data) : res.data;
               })
               .fail(function() {
                 m.trigger('pgadmin:view:fetch:error', m, self.field);
@@ -182,17 +221,18 @@ define([
           /*
            * Transform the data
            */
-          var transform = this.field.get('transform') || self.defaults.transform;
+          var transform = this.field.get('transform') || this.defaults.transform;
           if (transform && _.isFunction(transform)) {
             // We will transform the data later, when rendering.
             // It will allow us to generate different data based on the
             // dependencies.
-            self.field.set('options', transform.bind(self, data));
+            this.field.set('options', transform.bind(this, data));
           } else {
-            self.field.set('options', data);
+            this.field.set('options', data);
           }
         }
       },
+
       initialize: function() {
         /*
          * Initialization from the original control.
@@ -202,7 +242,8 @@ define([
         /*
          * We're about to fetch the options required for this control.
          */
-        this.fetch_options(false);
+        if (this.can_fetch_data())
+          this.fetch_data(false);
       },
     });
 
