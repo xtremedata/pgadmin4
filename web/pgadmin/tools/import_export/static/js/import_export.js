@@ -65,7 +65,7 @@ define([
       },
 
       render: function() {
-        this.fetch_data(true);
+        Backform.NodeAjaxOptionsControl.prototype.fetch_data.apply(this, true);
         return Backform.NodeListByNameControl.prototype.render.apply(this, arguments);
       },
     }),
