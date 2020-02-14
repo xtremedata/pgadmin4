@@ -112,42 +112,16 @@ define([
         transform: undefined,
         force_fetch: false,
         url_with_id: false,
+        dep_name: undefined,
+        dep_id: undefined,
+        can_cache: true,
+        can_fetch: true,
         select2: {
           allowClear: true,
           placeholder: 'Select an item...',
           width: 'style',
         },
       }),
-
-      /**
-       * Checks if it's OK to cache fetched options.
-       * Objects with dependencies in general should not cache - there is no use.
-       */
-      can_cache_options: function() {
-        var deps = this.field.get('deps');
-        return !deps || deps.length == 0;
-      },
-
-      /**
-       * Checks if it's OK to fetch options, i.e. all dependent objects are initialized.
-       * e.g. 'datasource' depend on 'data_group' being selected
-       */
-      can_fetch_data: function() {
-        if (this.can_cache_options())
-          return true;
-
-        var deps = this.field.get('deps'),
-          node_info = this.field.get('node_info');
-
-        for (var dep of deps) {
-          if (!node_info)
-            return false;
-
-          if (!node_info[dep])
-            return false;
-        }
-        return true;
-      },
 
       /**
        * Fetches options from server or from cache.
@@ -160,21 +134,42 @@ define([
           url = self.field.get('url') || self.defaults.url,
           m = self.model.top || self.model,
           url_jump_after_node = self.field.get('url_jump_after_node') || null,
-          can_cache = this.can_cache_options(),
-          data = undefined;
+          data = undefined,
+          can_cache = this.field.get('can_cache') || null,
+          can_fetch = this.field.get('can_fetch') || null,
+          dep_name = self.field.get('dep_name') || null,
+          dep_id = self.field.get('dep_id') || null;
+
+
+        if (can_fetch && _.isFunction(can_fetch))
+          can_fetch = this.apply(this, can_fetch);
+
+        if (dep_name && _.isFunction(dep_name))
+          dep_name = this.apply(this, dep_name);
+        if (dep_name) {
+          if (!url)
+            url = 'nodes';
+          if (dep_id && _.isFunction(dep_id))
+            dep_id = this.apply(this, dep_id, [m]);
+        }
 
         // Hmm - we found the url option.
         // That means - we needs to fetch the options from that node.
-        if (url) {
+        if (can_fetch && url) {
           var node = this.field.get('schema_node'),
             node_info = this.field.get('node_info'),
             with_id = this.field.get('url_with_id') || false,
-            full_url = node.generate_url.apply(
-              node, [
-                null, url, this.field.get('node_data'), with_id, node_info, url_jump_after_node,
-              ]),
             cache_level,
-            cache_node = this.field.get('cache_node');
+            cache_node = this.field.get('cache_node'),
+            full_url = null;
+
+          if (can_cache && _.isFunction(can_cache))
+            can_cache = this.apply(this, can_cache);
+            
+          full_url = node.generate_url.apply(
+            node, [
+              dep_id, url, this.field.get('node_data'), with_id, node_info, url_jump_after_node,
+            ]);
 
           if (can_cache) {
             cache_node = (cache_node && pgAdmin.Browser.Nodes[cache_node]) || node;
@@ -242,8 +237,7 @@ define([
         /*
          * We're about to fetch the options required for this control.
          */
-        if (this.can_fetch_data())
-          this.fetch_data(false);
+        this.fetch_data(false);
       },
     });
 

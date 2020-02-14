@@ -30,6 +30,7 @@ define([
   // Import Export Node List Control with preserving node ID
   var ImExNodeListByNameControl = Backform.NodeListByNameControl.extend({
     defaults: _.extend({}, Backform.NodeListByNameControl.prototype.defaults, {
+
       transform: function(rows) {
         var node = this.field.get('schema_node'),
           res = [],
@@ -63,12 +64,94 @@ define([
         this.model.attributes.name_id_map[this.field.attributes.name] = map;
         return res;
       },
-
-      render: function() {
-        Backform.NodeAjaxOptionsControl.prototype.fetch_data.apply(this, true);
-        return Backform.NodeListByNameControl.prototype.render.apply(this, arguments);
-      },
     }),
+
+    /**
+     * Returns selected dep_name view ID.
+     */
+    dep_id: function(model) {
+      var name_id_map = model.get('name_id_map') || null,
+        deps = this.field.get('deps') || null,
+        dep_name = this.field.get('dep_name') || null,
+        parent_name = undefined,
+        dep_id = undefined;
+
+      if (dep_name && name_id_map && deps) {
+        parent_name = model.get(dep_name) || null;
+        if (parent_name) {
+          try {
+            dep_id = name_id_map[dep_name][parent_name];
+            if (dep_id) {
+              return `${dep_name}/${dep_id}`;
+            }
+          } catch (err) {
+            model.errorModel.set('datasource', gettext('Error or invalid data group selected:'));
+            return null;
+          }
+        }
+      }
+      return null;
+    },
+
+    /**
+     * Automatically checks if disabled.
+     * Parent object has to be selected for being active.
+     */
+    disabled: function(m) {
+      var dep_id = this.field.get('dep_id') || null;
+      return _.isFunction(dep_id) ? this.apply(this, dep_id, [m]) : dep_id;
+    },
+
+    /**
+     * Checks if it's OK to cache fetched options.
+     * Objects with dependencies in general should not cache - there is no use.
+     */
+    can_cache: function() {
+      return this.field.get('dep_name') || null;
+    },
+
+    /**
+     * Checks if it's OK to fetch options, i.e. all dependent objects are initialized.
+     * e.g. 'datasource' depend on 'data_group' being selected
+     */
+    can_fetch: function() {
+      var deps = this.field.get('deps') || null,
+        node_info = this.field.get('node_info') || null,
+        dep_name = this.field.get('dep_name') || null;
+
+      if (!dep_name)
+        return true;
+
+      for (var dep of deps) {
+        if (!node_info)
+          return false;
+
+        if (!node_info[dep])
+          return false;
+      }
+
+      return true;
+    },
+
+    render: function() {
+      Backform.NodeListByNameControl.prototype.render.apply(this, arguments);
+      Backform.NodeAjaxOptionsControl.prototype.fetch_data.apply(this, arguments);
+      return Backform.NodeListByNameControl.prototype.render.apply(this, arguments);
+    },
+
+    initialize: function() {
+      /*
+       * Initialization from the original control.
+       */
+      Backform.NodeAjaxOptionsControl.prototype.initialize.apply(this, arguments);
+
+      var deps = this.field.get('deps') || null,
+        dep_name = this.field.get('dep_name') || null;
+        
+      if (!deps && dep_name) {
+        this.field.set('deps', [dep_name]);
+      }
+    },
   });
 
   // Main model for Import/Export functionality
@@ -135,32 +218,11 @@ define([
         deps: ['data_group'],
         control: ImExNodeListByNameControl,
         node: 'datasource',
+        dep_name: 'data_group',
         /*url: node.generate_url.apply(this.datasource, 
           [this.datasource, 'nodes',  ]),*/
-        url: 'nodes',
         placeholder: gettext('Select data ...'),
         group: gettext('Data'),
-        disabled: function(model) {
-          var data_group = model.get('data_group'),
-            name_id_map = model.get('name_id_map'),
-            data_group_id = undefined;
-          model.errorModel.clear();
-          if (data_group) {
-            try {
-              data_group_id = name_id_map[this.deps[0]][data_group];
-              if (data_group_id) {
-                var tmp_url = `nodes/${data_group_id}`;
-                if (tmp_url != this.url) {
-                  this.url = tmp_url;
-                }
-                return false;
-              }
-            } catch (err) {
-              model.errorModel.set('datasource', gettext('Error or invalid data group selected:'));
-            }
-          }
-          return true;
-        },
         select2: {
           allowClear: false,
           width: '100%',
