@@ -112,8 +112,6 @@ define([
         transform: undefined,
         force_fetch: false,
         url_with_id: false,
-        dep_name: undefined,
-        dep_id: undefined,
         can_cache: true,
         can_fetch: true,
         select2: {
@@ -126,7 +124,7 @@ define([
       /**
        * Fetches options from server or from cache.
        */
-      fetch_data: function(force) {
+      fetch_data: function() {
         /*
          * We're about to fetch the options required for this control.
          */
@@ -135,40 +133,26 @@ define([
           m = self.model.top || self.model,
           url_jump_after_node = self.field.get('url_jump_after_node') || null,
           data = undefined,
-          can_cache = this.field.get('can_cache') || null,
-          can_fetch = this.field.get('can_fetch') || null,
-          dep_name = self.field.get('dep_name') || null,
-          dep_id = self.field.get('dep_id') || null;
+          can_cache = this.field.get('can_cache') || this.defaults.can_cache;
 
-
-        if (can_fetch && _.isFunction(can_fetch))
-          can_fetch = this.apply(this, can_fetch);
-
-        if (dep_name && _.isFunction(dep_name))
-          dep_name = this.apply(this, dep_name);
-        if (dep_name) {
-          if (!url)
-            url = 'nodes';
-          if (dep_id && _.isFunction(dep_id))
-            dep_id = this.apply(this, dep_id, [m]);
-        }
 
         // Hmm - we found the url option.
         // That means - we needs to fetch the options from that node.
-        if (can_fetch && url) {
+        if (url) {
           var node = this.field.get('schema_node'),
             node_info = this.field.get('node_info'),
+            node_data = this.field.get('node_data'),
             with_id = this.field.get('url_with_id') || false,
             cache_level,
             cache_node = this.field.get('cache_node'),
             full_url = null;
 
           if (can_cache && _.isFunction(can_cache))
-            can_cache = this.apply(this, can_cache);
+            can_cache = can_cache.apply(this);
             
           full_url = node.generate_url.apply(
             node, [
-              dep_id, url, this.field.get('node_data'), with_id, node_info, url_jump_after_node,
+              null, url, node_data, with_id, node_info, url_jump_after_node,
             ]);
 
           if (can_cache) {
@@ -185,11 +169,11 @@ define([
              * If yes - use that, and do not bother about fetching it again,
              * and use it.
              */
-            data = force ? undefined : cache_node.cache(node.type + '#' + url, node_info, cache_level);
+            data = cache_node.cache(node.type + '#' + url, node_info, cache_level);
+            data = (data && data.data) || null;
           }
 
-          if (this.field.get('version_compatible') &&
-            (_.isUndefined(data) || _.isNull(data))) {
+          if (this.field.get('version_compatible') && !data) {
             m.trigger('pgadmin:view:fetching', m, self.field);
             $.ajax({
               async: false,
@@ -200,18 +184,16 @@ define([
                  * We will cache this data for short period of time for avoiding
                  * same calls.
                  */
-                data = can_cache ? cache_node.cache(node.type + '#' + url, node_info, cache_level, res.data) : res.data;
+                data = res.data;
+                if (can_cache && data)
+                  cache_node.cache(node.type + '#' + url, node_info, cache_level, data);
               })
               .fail(function() {
                 m.trigger('pgadmin:view:fetch:error', m, self.field);
               });
             m.trigger('pgadmin:view:fetched', m, self.field);
           }
-          // To fetch only options from cache, we do not need time from 'at'
-          // attribute but only options.
-          //
-          // It is feasible that the data may not have been fetched.
-          data = (data && data.data) || [];
+          data = data || [];
 
           /*
            * Transform the data
@@ -237,7 +219,12 @@ define([
         /*
          * We're about to fetch the options required for this control.
          */
-        this.fetch_data(false);
+        var can_fetch = this.field.get('can_fetch') || this.defaults.can_fetch,
+          model = this.model.top || this.model;
+
+        can_fetch = _.isFunction(can_fetch) ? can_fetch.apply(this, [model, true]) : can_fetch;
+        if (can_fetch)
+          this.fetch_data();
       },
     });
 

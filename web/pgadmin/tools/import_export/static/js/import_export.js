@@ -29,7 +29,8 @@ define([
 
   // Import Export Node List Control with preserving node ID
   var ImExNodeListByNameControl = Backform.NodeListByNameControl.extend({
-    defaults: _.extend({}, Backform.NodeListByNameControl.prototype.defaults, {
+    defaults: _.extend(Backform.NodeListByNameControl.prototype.defaults, {
+      url: 'nodes',
 
       transform: function(rows) {
         var node = this.field.get('schema_node'),
@@ -52,7 +53,7 @@ define([
                 ) :
                 (node['node_image'] || ('icon-' + node.type)));
 
-            map[r.label] = r._id;
+            map[r.label] = r;
             res.push({
               'value': r.label,
               'image': image,
@@ -61,81 +62,111 @@ define([
           }
         });
 
-        this.model.attributes.name_id_map[this.field.attributes.name] = map;
+        this.model.attributes.nodes_info_map[this.field.attributes.name] = map;
         return res;
+      },
+
+      /**
+       * Checks if it's OK to cache fetched options.
+       * Objects with dependencies in general should not cache - there is no use.
+       */
+      can_cache: function() {
+        var schema_node = this.field.get('schema_node') || null;
+        return !schema_node || !schema_node.parent_type;
+      },
+
+      /**
+       * Checks if it's OK to fetch options, i.e. all dependent objects are initialized.
+       * e.g. 'datasource' depend on 'data_group' being selected
+       */
+      can_fetch: function(model, def_val) {
+        var schema_node=this.field.get('schema_node') || null,
+          fetch_dep=this.field.get('fetch_dep') || this.defaults.fetch_dep;
+
+        return schema_node && schema_node.parent_type
+          ? _.isFunction(fetch_dep) ?  fetch_dep.apply(this, [model]) : fetch_dep
+          : def_val;
+      },
+
+      /**
+       * Automatically checks if disabled.
+       * Parent object has to be selected for being active.
+       */
+      disabled: function(model) {
+        var can_fetch = this.field.get('can_fetch') || this.defaults.can_fetch;
+        return !(_.isFunction(can_fetch) ? can_fetch.apply(this, [model]) : can_fetch);
+      },
+
+      /**
+       * Finds selected parent node model by type.
+       */
+      find_parent_node: function(this_type, parent_type, model) {
+        var nodes_info_map = model.get('nodes_info_map') || null,
+          parent_name = undefined;
+
+        if (nodes_info_map) {
+          parent_name = model.get(parent_type) || null;
+          if (parent_name) {
+            try {
+              return nodes_info_map[parent_type][parent_name];
+            } catch (err) {
+              model.errorModel.set(this_type, gettext('Error or invalid data group selected:'));
+              return null;
+            }
+          }
+        }
+        return null;
+      },
+
+      /**
+       * Returns selected parent node model.
+       */
+      fetch_dep: function(model) {
+        var schema_node = this.field.get('schema_node') || null,
+          find_parent_node = this.field.get('find_parent_node') || this.defaults.find_parent_node;
+
+        return schema_node && schema_node.parent_type ?
+          find_parent_node.apply(this, [schema_node.type, schema_node.parent_type, model]) : null;
       },
     }),
 
     /**
-     * Returns selected dep_name view ID.
+     * Rebuilds nodes datas based on selected items.
      */
-    dep_id: function(model) {
-      var name_id_map = model.get('name_id_map') || null,
-        deps = this.field.get('deps') || null,
-        dep_name = this.field.get('dep_name') || null,
-        parent_name = undefined,
-        dep_id = undefined;
+    rebuild_node_info: function(parent_node, model) {
+      var node_tree = {},
+        find_parent_node = this.field.get('find_parent_node') || this.defaults.find_parent_node,
+        i = null;
 
-      if (dep_name && name_id_map && deps) {
-        parent_name = model.get(dep_name) || null;
-        if (parent_name) {
-          try {
-            dep_id = name_id_map[dep_name][parent_name];
-            if (dep_id) {
-              return `${dep_name}/${dep_id}`;
-            }
-          } catch (err) {
-            model.errorModel.set('datasource', gettext('Error or invalid data group selected:'));
-            return null;
-          }
+      // something to do only for nodes with parent ID
+      if (!_.isBoolean(parent_node)) {
+        i = parent_node;
+        while (i) {
+          node_tree[i._type] = i;
+          i = find_parent_node.apply(this, [i._type, i.parent_type, model]);
         }
       }
-      return null;
+
+      this.field.set('node_data', null);
+      this.field.set('node_info', node_tree);
     },
 
     /**
-     * Automatically checks if disabled.
-     * Parent object has to be selected for being active.
+     * Depenent changes might require data fetch.
      */
-    disabled: function(m) {
-      var dep_id = this.field.get('dep_id') || null;
-      return _.isFunction(dep_id) ? this.apply(this, dep_id, [m]) : dep_id;
-    },
+    render: function() {
+      var can_fetch = this.field.get('can_fetch') || this.defaults.can_fetch,
+        model = this.model.top || this.model;
 
-    /**
-     * Checks if it's OK to cache fetched options.
-     * Objects with dependencies in general should not cache - there is no use.
-     */
-    can_cache: function() {
-      return this.field.get('dep_name') || null;
-    },
-
-    /**
-     * Checks if it's OK to fetch options, i.e. all dependent objects are initialized.
-     * e.g. 'datasource' depend on 'data_group' being selected
-     */
-    can_fetch: function() {
-      var deps = this.field.get('deps') || null,
-        node_info = this.field.get('node_info') || null,
-        dep_name = this.field.get('dep_name') || null;
-
-      if (!dep_name)
-        return true;
-
-      for (var dep of deps) {
-        if (!node_info)
-          return false;
-
-        if (!node_info[dep])
-          return false;
+      /*
+       * Data fetch here only for dependent nodes, as they might need reload.
+       */
+      can_fetch = _.isFunction(can_fetch) ? can_fetch.apply(this, [model, false]) : can_fetch;
+      if (can_fetch) {
+        this.rebuild_node_info(can_fetch, model);
+        this.fetch_data();
       }
 
-      return true;
-    },
-
-    render: function() {
-      Backform.NodeListByNameControl.prototype.render.apply(this, arguments);
-      Backform.NodeAjaxOptionsControl.prototype.fetch_data.apply(this, arguments);
       return Backform.NodeListByNameControl.prototype.render.apply(this, arguments);
     },
 
@@ -143,15 +174,9 @@ define([
       /*
        * Initialization from the original control.
        */
-      Backform.NodeAjaxOptionsControl.prototype.initialize.apply(this, arguments);
-
-      var deps = this.field.get('deps') || null,
-        dep_name = this.field.get('dep_name') || null;
-        
-      if (!deps && dep_name) {
-        this.field.set('deps', [dep_name]);
-      }
+      Backform.NodeListByNameControl.prototype.initialize.apply(this, arguments);
     },
+    
   });
 
   // Main model for Import/Export functionality
@@ -179,7 +204,7 @@ define([
       datasource: undefined,
       bucket: undefined,
       dirobj: undefined,
-      name_id_map: {},
+      nodes_info_map: {},
     },
     schema: [{
       id: 'is_import',
@@ -218,7 +243,6 @@ define([
         deps: ['data_group'],
         control: ImExNodeListByNameControl,
         node: 'datasource',
-        dep_name: 'data_group',
         /*url: node.generate_url.apply(this.datasource, 
           [this.datasource, 'nodes',  ]),*/
         placeholder: gettext('Select data ...'),
@@ -258,7 +282,7 @@ define([
         group: gettext('Server'),
         disabled: function(model) {
           var server_group = model.get('server_group');
-          return server_group == null;
+          return _.isUndefined(server_group) || _.isNull(server_group);
         },
         select2: {
           allowClear: false,
