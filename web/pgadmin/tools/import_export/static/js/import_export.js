@@ -71,7 +71,7 @@ define([
        * Objects with dependencies in general should not cache - there is no use.
        */
       can_cache: function() {
-        var schema_node = this.field.get('schema_node') || null;
+        var schema_node = this.schema_node || null;
         return !schema_node || !schema_node.parent_type;
       },
 
@@ -79,13 +79,9 @@ define([
        * Checks if it's OK to fetch options, i.e. all dependent objects are initialized.
        * e.g. 'datasource' depend on 'data_group' being selected
        */
-      can_fetch: function(model, def_val) {
-        var schema_node=this.field.get('schema_node') || null,
-          fetch_dep=this.field.get('fetch_dep') || this.defaults.fetch_dep;
-
-        return schema_node && schema_node.parent_type
-          ? _.isFunction(fetch_dep) ?  fetch_dep.apply(this, [model]) : fetch_dep
-          : def_val;
+      can_fetch: function(model) {
+        var schema_node=this.schema_node || null;
+        return schema_node && schema_node.parent_type && !!model.get(schema_node.parent_type) || false;
       },
 
       /**
@@ -93,42 +89,56 @@ define([
        * Parent object has to be selected for being active.
        */
       disabled: function(model) {
-        var can_fetch = this.field.get('can_fetch') || this.defaults.can_fetch;
+        // called with the controller only
+        var can_fetch = this.can_fetch || null;
         return !(_.isFunction(can_fetch) ? can_fetch.apply(this, [model]) : can_fetch);
       },
+    }),
 
-      /**
-       * Finds selected parent node model by type.
-       */
-      find_parent_node: function(this_type, parent_type, model) {
-        var nodes_info_map = model.get('nodes_info_map') || null,
-          parent_name = undefined;
+    /**
+     * Finds selected parent node model by type.
+     */
+    find_parent_node: function(this_type, parent_type, model) {
+      var nodes_info_map = model.get('nodes_info_map') || null,
+        parent_name = undefined;
 
-        if (nodes_info_map) {
-          parent_name = model.get(parent_type) || null;
-          if (parent_name) {
-            try {
-              return nodes_info_map[parent_type][parent_name];
-            } catch (err) {
-              model.errorModel.set(this_type, gettext('Error or invalid data group selected:'));
-              return null;
-            }
+      if (nodes_info_map) {
+        parent_name = model.get(parent_type) || null;
+        if (parent_name) {
+          try {
+            return nodes_info_map[parent_type][parent_name];
+          } catch (err) {
+            model.errorModel.set(this_type, gettext('Error or invalid data group selected:'));
+            return null;
           }
         }
-        return null;
-      },
+      }
+      return null;
+    },
 
-      /**
-       * Returns selected parent node model.
-       */
-      fetch_dep: function(model) {
-        var schema_node = this.field.get('schema_node') || null,
-          find_parent_node = this.field.get('find_parent_node') || this.defaults.find_parent_node;
+    /**
+     * Returns selected parent node model.
+     */
+    fetch_dep: function(model) {
+      var schema_node = this.field.get('schema_node') || null,
+        find_parent_node = this.field.get('find_parent_node') || this.defaults.find_parent_node;
 
-        return schema_node && schema_node.parent_type ?
-          find_parent_node.apply(this, [schema_node.type, schema_node.parent_type, model]) : null;
-      },
-    }),
+      return schema_node && schema_node.parent_type ?
+        find_parent_node.apply(this, [schema_node.type, schema_node.parent_type, model]) : null;
+    },
+
+    /**
+     * Checks if it's OK to fetch options, i.e. all dependent objects are initialized.
+     * e.g. 'datasource' depend on 'data_group' being selected
+     */
+    get_check_fetch: function(model, def_val) {
+      var schema_node=this.schema_node || null,
+        fetch_dep=this.field.get('fetch_dep') || this.defaults.fetch_dep;
+
+      return schema_node && schema_node.parent_type
+        ? _.isFunction(fetch_dep) ?  fetch_dep.apply(this, [model]) : fetch_dep
+        : def_val;
+    },
 
     /**
      * Rebuilds nodes datas based on selected items.
@@ -136,19 +146,21 @@ define([
     rebuild_node_info: function(parent_node, model) {
       var node_tree = {},
         find_parent_node = this.field.get('find_parent_node') || this.defaults.find_parent_node,
-        i = null,
+        i = 10,
+        o = null,
         schema_node=null;
 
       // something to do only for nodes with parent ID
       if (!_.isBoolean(parent_node)) {
-        i = parent_node;
-        while (i) {
-          node_tree[i._type] = i;
-          schema_node = pgBrowser.Nodes[i._type] || null;
+        o = parent_node;
+        while (o) {
+          o.priority = i--;
+          node_tree[o._type] = o;
+          schema_node = pgBrowser.Nodes[o._type] || null;
           if (schema_node && schema_node.parent_type) {
-            i = find_parent_node.apply(this, [i._type, schema_node.parent_type, model]);
+            o = find_parent_node.apply(this, [o._type, schema_node.parent_type, model]);
           } else {
-            i = null;
+            o = null;
             break;
           }
         }
@@ -162,16 +174,43 @@ define([
      * Depenent changes might require data fetch.
      */
     render: function() {
-      var can_fetch = this.field.get('can_fetch') || this.defaults.can_fetch,
-        model = this.model.top || this.model;
+      var get_check_fetch = this.field.get('get_check_fetch') || this.defaults.get_check_fetch,
+        schema_node = this.field.get('schema_node') || null,
+        model = this.model.top || this.model,
+        value = this.field.get('value') || null,
+        selected_node = null;
+
+      /**
+       * Default value.
+       */
+      if (!value && schema_node && schema_node.type) {
+        try {
+          selected_node = model.get('selected_info')[schema_node.type] || null;
+          if (selected_node) {
+            this.transform_data([selected_node], true);
+            this.field.set('disabled', true);
+          }
+        } catch (ignore) {
+          // no selected node for this type - ignoring
+        }
+      }
 
       /*
        * Data fetch here only for dependent nodes, as they might need reload.
        */
-      can_fetch = _.isFunction(can_fetch) ? can_fetch.apply(this, [model, false]) : can_fetch;
-      if (can_fetch) {
-        this.rebuild_node_info(can_fetch, model);
-        this.fetch_data();
+      if (!selected_node) {
+        get_check_fetch = _.isFunction(get_check_fetch) ? get_check_fetch.apply(this, [model, false]) : get_check_fetch;
+        if (get_check_fetch) {
+          this.rebuild_node_info(get_check_fetch, model);
+          this.fetch_data();
+        }
+      }
+
+      /**
+       * Our disabled.
+       */
+      if (!selected_node && _.isBoolean(this.field.get('disabled'))) {
+        this.field.set('disabled', this.defaults.disabled);
       }
 
       return Backform.NodeListByNameControl.prototype.render.apply(this, arguments);
@@ -290,7 +329,7 @@ define([
       control: 'fieldset',
       label: 'Server',
       group: gettext('Source/Destination'),
-      schema: [{ /* data group selection */
+      schema: [{ /* server group selection */
         id: 'server_group',
         label: gettext('Server Group'),
         cell: 'string',
@@ -303,7 +342,7 @@ define([
           allowClear: false,
           width: '100%',
         },
-      }, { /* data selection */
+      }, { /* server selection */
         id: 'server',
         label: gettext('Server'),
         cell: 'string',
@@ -319,6 +358,48 @@ define([
         },
         validate: function() {
           return this.load_server_preferences(this.server);
+        },
+      }, { /* database selection */
+        id: 'database',
+        label: gettext('Database'),
+        cell: 'string',
+        type: 'select2',
+        deps: ['server'],
+        control: ImExNodeListByNameControl,
+        node: 'database',
+        placeholder: gettext('Select database ...'),
+        group: gettext('Server'),
+        select2: {
+          allowClear: false,
+          width: '100%',
+        },
+      }, { /* schema selection */
+        id: 'schema',
+        label: gettext('Schema'),
+        cell: 'string',
+        type: 'select2',
+        deps: ['database'],
+        control: ImExNodeListByNameControl,
+        node: 'schema',
+        placeholder: gettext('Select schema ...'),
+        group: gettext('Server'),
+        select2: {
+          allowClear: false,
+          width: '100%',
+        },
+      }, { /* table selection */
+        id: '',
+        label: gettext('Table'),
+        cell: 'string',
+        type: 'select2',
+        deps: ['schema'],
+        control: ImExNodeListByNameControl,
+        node: 'table',
+        placeholder: gettext('Select table ...'),
+        group: gettext('Server'),
+        select2: {
+          allowClear: false,
+          width: '100%',
         },
       }],
     }, {
@@ -776,6 +857,11 @@ define([
         Alertify.dialog('ImportDialog', function factory() {
 
           return {
+            /**
+             * node: selected data model node (general from pgBrowser)
+             * item: selected (or clicked on) tree view element
+             * data: data from selected tree view for data model (schema)
+             */
             main: function(title, node, item, data) {
               this.set('title', title);
               this.setting('pg_node', node);
@@ -909,7 +995,8 @@ define([
                 i = this.settings.pg_item,
                 treeInfo = n.getTreeNodeHierarchy.apply(n, [i]),
                 newModel = new ImportExportModel({}, {
-                  node_info: treeInfo,
+                  node_info: {},
+                  selected_info: treeInfo,
                 }),
                 fields = Backform.generateViewSchema(
                   treeInfo, newModel, 'create', node, treeInfo.server, true
@@ -923,6 +1010,8 @@ define([
               $(this.elements.body.childNodes[0]).addClass(
                 'alertify_tools_dialog_properties obj_properties'
               );
+              // My variable is not propagated as 'node_info'
+              newModel.set('selected_info', treeInfo);
               view.render();
 
               this.elements.content.appendChild($container.get(0));

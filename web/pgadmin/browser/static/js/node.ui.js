@@ -121,6 +121,25 @@ define([
         },
       }),
 
+      /*
+       * Transform the data
+       */
+      transform_data: function(data, set_default) {
+        var transform = this.field.get('transform') || this.defaults.transform;
+        if (transform && _.isFunction(transform)) {
+          // We will transform the data later, when rendering.
+          // It will allow us to generate different data based on the
+          // dependencies.
+          this.field.set('options', transform.bind(this, data));
+          if (data && set_default)
+            this.field.set('value', transform.apply(this, [data[0]]));
+        } else {
+          this.field.set('options', data);
+          if (data && set_default)
+            this.field.set('value', data[0]);
+        }
+      },
+
       /**
        * Fetches options from server or from cache.
        */
@@ -148,7 +167,7 @@ define([
             full_url = null;
 
           if (can_cache && _.isFunction(can_cache))
-            can_cache = can_cache.apply(this);
+            can_cache = can_cache.apply(this.field);
             
           full_url = node.generate_url.apply(
             node, [
@@ -195,18 +214,7 @@ define([
           }
           data = data || [];
 
-          /*
-           * Transform the data
-           */
-          var transform = this.field.get('transform') || this.defaults.transform;
-          if (transform && _.isFunction(transform)) {
-            // We will transform the data later, when rendering.
-            // It will allow us to generate different data based on the
-            // dependencies.
-            this.field.set('options', transform.bind(this, data));
-          } else {
-            this.field.set('options', data);
-          }
+          this.transform_data(data, false);
         }
       },
 
@@ -222,7 +230,7 @@ define([
         var can_fetch = this.field.get('can_fetch') || this.defaults.can_fetch,
           model = this.model.top || this.model;
 
-        can_fetch = _.isFunction(can_fetch) ? can_fetch.apply(this, [model, true]) : can_fetch;
+        can_fetch = _.isFunction(can_fetch) ? can_fetch.apply(this.field, [model, true]) : can_fetch;
         if (can_fetch)
           this.fetch_data();
       },
