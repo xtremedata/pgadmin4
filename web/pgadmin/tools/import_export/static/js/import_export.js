@@ -136,14 +136,20 @@ define([
     rebuild_node_info: function(parent_node, model) {
       var node_tree = {},
         find_parent_node = this.field.get('find_parent_node') || this.defaults.find_parent_node,
-        i = null;
+        i = null,
+        schema_node=null;
 
       // something to do only for nodes with parent ID
       if (!_.isBoolean(parent_node)) {
         i = parent_node;
         while (i) {
           node_tree[i._type] = i;
-          i = find_parent_node.apply(this, [i._type, i.parent_type, model]);
+          schema_node = pgBrowser.Nodes[i._type] || null;
+          if (schema_node) {
+            i = find_parent_node.apply(this, [i._type, schema_node.parent_type, model]);
+          } else {
+            i = null;
+          }
         }
       }
 
