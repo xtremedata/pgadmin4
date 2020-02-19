@@ -145,10 +145,11 @@ define([
         while (i) {
           node_tree[i._type] = i;
           schema_node = pgBrowser.Nodes[i._type] || null;
-          if (schema_node) {
+          if (schema_node && schema_node.parent_type) {
             i = find_parent_node.apply(this, [i._type, schema_node.parent_type, model]);
           } else {
             i = null;
+            break;
           }
         }
       }
@@ -241,7 +242,7 @@ define([
           allowClear: false,
           width: '100%',
         },
-      }, { /* data selection */
+      }, { /* data source selection */
         id: 'datasource',
         label: gettext('Data'),
         cell: 'string',
@@ -249,9 +250,35 @@ define([
         deps: ['data_group'],
         control: ImExNodeListByNameControl,
         node: 'datasource',
-        /*url: node.generate_url.apply(this.datasource, 
-          [this.datasource, 'nodes',  ]),*/
         placeholder: gettext('Select data ...'),
+        group: gettext('Data'),
+        select2: {
+          allowClear: false,
+          width: '100%',
+        },
+      }, { /* data bucket selection */
+        id: 'bucket',
+        label: gettext('Bucket'),
+        cell: 'string',
+        type: 'select2',
+        deps: ['datasource'],
+        control: ImExNodeListByNameControl,
+        node: 'bucket',
+        placeholder: gettext('Select bucket ...'),
+        group: gettext('Data'),
+        select2: {
+          allowClear: false,
+          width: '100%',
+        },
+      }, { /* data object selection */
+        id: 'dirobj',
+        label: gettext('Object'),
+        cell: 'string',
+        type: 'select2',
+        deps: ['bucket'],
+        control: ImExNodeListByNameControl,
+        node: 'dirobj',
+        placeholder: gettext('Select object ...'),
         group: gettext('Data'),
         select2: {
           allowClear: false,
@@ -268,8 +295,8 @@ define([
         label: gettext('Server Group'),
         cell: 'string',
         type: 'select2',
-        control: Backform.NodeListByNameControl,
-        node: 'data_group',
+        control: ImExNodeListByNameControl,
+        node: 'server_group',
         placeholder: gettext('Select server group ...'),
         group: gettext('Server'),
         select2: {
@@ -282,14 +309,10 @@ define([
         cell: 'string',
         type: 'select2',
         deps: ['server_group'],
-        control: Backform.NodeListByNameControl,
+        control: ImExNodeListByNameControl,
         node: 'server',
         placeholder: gettext('Select server ...'),
         group: gettext('Server'),
-        disabled: function(model) {
-          var server_group = model.get('server_group');
-          return _.isUndefined(server_group) || _.isNull(server_group);
-        },
         select2: {
           allowClear: false,
           width: '100%',

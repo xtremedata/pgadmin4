@@ -45,13 +45,6 @@ define('pgadmin.node.dirobj', [
           return;
 
         this.initialized = true;
-
-        pgBrowser.add_menus([{
-          name: 'import', node: 'dirobj', module: this,
-          applies: ['object, context, tools'], callback: 'import',
-          label: gettext('Import...'), priority: 4,
-          icon: 'fa fa-anchor', enable: true,
-        }]);
       },
       callbacks: {
         beforeopen: function() {
@@ -64,10 +57,6 @@ define('pgadmin.node.dirobj', [
 
           // Call added method of node.js
           pgAdmin.Browser.Node.callbacks.added.apply(this, arguments);
-          return true;
-        },
-
-        import: function() {
           return true;
         },
       },

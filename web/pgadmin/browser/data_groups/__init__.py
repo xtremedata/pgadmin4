@@ -209,7 +209,7 @@ class DataGroupView(NodeView):
                     status=410, success=0, errormsg=e
                 )
 
-        return make_json_response(result=request.form)
+        return make_json_response(data=request.form)
 
     @login_required
     def update(self, gid):

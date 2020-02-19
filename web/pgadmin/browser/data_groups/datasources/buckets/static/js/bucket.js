@@ -40,9 +40,6 @@ define('pgadmin.node.bucket', [
       canEdit: false,
       can_create_bucket: false,
       can_expand: true,
-      node_image: function() {
-        return 'icon-bucket';
-      },
       Init: function() {
         /* Avoid mulitple registration of menus */
         if (this.initialized)

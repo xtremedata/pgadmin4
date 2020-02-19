@@ -177,7 +177,7 @@ blueprint = DataSourceModule(__name__)
 
 
 
-class DataSourceNode(NodeView):
+class DataSourceView(NodeView):
     node_type = DataSourceModule.NODE_TYPE
 
     parent_ids = [{'type': 'int', 'id': 'gid'}]
@@ -221,7 +221,7 @@ class DataSourceNode(NodeView):
             return gone(errormsg=gettext(
                 'The specified data group with id# {0} could not be found.').format(gid))
 
-        return make_json_response(result=datasources)
+        return make_json_response(data=datasources)
 
 
 
@@ -241,7 +241,7 @@ class DataSourceNode(NodeView):
                 )
             )
 
-        return make_json_response(result=self.blueprint.get_browser_node(datasource))
+        return make_json_response(data=self.blueprint.get_browser_node(datasource))
 
     @login_required
     def delete(self, gid, sid):
@@ -503,4 +503,4 @@ class DataSourceNode(NodeView):
         )
 
 
-DataSourceNode.register_node_view(blueprint)
+DataSourceView.register_node_view(blueprint)
