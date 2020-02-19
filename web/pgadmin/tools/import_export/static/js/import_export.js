@@ -90,7 +90,7 @@ define([
        * Parent object has to be selected for being active.
        */
       disabled: function(model) {
-        var schema_node=this.get('schema_node') || null;
+        var schema_node=this.schema_node || null;
         return (schema_node) ? schema_node.parent_type && !model.get(schema_node.parent_type) : true;
       },
     }),
