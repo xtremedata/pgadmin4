@@ -80,9 +80,11 @@ define([
        * e.g. 'datasource' depend on 'data_group' being selected
        */
       can_fetch: function(model) {
-        var schema_node=this.get('schema_node') || null;
-        return (schema_node) ? !schema_node.parent_type || !!model.get(schema_node.parent_type) : false;
-
+        var schema_node = this.get('schema_node') || null,
+          selected_info = model.get('selected_info') || null;
+        return schema_node && schema_node.type 
+              && !(selected_info && selected_info[schema_node.type])
+              && !(schema_node.parent_type && !model.get(schema_node.parent_type));
       },
 
       /**
@@ -90,8 +92,11 @@ define([
        * Parent object has to be selected for being active.
        */
       disabled: function(model) {
-        var schema_node=this.schema_node || null;
-        return (schema_node) ? schema_node.parent_type && !model.get(schema_node.parent_type) : true;
+        var schema_node = this.schema_node || null,
+          selected_info = model.get('selected_info') || null;
+        return !schema_node || !schema_node.type 
+              || selected_info && selected_info[schema_node.type]
+              || schema_node.parent_type && !model.get(schema_node.parent_type);
       },
     }),
 
@@ -120,11 +125,10 @@ define([
      * Returns selected parent node model.
      */
     fetch_dep: function(model) {
-      var schema_node = this.field.get('schema_node') || null,
-        find_parent_node = this.field.get('find_parent_node') || this.defaults.find_parent_node;
+      var schema_node = this.field.get('schema_node') || null;
 
       return schema_node && schema_node.parent_type ?
-        find_parent_node.apply(this, [schema_node.type, schema_node.parent_type, model]) : null;
+        this.find_parent_node(schema_node.type, schema_node.parent_type, model) : null;
     },
 
     /**
@@ -132,12 +136,8 @@ define([
      * e.g. 'datasource' depend on 'data_group' being selected
      */
     get_check_fetch: function(model, def_val) {
-      var schema_node=this.schema_node || null,
-        fetch_dep=this.field.get('fetch_dep') || this.defaults.fetch_dep;
-
-      return schema_node && schema_node.parent_type
-        ? _.isFunction(fetch_dep) ?  fetch_dep.apply(this, [model]) : fetch_dep
-        : def_val;
+      var schema_node = this.field.get('schema_node') || null;
+      return schema_node && schema_node.parent_type ? this.fetch_dep(model) : def_val;
     },
 
     /**
@@ -145,7 +145,6 @@ define([
      */
     rebuild_node_info: function(parent_node, model) {
       var node_tree = {},
-        find_parent_node = this.field.get('find_parent_node') || this.defaults.find_parent_node,
         i = 10,
         o = null,
         schema_node=null;
@@ -158,7 +157,7 @@ define([
           node_tree[o._type] = o;
           schema_node = pgBrowser.Nodes[o._type] || null;
           if (schema_node && schema_node.parent_type) {
-            o = find_parent_node.apply(this, [o._type, schema_node.parent_type, model]);
+            o = this.find_parent_node(o._type, schema_node.parent_type, model);
           } else {
             o = null;
             break;
@@ -174,8 +173,7 @@ define([
      * Depenent changes might require data fetch.
      */
     render: function() {
-      var get_check_fetch = this.field.get('get_check_fetch') || this.defaults.get_check_fetch,
-        schema_node = this.field.get('schema_node') || null,
+      var schema_node = this.field.get('schema_node') || null,
         model = this.model.top || this.model,
         value = this.field.get('value') || null,
         selected_node = null;
@@ -187,8 +185,17 @@ define([
         try {
           selected_node = model.get('selected_info')[schema_node.type] || null;
           if (selected_node) {
-            this.transform_data([selected_node], true);
+            var select2 = this.field.get('select2') || null;
+            if (select2) {
+              select2.first_empty = false;
+              select2.emptyOptions = true;
+              select2.tags = true;
+              select2.allowClear = false;
+              select2.openOnEnter = false;
+            }
             this.field.set('disabled', true);
+            //this.transform_data([selected_node]);
+            //model.set(schema_node.type, selected_node.label);
           }
         } catch (ignore) {
           // no selected node for this type - ignoring
@@ -199,9 +206,9 @@ define([
        * Data fetch here only for dependent nodes, as they might need reload.
        */
       if (!selected_node) {
-        get_check_fetch = _.isFunction(get_check_fetch) ? get_check_fetch.apply(this, [model, false]) : get_check_fetch;
-        if (get_check_fetch) {
-          this.rebuild_node_info(get_check_fetch, model);
+        var get_fetch_parent = this.get_check_fetch(model, false);
+        if (get_fetch_parent) {
+          this.rebuild_node_info(get_fetch_parent, model);
           this.fetch_data();
         }
       }
@@ -996,7 +1003,6 @@ define([
                 treeInfo = n.getTreeNodeHierarchy.apply(n, [i]),
                 newModel = new ImportExportModel({}, {
                   node_info: {},
-                  selected_info: treeInfo,
                 }),
                 fields = Backform.generateViewSchema(
                   treeInfo, newModel, 'create', node, treeInfo.server, true
@@ -1012,6 +1018,14 @@ define([
               );
               // My variable is not propagated as 'node_info'
               newModel.set('selected_info', treeInfo);
+              _.each(treeInfo, function(e) {
+                try {
+                  newModel.set(e._type, e.label);
+                } catch (ignore) {
+                  // placeholder for syntax checker
+                }
+              });
+              //
               view.render();
 
               this.elements.content.appendChild($container.get(0));

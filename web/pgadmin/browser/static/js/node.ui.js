@@ -124,19 +124,15 @@ define([
       /*
        * Transform the data
        */
-      transform_data: function(data, set_default) {
+      transform_data: function(data) {
         var transform = this.field.get('transform') || this.defaults.transform;
         if (transform && _.isFunction(transform)) {
           // We will transform the data later, when rendering.
           // It will allow us to generate different data based on the
           // dependencies.
           this.field.set('options', transform.bind(this, data));
-          if (data && set_default)
-            this.field.set('value', transform.apply(this, [data[0]]));
         } else {
           this.field.set('options', data);
-          if (data && set_default)
-            this.field.set('value', data[0]);
         }
       },
 
@@ -214,7 +210,7 @@ define([
           }
           data = data || [];
 
-          this.transform_data(data, false);
+          this.transform_data(data);
         }
       },
 
