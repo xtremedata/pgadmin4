@@ -752,14 +752,16 @@ define([
       return !(m.importing.apply(this, arguments));
     },
     has_parent: function(parent) {
-      var self = this;
+      var self = this,
+        found_parent=null;
       if (Array.isArray(parent)) {
-        parent.every(function(e) {
+        found_parent = !parent.every(function(e) {
           return !self.get(e);
         });
       } else {
-        return !!self.get(parent);
+        found_parent = !!self.get(parent);
       }
+      return found_parent;
     },
     get_parent: function(parent) {
       var self = this;
