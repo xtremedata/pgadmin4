@@ -397,7 +397,7 @@ class ServerNode(PGChildNodeView):
                 'The specified server group with id# {0} could not be found.'
             ))
 
-        return make_json_response(result=res)
+        return make_json_response(data=res)
 
     @login_required
     def node(self, gid, sid):

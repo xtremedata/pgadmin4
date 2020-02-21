@@ -33,23 +33,27 @@ define([
       url: 'nodes',
 
       transform: function(rows) {
-        var node = this.field.get('schema_node'),
+        var self = this,
+          node = this.field.get('schema_node'),
+          model = this.model.top || this.model,
           res = [],
           map = {},
+          sel_value = null,
           filter = this.field.get('filter') || function() {
             return true;
           };
 
-        filter = filter.bind(this);
+        filter = filter.bind(self);
+        sel_value = model && model.get(node.type) || null;
 
         _.each(rows, function(r) {
           if (filter(r)) {
             var l = (_.isFunction(node['node_label']) ?
-                (node['node_label']).apply(node, [r, this.model, this]) :
+                (node['node_label']).apply(node, [r, self.model, self]) :
                 r.label),
               image = (_.isFunction(node['node_image']) ?
                 (node['node_image']).apply(
-                  node, [r, this.model, this]
+                  node, [r, self.model, self]
                 ) :
                 (node['node_image'] || ('icon-' + node.type)));
 
@@ -58,11 +62,12 @@ define([
               'value': r.label,
               'image': image,
               'label': l,
+              'selected': (sel_value ? r.label == sel_value : false),
             });
           }
         });
 
-        this.model.attributes.nodes_info_map[this.field.attributes.name] = map;
+        self.model.attributes.nodes_info_map[self.field.attributes.name] = map;
         return res;
       },
 
@@ -80,11 +85,13 @@ define([
        * e.g. 'datasource' depend on 'data_group' being selected
        */
       can_fetch: function(model) {
-        var schema_node = this.get('schema_node') || null,
-          selected_info = model.get('selected_info') || null;
+        var schema_node = this.get('schema_node') || null;
+        // by default fetch is allowed if no 'has_parent' function available 
+        // - a different model
+        var has_parent = _.isFunction(model.has_parent) 
+          ? model.has_parent(schema_node.parent_type) : true;
         return schema_node && schema_node.type 
-              && !(selected_info && selected_info[schema_node.type])
-              && !(schema_node.parent_type && !model.get(schema_node.parent_type));
+              && !(schema_node.parent_type && !has_parent);
       },
 
       /**
@@ -92,23 +99,24 @@ define([
        * Parent object has to be selected for being active.
        */
       disabled: function(model) {
-        var schema_node = this.schema_node || null,
-          selected_info = model.get('selected_info') || null;
+        var schema_node = this.schema_node || null;
+        var has_parent = _.isFunction(model.has_parent) 
+          ? model.has_parent(schema_node.parent_type) : false;
         return !schema_node || !schema_node.type 
-              || selected_info && selected_info[schema_node.type]
-              || schema_node.parent_type && !model.get(schema_node.parent_type);
+              || schema_node.parent_type && !has_parent;
       },
     }),
 
     /**
      * Finds selected parent node model by type.
+     * In case of arrays - the first found parent with value.
      */
     find_parent_node: function(this_type, parent_type, model) {
       var nodes_info_map = model.get('nodes_info_map') || null,
         parent_name = undefined;
 
       if (nodes_info_map) {
-        parent_name = model.get(parent_type) || null;
+        parent_name = model.get_parent(parent_type) || null;
         if (parent_name) {
           try {
             return nodes_info_map[parent_type][parent_name];
@@ -188,13 +196,15 @@ define([
             var select2 = this.field.get('select2') || null;
             if (select2) {
               select2.first_empty = false;
-              select2.emptyOptions = true;
-              select2.tags = true;
+              // this did not work with preselction - solved with: options[].selected 
+              //select2.emptyOptions = true;
+              //select2.tags = true;
               select2.allowClear = false;
               select2.openOnEnter = false;
             }
+            //this.field.set('value', model.get(schema_node.type));
             this.field.set('disabled', true);
-            //this.transform_data([selected_node]);
+            // this triggeres 'render'
             //model.set(schema_node.type, selected_node.label);
           }
         } catch (ignore) {
@@ -203,7 +213,7 @@ define([
       }
 
       /*
-       * Data fetch here only for dependent nodes, as they might need reload.
+       * Data fetch here only for dependent nodes with known parent, as they might need reload.
        */
       if (!selected_node) {
         var get_fetch_parent = this.get_check_fetch(model, false);
@@ -316,7 +326,7 @@ define([
           allowClear: false,
           width: '100%',
         },
-      }, { /* data object selection */
+      /*}, { /* data object selection 
         id: 'dirobj',
         label: gettext('Object'),
         cell: 'string',
@@ -329,7 +339,7 @@ define([
         select2: {
           allowClear: false,
           width: '100%',
-        },
+        },*/
       }],
     }, { /* server source/destination selection panel */
       type: 'nested',
@@ -741,6 +751,29 @@ define([
     exporting: function(m) {
       return !(m.importing.apply(this, arguments));
     },
+    has_parent: function(parent) {
+      var self = this;
+      if (Array.isArray(parent)) {
+        parent.every(function(e) {
+          return !self.get(e);
+        });
+      } else {
+        return !!self.get(parent);
+      }
+    },
+    get_parent: function(parent) {
+      var self = this;
+      if (Array.isArray(parent)) {
+        for (var e of parent) {
+          if(self.get(e))
+            return self.get(e);
+        }
+      } else {
+        return self.get(parent);
+      }
+
+      return null;
+    },
   });
 
   pgTools.import_utility = {
@@ -1020,7 +1053,7 @@ define([
               newModel.set('selected_info', treeInfo);
               _.each(treeInfo, function(e) {
                 try {
-                  newModel.set(e._type, e.label);
+                  newModel.set(e._type, e._label);
                 } catch (ignore) {
                   // placeholder for syntax checker
                 }

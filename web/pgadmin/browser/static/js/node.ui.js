@@ -226,7 +226,7 @@ define([
         var can_fetch = this.field.get('can_fetch') || this.defaults.can_fetch,
           model = this.model.top || this.model;
 
-        can_fetch = _.isFunction(can_fetch) ? can_fetch.apply(this.field, [model, true]) : can_fetch;
+        can_fetch = _.isFunction(can_fetch) ? can_fetch.apply(this.field, [model]) : can_fetch;
         if (can_fetch)
           this.fetch_data();
       },

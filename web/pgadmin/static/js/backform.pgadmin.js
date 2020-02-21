@@ -341,7 +341,7 @@ define([
    */
   Backform.SelectControl.prototype.render = function() {
     var field = _.defaults(this.field.toJSON(), this.defaults),
-      attributes = this.model.toJSON(),
+      attributes = this.model ? this.model.toJSON() : {},
       attrArr = field.name.split('.'),
       name = attrArr.shift(),
       path = attrArr.join('.'),
