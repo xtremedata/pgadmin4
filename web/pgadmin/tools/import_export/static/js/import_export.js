@@ -246,6 +246,7 @@ define([
   var ImportExportModel = Backbone.Model.extend({
     defaults: {
       is_import: false,
+      is_def_ds: true,
       /* false for Export */
       filename: undefined,
       format: 'csv',
@@ -269,21 +270,38 @@ define([
       dirobj: undefined,
       nodes_info_map: {},
     },
-    schema: [{
-      id: 'is_import',
-      label: gettext('Import/Export'),
-      cell: 'switch',
-      type: 'switch',
+    schema: [{ /* master import/export options */
+      type: 'nested',
+      control: 'fieldset',
+      label: gettext('Master Options'),
       group: gettext('Source/Destination'),
-      options: {
-        'onText': gettext('Import'),
-        'offText': gettext('Export'),
-        width: '65',
-      },
+      schema: [{ /* import / export switch */
+        id: 'is_import',
+        label: gettext('Import/Export'),
+        cell: 'switch',
+        type: 'switch',
+        group: gettext('Master Options'),
+        options: {
+          'onText': gettext('Import'),
+          'offText': gettext('Export'),
+          width: '65',
+        },
+      }, { /* default datasource / selected datasource switch */
+        id: 'is_def_ds',
+        label: gettext('Default/Selected'),
+        cell: 'switch',
+        type: 'switch',
+        group: gettext('Master Options'),
+        options: {
+          'onText': gettext('Default'),
+          'offText': gettext('Selected'),
+          width: '65',
+        },
+      }],
     }, { /* data source/destination selection panel */
       type: 'nested',
       control: 'fieldset',
-      label: 'Data',
+      label: gettext('Data'),
       group: gettext('Source/Destination'),
       schema: [{ /* data group selection */
         id: 'data_group',
@@ -751,6 +769,12 @@ define([
     exporting: function(m) {
       return !(m.importing.apply(this, arguments));
     },
+    def_ds: function(m) {
+      return m.get('is_def_ds');
+    },
+    sel_ds: function (m) {
+      return !(m.get('is_def_ds'));
+    },
     has_parent: function(parent) {
       var self = this,
         found_parent=null;
@@ -1060,6 +1084,7 @@ define([
                   // placeholder for syntax checker
                 }
               });
+              newModel.set('is_def_ds', !newModel.get('data_group'));
               //
               view.render();
 

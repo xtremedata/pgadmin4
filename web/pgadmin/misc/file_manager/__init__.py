@@ -357,6 +357,11 @@ class Filemanager(object):
         Filemanager.suspend_windows_warning()
         fm_type = params['dialog_type']
         storage_dir = get_storage_directory()
+        ds_type = 'fs'
+        try:
+            ds_type = params['ds_type']
+        except KeyError:
+            ds_type = 'fs'
 
         # It is used in utitlity js to decide to
         # show or hide select file type options
@@ -445,7 +450,8 @@ class Filemanager(object):
             "folders_only": folders_only,
             "supported_types": supp_types,
             "platform_type": _platform,
-            "show_volumes": show_volumes
+            "show_volumes": show_volumes,
+            "ds_type": ds_type
         }
 
         # Create a unique id for the transaction
@@ -1247,10 +1253,10 @@ def file_manager(trans_id):
             'name': req.args['name'] if 'name' in req.args else ''
         }
         mode = req.args['mode']
-
     try:
         func = getattr(myFilemanager, mode)
         res = func(**kwargs)
+        current_app.logger.info("####### M:%s, mode:%s, req:%s, res:%s" % (req.method, mode, str(req), str(res)))
         return make_json_response(data={'result': res, 'status': True})
     except Exception:
         return getattr(myFilemanager, mode)(**kwargs)
