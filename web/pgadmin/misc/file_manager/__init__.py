@@ -19,6 +19,8 @@ from sys import platform as _platform
 import config
 import codecs
 
+from importlib import import_module
+
 import simplejson as json
 from flask import render_template, Response, session, request as req, \
     url_for, current_app
@@ -26,8 +28,12 @@ from flask_babelex import gettext
 from flask_security import login_required
 from pgadmin.utils import PgAdminModule
 from pgadmin.utils import get_storage_directory
-from pgadmin.utils.ajax import make_json_response
+from pgadmin.utils.ajax import \
+        make_json_response, \
+        bad_request, \
+        internal_server_error
 from pgadmin.utils.preferences import Preferences
+
 
 # Checks if platform is Windows
 if _platform == "win32":
@@ -327,6 +333,39 @@ def save_show_hidden_file_option(trans_id):
 class Filemanager(object):
     """FileManager Class."""
 
+
+    registered_ds = {}
+
+
+    @classmethod
+    def register(cls, name, class_ref):
+        cls.registered_ds[name] = class_ref
+
+
+    @classmethod
+    def create_filemanager(cls, trans_id):
+        trans_data = cls.get_trasaction_selection(trans_id)
+        if not trans_data:
+            return bad_request(errormsg=("Invalid session:%s" % trans_id[:20]))
+
+        try:
+            ds_type = trans_data['ds_type']
+        except KeyError:
+            return internal_server_error(errormsg="Invalid client or server version")
+
+        try:
+            ds_class = cls.registered_ds[ds_type]
+        except KeyError:
+            try:
+                mod = import_module(ds_type, '.')
+                ds_class = cls.registered_ds[ds_type]
+            except (KeyError, ImportError):
+                return internal_server_error(errormsg=("Unknown data type:%s" % ds_type[:20]))
+
+        return ds_class(trans_id)
+
+
+
     def __init__(self, trans_id):
         self.trans_id = trans_id
         self.patherror = encode_json(
@@ -341,6 +380,9 @@ class Filemanager(object):
 
         if self.dir is not None and isinstance(self.dir, list):
             self.dir = ""
+            
+
+
 
     @staticmethod
     def create_new_transaction(params):
@@ -451,7 +493,7 @@ class Filemanager(object):
             "supported_types": supp_types,
             "platform_type": _platform,
             "show_volumes": show_volumes,
-            "ds_type": ds_type
+            "ds_type": ds_type.lower()
         }
 
         # Create a unique id for the transaction
@@ -1223,6 +1265,10 @@ class Filemanager(object):
         return res
 
 
+
+Filemanager.register('fs', Filemanager)
+
+
 @blueprint.route(
     "/filemanager/<int:trans_id>/",
     methods=["GET", "POST"], endpoint='filemanager'
@@ -1235,7 +1281,10 @@ def file_manager(trans_id):
     It gets unique transaction id from post request and
     rotate it into Filemanager class.
     """
-    myFilemanager = Filemanager(trans_id)
+    myFilemanager = Filemanager.create_filemanager(trans_id)
+    if not isinstance(myFilemanager, Filemanager):
+        return myFilemanager
+
     mode = ''
     kwargs = {}
     if req.method == 'POST':
