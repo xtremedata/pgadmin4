@@ -800,18 +800,31 @@ define([
 
       return null;
     },
-    ds_type: function() {
+    ds_info: function() {
       var ds_type = 'FS',
+        ds_info = {},
         sel_dg = this.get('data_group') || null,
         sel_ds = this.get('datasource') || null,
         sel_bucket = this.get('bucket') || null,
         mapper = this.get('nodes_info_map');
       if (this.sel_ds(this) && sel_dg && sel_ds && sel_bucket && mapper) {
         var ds = mapper['datasource'][sel_ds] || null;
-        ds_type = ds.datasource_type;
+        ds_info = { 
+          ds_type: ds.datasource_type,
+          ds_id: ds._id,
+          ds_name: ds.name,
+          ds_bucket: sel_bucket,
+        };
+      } else {
+        ds_info = {
+          ds_type: ds_type,
+          ds_id: null,
+          ds_name: null,
+          ds_bucket: null,
+        };
       }
 
-      return ds_type;
+      return ds_info;
     },
   });
 

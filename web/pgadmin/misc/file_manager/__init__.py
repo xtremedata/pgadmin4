@@ -20,6 +20,7 @@ import config
 import codecs
 
 from importlib import import_module
+from errno import EACCES
 
 import simplejson as json
 from flask import render_template, Response, session, request as req, \
@@ -331,6 +332,15 @@ class Filemanager(object):
 
 
     @classmethod
+    def def_ds(cls):
+        return { 
+                'ds_type': cls.TYPE,
+                'ds_id': None,
+                'ds_name': None,
+                'ds_bucket': None }
+
+
+    @classmethod
     def register(cls, name, class_ref):
         cls.registered_ds[name] = class_ref
 
@@ -347,26 +357,27 @@ class Filemanager(object):
             return bad_request(errormsg=("Invalid session:%s" % trans_id[:20]))
 
         try:
-            ds_type = trans_data['ds_type']
+            ds_info = trans_data['ds_info']
+            ds_type = ds_info['ds_type'].upper()
         except KeyError:
             return internal_server_error(errormsg="Invalid client or server version")
 
         try:
-            ds_class = cls.registered_ds[ds_type.upper()]
+            ds_class = cls.registered_ds[ds_type]
         except KeyError:
             try:
                 mod = import_module(cls.getmod(ds_type), '.')
-                ds_class = cls.registered_ds[ds_type.upper()]
+                ds_class = cls.registered_ds[ds_type]
             except (KeyError, ImportError):
                 return internal_server_error(errormsg=("Unknown data type:%s" % ds_type[:20]))
 
-        return ds_class(trans_id, ds_type)
+        return ds_class(trans_id, ds_info)
 
 
 
-    def __init__(self, trans_id, ds_type=None):
+    def __init__(self, trans_id, ds_info=None):
         self.trans_id = trans_id
-        self.ds_type = ds_type if ds_type else self.TYPE
+        self.ds_info = ds_info if ds_info else self.def_ds()
         self.patherror = encode_json(
             {
                 'Error': gettext(
@@ -398,11 +409,11 @@ class Filemanager(object):
         Filemanager.suspend_windows_warning()
         fm_type = params['dialog_type']
         storage_dir = get_storage_directory()
-        ds_type = Filemanager.TYPE
+        ds_info = Filemanager.def_ds()
         try:
-            ds_type = params['ds_type']
+            ds_info = params['ds_info']
         except KeyError:
-            ds_type = Filemanager.TYPE
+            pass
 
         # It is used in utitlity js to decide to
         # show or hide select file type options
@@ -492,7 +503,7 @@ class Filemanager(object):
             "supported_types": supp_types,
             "platform_type": _platform,
             "show_volumes": show_volumes,
-            "ds_type": ds_type.lower()
+            "ds_info": ds_info
         }
 
         # Create a unique id for the transaction
@@ -710,18 +721,23 @@ class Filemanager(object):
                         "Size": sizeof_fmt(getSize(system_path))
                     }
                 }
-        except Exception as e:
-            Filemanager.resume_windows_warning()
-            if (hasattr(e, 'strerror') and
-                    e.strerror == gettext('Permission denied')):
-                err_msg = u"Error: {0}".format(e.strerror)
-            else:
-                err_msg = u"Error: {0}".format(e)
+        except OSError as e:
+            code = 0
+            err_msg = u"Error: {0}".format(e.strerror)
             files = {
                 'Code': 0,
                 'Error': err_msg
             }
-        Filemanager.resume_windows_warning()
+        except Exception as e:
+            code = 0
+            err_msg = u"Error: {0}".format(str(e))
+            files = {
+                'Code': 0,
+                'Error': err_msg
+            }
+        finally:
+            Filemanager.resume_windows_warning()
+
         return files
 
     @staticmethod
@@ -973,9 +989,12 @@ class Filemanager(object):
                 os.rmdir(orig_path)
             else:
                 os.remove(orig_path)
-        except Exception as e:
+        except OSError as e:
             code = 0
             err_msg = u"Error: {0}".format(e.strerror)
+        except Exception as e:
+            code = 0
+            err_msg = u"Error: {0}".format(str(e))
 
         result = {
             'Path': path,
@@ -1017,10 +1036,12 @@ class Filemanager(object):
                     if not data:
                         break
                     f.write(data)
+        except OSError as e:
+            code = 0
+            err_msg = u"Error: {0}".format(e.strerror)
         except Exception as e:
             code = 0
-            err_msg = u"Error: {0}".format(
-                e.strerror if hasattr(e, 'strerror') else u'Unknown')
+            err_msg = u"Error: {0}".format(str(e))
 
         try:
             Filemanager.check_access_permission(dir, path)
@@ -1060,12 +1081,12 @@ class Filemanager(object):
             newName = u"{0}{1}".format(orig_path, name)
             if not os.path.exists(newName):
                 code = 0
+        except OSError as e:
+            code = 0
+            err_msg = u"Error: {0}".format(e.strerror)
         except Exception as e:
             code = 0
-            if hasattr(e, 'strerror'):
-                err_msg = u"Error: {0}".format(e.strerror)
-            else:
-                err_msg = u"Error: {0}".format(e)
+            err_msg = u"Error: {0}".format(str(e))
 
         result = {
             'Path': path,
@@ -1147,7 +1168,7 @@ class Filemanager(object):
             status = False
             # we don't want to expose real path of file
             # so only show error message.
-            if ex.strerror == 'Permission denied':
+            if ex.errno == EACCES:
                 err_msg = u"Error: {0}".format(ex.strerror)
             else:
                 err_msg = u"Error: {0}".format(str(ex))
@@ -1198,16 +1219,22 @@ class Filemanager(object):
         if not path_exists(newPath):
             try:
                 os.mkdir(newPath)
-            except Exception as e:
+            except OSError as e:
                 code = 0
                 err_msg = u"Error: {0}".format(e.strerror)
+            except Exception as e:
+                code = 0
+                err_msg = u"Error: {0}".format(str(e))
         else:
             newPath, newName = self.getNewName(dir, path, name)
             try:
                 os.mkdir(newPath)
-            except Exception as e:
+            except OSError as e:
                 code = 0
                 err_msg = u"Error: {0}".format(e.strerror)
+            except Exception as e:
+                code = 0
+                err_msg = u"Error: {0}".format(str(e))
 
         result = {
             'Parent': path,
@@ -1286,7 +1313,7 @@ def file_manager(trans_id):
 
     mode = ''
     kwargs = {}
-    current_app.logger.info("####### ID:%s, TYPE:%s, ds_type:%s" % (trans_id, myFilemanager.TYPE, myFilemanager.ds_type))
+    current_app.logger.info("####### ID:%s, TYPE:%s, ds:%s" % (trans_id, myFilemanager.TYPE, myFilemanager.ds_info))
     if req.method == 'POST':
         if req.files:
             mode = 'add'
