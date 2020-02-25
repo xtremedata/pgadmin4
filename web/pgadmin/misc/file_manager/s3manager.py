@@ -77,13 +77,14 @@ class S3Manager(Filemanager):
 
 
     @classmethod
-    def is_child(cls, o1_path, o2_path):
+    def is_child(cls, o1, o2_path):
         """ Returns True if o1 is child of o2.
         """
-        key = o1_path['Key'] if isinstance(o1_path, dict) \
-                else o1_path if isinstance(o1_path, str) \
-                else o1_path.key
-        return key.startswith(o2_path) if o1_path and o2_path \
+        key = o1['Key'] if isinstance(o1, dict) \
+                else o1 if isinstance(o1, str) \
+                else o1.key if o1 \
+                else ''
+        return key.startswith(o2_path) and len(key) != len(o2_path) if key and o2_path \
                 else (key.find(path.sep) == -1 or key[-1] == path.sep) if not o2_path \
                 else False
 
