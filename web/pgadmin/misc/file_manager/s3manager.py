@@ -77,6 +77,18 @@ class S3Manager(Filemanager):
 
 
     @classmethod
+    def is_child(cls, o1_path, o2_path):
+        """ Returns True if o1 is child of o2.
+        """
+        key = o1_path['Key'] if isinstance(o1_path, dict) \
+                else o1_path if isinstance(o1_path, str) \
+                else o1_path.key
+        return key.startswith(o2_path) if o1_path and o2_path \
+                else (key.find(path.sep) == -1 or key[-1] == path.sep) if not o2_path \
+                else False
+
+
+    @classmethod
     def s3obj_to_s3dict(cls, s3obj):
         return {
                 'Key': s3obj.key,
@@ -105,7 +117,7 @@ class S3Manager(Filemanager):
 
             Filename = ''
             Path = ''
-            Protected = 1
+            Protected = 0
             FileType = u''
             if cls.is_dir(obj_name):
                 FileType = u'dir'
@@ -171,11 +183,12 @@ class S3Manager(Filemanager):
             objects = {}
         else:
             for o in contents:
-                name, desc = self.s3dict_to_filedesc(o)
-                if name is None:
-                    return desc
-                else:
-                    objects[name] = desc
+                if self.is_child(o, path):
+                    name, desc = self.s3dict_to_filedesc(o)
+                    if name is None:
+                        return desc
+                    else:
+                        objects[name] = desc
 
         current_app.logger.info("####### path:%s, st:%i, res:%s, obj:%s" % (path,res_status, str(res), str(objects)))
         self.resume_windows_warning()
