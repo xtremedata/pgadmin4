@@ -126,7 +126,8 @@ class S3Manager(Filemanager):
                 _, FileType = path.splitext(obj_name)
                 Path, Filename = path.split(obj_name)
 
-            Path = path.join(path.sep, Path)
+            Path = path.join(path.sep, obj_name)
+            FileType = FileType.lstrip('.')
             return (Filename, {
                 "Error": '',
                 "Code": 1,
