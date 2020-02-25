@@ -34,6 +34,8 @@ from pgadmin.utils.ajax import \
         internal_server_error
 from pgadmin.utils.preferences import Preferences
 
+from .utils import sizeof_fmt
+
 
 # Checks if platform is Windows
 if _platform == "win32":
@@ -63,16 +65,6 @@ global transid
 path_exists = os.path.exists
 split_path = os.path.split
 encode_json = json.JSONEncoder().encode
-
-
-# utility functions
-# convert bytes type to human readable format
-def sizeof_fmt(num, suffix='B'):
-    for unit in ['', 'k', 'M', 'G', 'T', 'P', 'E', 'Z']:
-        if abs(num) < 1024.0:
-            return "%3.1f %s%s" % (num, unit, suffix)
-        num /= 1024.0
-    return "%.1f %s%s" % (num, 'Y', suffix)
 
 
 # return size of file
@@ -334,12 +326,18 @@ class Filemanager(object):
     """FileManager Class."""
 
 
+    TYPE = 'FS'
     registered_ds = {}
 
 
     @classmethod
     def register(cls, name, class_ref):
         cls.registered_ds[name] = class_ref
+
+
+    @classmethod
+    def getmod(cls, name):
+        return name.lower() + 'manager'
 
 
     @classmethod
@@ -354,20 +352,21 @@ class Filemanager(object):
             return internal_server_error(errormsg="Invalid client or server version")
 
         try:
-            ds_class = cls.registered_ds[ds_type]
+            ds_class = cls.registered_ds[ds_type.upper()]
         except KeyError:
             try:
-                mod = import_module(ds_type, '.')
-                ds_class = cls.registered_ds[ds_type]
+                mod = import_module(cls.getmod(ds_type), '.')
+                ds_class = cls.registered_ds[ds_type.upper()]
             except (KeyError, ImportError):
                 return internal_server_error(errormsg=("Unknown data type:%s" % ds_type[:20]))
 
-        return ds_class(trans_id)
+        return ds_class(trans_id, ds_type)
 
 
 
-    def __init__(self, trans_id):
+    def __init__(self, trans_id, ds_type=None):
         self.trans_id = trans_id
+        self.ds_type = ds_type if ds_type else self.TYPE
         self.patherror = encode_json(
             {
                 'Error': gettext(
@@ -399,11 +398,11 @@ class Filemanager(object):
         Filemanager.suspend_windows_warning()
         fm_type = params['dialog_type']
         storage_dir = get_storage_directory()
-        ds_type = 'fs'
+        ds_type = Filemanager.TYPE
         try:
             ds_type = params['ds_type']
         except KeyError:
-            ds_type = 'fs'
+            ds_type = Filemanager.TYPE
 
         # It is used in utitlity js to decide to
         # show or hide select file type options
@@ -1266,7 +1265,7 @@ class Filemanager(object):
 
 
 
-Filemanager.register('fs', Filemanager)
+Filemanager.register(Filemanager.TYPE, Filemanager)
 
 
 @blueprint.route(
@@ -1287,6 +1286,7 @@ def file_manager(trans_id):
 
     mode = ''
     kwargs = {}
+    current_app.logger.info("####### ID:%s, TYPE:%s, ds_type:%s" % (trans_id, myFilemanager.TYPE, myFilemanager.ds_type))
     if req.method == 'POST':
         if req.files:
             mode = 'add'
@@ -1305,7 +1305,7 @@ def file_manager(trans_id):
     try:
         func = getattr(myFilemanager, mode)
         res = func(**kwargs)
-        current_app.logger.info("####### M:%s, mode:%s, req:%s, res:%s" % (req.method, mode, str(req), str(res)))
+        current_app.logger.info("####### M:%s, mode:%s, req:%s, args:%s, res:%s" % (req.method, mode, str(req), str(req.args), str(res)))
         return make_json_response(data={'result': res, 'status': True})
     except Exception:
         return getattr(myFilemanager, mode)(**kwargs)

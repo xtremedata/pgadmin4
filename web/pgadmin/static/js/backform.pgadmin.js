@@ -2650,7 +2650,7 @@ define([
       btn_primary: '',
       helpMessage: null,
       dialog_type: 'select_file',
-      ds_type: 'FS',
+      ds_type: '',
     },
     initialize: function() {
       Backform.InputControl.prototype.initialize.apply(this, arguments);
@@ -2677,7 +2677,7 @@ define([
     },
     onSelect: function() {
       var dialog_type = this.field.get('dialog_type'),
-        ds_type = this.field.get('ds_type'),
+        ds_type = this.get_ds_type(),
         supp_types = this.field.get('supp_types'),
         btn_primary = this.field.get('btn_primary'),
         dialog_title = this.field.get('dialog_title'),
@@ -2688,6 +2688,7 @@ define([
           dialog_title: dialog_title,
           btn_primary: btn_primary,
         };
+
 
       pgAdmin.FileManager.init();
       pgAdmin.FileManager.show_dialog(params);
@@ -2730,6 +2731,15 @@ define([
     },
     enable_button: function() {
       this.$el.find('button.select_item').removeAttr('disabled');
+    },
+    get_ds_type: function() {
+      var model = this.model,
+        ds_type = this.field.get('ds_type') || model.ds_type || this.field.defaults.ds_type;
+      if (_.isFunction(ds_type)) {
+        ds_type = ds_type.apply(model, []);
+      }
+
+      return ds_type;
     },
   });
 

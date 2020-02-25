@@ -772,7 +772,7 @@ define([
     def_ds: function(m) {
       return m.get('is_def_ds');
     },
-    sel_ds: function (m) {
+    sel_ds: function(m) {
       return !(m.get('is_def_ds'));
     },
     has_parent: function(parent) {
@@ -799,6 +799,19 @@ define([
       }
 
       return null;
+    },
+    ds_type: function() {
+      var ds_type = 'FS',
+        sel_dg = this.get('data_group') || null,
+        sel_ds = this.get('datasource') || null,
+        sel_bucket = this.get('bucket') || null,
+        mapper = this.get('nodes_info_map');
+      if (this.sel_ds(this) && sel_dg && sel_ds && sel_bucket && mapper) {
+        var ds = mapper['datasource'][sel_ds] || null;
+        ds_type = ds.datasource_type;
+      }
+
+      return ds_type;
     },
   });
 
