@@ -100,7 +100,7 @@ class S3Manager(Filemanager):
     @classmethod
     def s3dict_to_filedesc(cls, s3obj):
         """ Converts S3 object into filemanger dictionary.
-            @returns (object name, object description or (None, error description)
+            @returns (is_dir_flag, object name, object description or (None, None, error description)
         """
         if s3obj is None:
             return None
@@ -110,17 +110,18 @@ class S3Manager(Filemanager):
             obj_mtime = s3obj['LastModified']
             obj_size = s3obj['Size']
         except KeyError as e:
-            return (None, cls.fail_response('Invalid S3 data: %s' % str(e)[:100]))
+            return (None, None, cls.fail_response('Invalid S3 data: %s' % str(e)[:100]))
 
         else:
             if not obj_name:
-                return (None, cls.fail_response('Received S3 object with no name'))
+                return (None, None, cls.fail_response('Received S3 object with no name'))
 
             Filename = ''
             Path = ''
             Protected = 0
             FileType = u''
-            if cls.is_dir(obj_name):
+            IsDir = cls.is_dir(obj_name)
+            if IsDir:
                 FileType = u'dir'
                 Path, Filename = path.split(obj_name[:-1])
             else:
@@ -129,7 +130,7 @@ class S3Manager(Filemanager):
 
             Path = path.join(path.sep, obj_name)
             FileType = FileType.lstrip('.')
-            return (Filename, {
+            return (IsDir, Filename, {
                 "Error": '',
                 "Code": 1,
                 "Filename": Filename,
@@ -179,6 +180,18 @@ class S3Manager(Filemanager):
         if res_status != 200:
             return self.fail_response('Error accessing S3 storage:%i' % res_status)
 
+        folders_only = trans_data['folders_only'] \
+            if 'folders_only' in trans_data else ''
+        files_only = trans_data['files_only'] \
+            if 'files_only' in trans_data else ''
+        supported_types = trans_data['supported_types'] \
+            if 'supported_types' in trans_data else []
+
+        supp_filter = lambda obj: True if not supported_types or '*' in supported_types \
+                else obj['FileType'] in supported_types
+        sel_filter = lambda obj: True if not file_type or file_type == '*' \
+                else obj['FileType'] == file_type
+
         try:
             contents = res['Contents']
         except KeyError:
@@ -186,10 +199,15 @@ class S3Manager(Filemanager):
         else:
             for o in contents:
                 if self.is_child(o, path):
-                    name, desc = self.s3dict_to_filedesc(o)
+                    is_dir, name, desc = self.s3dict_to_filedesc(o)
                     if name is None:
                         return desc
-                    else:
+                    # below cannot be used based on how 'folders_only' and 'files_only' are set
+                    # elif is_dir and files_only:
+                    #    continue
+                    elif not is_dir and folders_only:
+                        continue
+                    elif is_dir or sel_filter(desc) and supp_filter(desc):
                         objects[name] = desc
 
         current_app.logger.info("####### path:%s, st:%i, res:%s, obj:%s" % (path,res_status, str(res), str(objects)))
@@ -216,7 +234,8 @@ class S3Manager(Filemanager):
                 return self.fail_response(str(e2))
 
 
-        return self.s3dict_to_filedesc(self.s3obj_to_s3dict(s3obj))
+        _, _, desc = self.s3dict_to_filedesc(self.s3obj_to_s3dict(s3obj))
+        return desc
 
 
 

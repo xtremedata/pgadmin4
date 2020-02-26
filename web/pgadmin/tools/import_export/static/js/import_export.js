@@ -99,11 +99,10 @@ define([
        * Parent object has to be selected for being active.
        */
       disabled: function(model) {
-        var schema_node = this.schema_node || null;
-        var has_parent = _.isFunction(model.has_parent) 
-          ? model.has_parent(schema_node.parent_type) : false;
-        return !schema_node || !schema_node.type 
-              || schema_node.parent_type && !has_parent;
+        var is_sel_disabled = model.is_sel_disabled || null;
+        if (_.isFunction(is_sel_disabled))
+          is_sel_disabled = is_sel_disabled.apply(this, arguments);
+        return is_sel_disabled;
       },
     }),
 
@@ -275,6 +274,7 @@ define([
       control: 'fieldset',
       label: gettext('Master Options'),
       group: gettext('Source/Destination'),
+      contentClass: 'row',
       schema: [{ /* import / export switch */
         id: 'is_import',
         label: gettext('Import/Export'),
@@ -308,6 +308,7 @@ define([
         label: gettext('Data Group'),
         cell: 'string',
         type: 'select2',
+        deps: ['is_def_ds'],
         control: ImExNodeListByNameControl,
         node: 'data_group',
         placeholder: gettext('Select data group ...'),
@@ -316,12 +317,13 @@ define([
           allowClear: false,
           width: '100%',
         },
+        disabled: 'is_dep_ds_disabled',
       }, { /* data source selection */
         id: 'datasource',
         label: gettext('Data'),
         cell: 'string',
         type: 'select2',
-        deps: ['data_group'],
+        deps: ['is_def_ds', 'data_group'],
         control: ImExNodeListByNameControl,
         node: 'datasource',
         placeholder: gettext('Select data ...'),
@@ -330,12 +332,13 @@ define([
           allowClear: false,
           width: '100%',
         },
+        disabled: 'is_dep_ds_disabled',
       }, { /* data bucket selection */
         id: 'bucket',
         label: gettext('Bucket'),
         cell: 'string',
         type: 'select2',
-        deps: ['datasource'],
+        deps: ['is_def_ds', 'datasource'],
         control: ImExNodeListByNameControl,
         node: 'bucket',
         placeholder: gettext('Select bucket ...'),
@@ -344,6 +347,7 @@ define([
           allowClear: false,
           width: '100%',
         },
+        disabled: 'is_dep_ds_disabled',
       /*}, { /* data object selection 
         id: 'dirobj',
         label: gettext('Object'),
@@ -775,6 +779,16 @@ define([
     sel_ds: function(m) {
       return !(m.get('is_def_ds'));
     },
+    is_dep_ds_disabled: function(m) {
+      return m.def_ds.apply(this, arguments) || m.is_sel_disabled.apply(this, arguments);
+    },
+    is_sel_disabled: function(m) {
+      var schema_node = this.schema_node || null;
+      var has_parent = _.isFunction(m.has_parent) 
+        ? m.has_parent(schema_node.parent_type) : false;
+      return !schema_node || !schema_node.type 
+        || schema_node.parent_type && !has_parent;
+    },
     has_parent: function(parent) {
       var self = this,
         found_parent=null;
@@ -1177,7 +1191,7 @@ define([
 
           // Open the Alertify dialog for the import/export module
           Alertify.ImportDialog(
-            gettext('Import/Export data - table \'%s\'', treeInfo.table.label),
+            gettext('Import/Export data \'%s\'', treeInfo.table.label),
             node, i, d
           ).set('resizable', true).resizeTo(pgAdmin.Browser.stdW.md,pgAdmin.Browser.stdH.lg);
         })
