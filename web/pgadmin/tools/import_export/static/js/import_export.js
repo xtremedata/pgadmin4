@@ -923,10 +923,15 @@ define([
     callback_import_export: function(args, item) {
       var i = item || pgBrowser.tree.selected(),
         source_data = null,
-        root_nodes = ['server_group', 'data_group'];
+        check_data = null,
+        root_nodes = ['server_group', 'data_group'],
+        check_nodes = ['server'];
 
       while (i) {
         var node_data = pgBrowser.tree.itemData(i);
+        if (check_nodes.includes(node_data._type)) {
+          check_data = node_data;
+        }
         if (root_nodes.includes(node_data._type)) {
           source_data = node_data;
           break;
@@ -944,7 +949,6 @@ define([
         return;
       }
 
-
       if (source_data.module == 'pgadmin.node.server') {
         this.load_server_preferences(source_data);
       }
@@ -958,6 +962,7 @@ define([
         return;
 
       var treeInfo = node.getTreeNodeHierarchy.apply(node, [i]);
+
 
       if (!Alertify.ImportDialog) {
         Alertify.dialog('ImportDialog', function factory() {
@@ -1171,37 +1176,49 @@ define([
         });
       }
 
-      const baseUrl = url_for('import_export.utility_exists', {
-        'sid': source_data._id,
-      });
 
-      // Check psql utility exists or not.
-      $.ajax({
-        url: baseUrl,
-        type:'GET',
-      })
-        .done(function(res) {
-          if (!res.success) {
+      var StartImportDialog = !check_data;
+
+      if (!StartImportDialog) {
+        const baseUrl = url_for('import_export.utility_exists', {
+          'sid': source_data._id,
+        });
+
+        // Check psql utility exists or not.
+        $.ajax({
+          url: baseUrl,
+          type:'GET',
+        })
+          .done(function(res) {
+            if (!res.success) {
+              Alertify.alert(
+                gettext('Utility not found'),
+                res.errormsg
+              );
+              return;
+            }
+
+            // Open the Alertify dialog for the import/export module
+            Alertify.ImportDialog(
+              gettext('Import/Export data - table \'%s\'', treeInfo.table.label),
+              node, i, d
+            ).set('resizable', true).resizeTo(pgAdmin.Browser.stdW.md,pgAdmin.Browser.stdH.lg);
+            return;
+          })
+          .fail(function() {
             Alertify.alert(
               gettext('Utility not found'),
-              res.errormsg
+              gettext('Failed to fetch Utility information')
             );
             return;
-          }
-
-          // Open the Alertify dialog for the import/export module
-          Alertify.ImportDialog(
-            gettext('Import/Export data \'%s\'', treeInfo.table.label),
-            node, i, d
-          ).set('resizable', true).resizeTo(pgAdmin.Browser.stdW.md,pgAdmin.Browser.stdH.lg);
-        })
-        .fail(function() {
-          Alertify.alert(
-            gettext('Utility not found'),
-            gettext('Failed to fetch Utility information')
-          );
-          return;
-        });
+          });
+      } else {
+        // Open the Alertify dialog for the import/export module
+        Alertify.ImportDialog(
+          gettext('Import/Export data - preselected \'%s\'', source_data.label),
+          node, i, d
+        ).set('resizable', true).resizeTo(pgAdmin.Browser.stdW.md,pgAdmin.Browser.stdH.lg);
+      }
     },
   };
 
