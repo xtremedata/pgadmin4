@@ -743,11 +743,6 @@ class ServerNode(PGChildNodeView):
             u'sslmode',
         ]
 
-        try:
-            raise Exception("testing:{0}".format(gid))
-        except Exception as e:
-            current_app.logger.exception(e)
-
         data = request.form if request.form else json.loads(
             request.data, encoding='utf-8'
         )
