@@ -9,7 +9,7 @@
 
 """A blueprint module implementing the dashboard frame."""
 from functools import wraps
-from flask import render_template, url_for, Response, g, request
+from flask import render_template, url_for, Response, g, request, current_app
 from flask_babelex import gettext
 from flask_security import login_required
 import simplejson as json
@@ -247,6 +247,7 @@ def check_precondition(f):
             '#{0}#{1}#'.format(g.server_type, g.version)
             if g.server_type == 'gpdb' else '#{0}#'.format(g.version)
         )
+        current_app.logger.info("###### ver:%s, server_type:%s, tmpl:%s" % (g.manager.version, str(g.manager.server_type), g.template_path))
 
         return f(*args, **kwargs)
 
