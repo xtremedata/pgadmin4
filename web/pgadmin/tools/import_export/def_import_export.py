@@ -36,6 +36,8 @@ class DefImportExport(object):
     @classmethod
     def create_job(cls, conn, driver, manager, utility, server, sid, data):
         
+        return bad_request(errormsg=_('Not implemented yet'))
+
         # Get the storage path from preference
         storage_dir = get_storage_directory()
 
