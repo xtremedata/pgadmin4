@@ -28,6 +28,12 @@ from .utils import \
 
 
 class DefaultImportExport(object):
+    """
+
+    Excample:
+        path:   s3://oleg-test/cluster1/s3test.txt
+        url:    https://oleg-test.s3.amazonaws.com/cluster1/s3test.txt
+    """
 
 
     import_export_registry = {}
