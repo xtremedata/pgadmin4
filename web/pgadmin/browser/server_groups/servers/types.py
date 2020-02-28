@@ -117,10 +117,10 @@ class ServerType(object):
             res = 'psql'
         else:
             raise Exception(
-                _("Could not find the utility for the operation '%s'".format(
-                    operation
+                _("Could not find the utility for the operation '%s'" \
+                        % operation
                 ))
-            )
+
         bin_path = self.utility_path.get()
         if "$DIR" in bin_path:
             # When running as an WSGI application, we will not find the

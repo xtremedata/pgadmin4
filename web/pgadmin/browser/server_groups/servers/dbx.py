@@ -7,6 +7,8 @@
 #
 ##########################################################################
 
+import os, sys
+
 from flask_babelex import gettext
 from pgadmin.browser.server_groups.servers.types import ServerType
 
@@ -40,10 +42,10 @@ class DBX(ServerType):
             res = 'dbx-pload'
         else:
             raise Exception(
-                _("Could not find the utility for the operation '%s'".format(
-                    operation
+                gettext("Could not find the utility for the operation '%s'" \
+                        % operation
                 ))
-            )
+
         bin_path = self.utility_path.get()
         if "$DIR" in bin_path:
             # When running as an WSGI application, we will not find the
