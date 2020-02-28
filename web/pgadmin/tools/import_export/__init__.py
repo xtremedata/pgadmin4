@@ -27,11 +27,6 @@ from .utils import filename_with_file_manager_path, IEMessage
 
 MODULE_NAME = 'import_export'
 
-if __debug__:
-    import pdb
-    pdb.set_trace()
-
-
 
 class ImportExportModule(PgAdminModule):
     """
