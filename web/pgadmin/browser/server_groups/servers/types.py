@@ -113,6 +113,8 @@ class ServerType(object):
             res = 'pg_restore'
         elif operation == 'sql':
             res = 'psql'
+        elif operation == 'import_export':
+            res = 'psql'
         else:
             raise Exception(
                 _("Could not find the utility for the operation '%s'".format(

@@ -27,10 +27,14 @@ from .utils import \
 
 
 
-class DefaultImportExport(object):
+class DefImportExport(object):
 
 
-    def create_job(self, conn, driver, manager, utility, server, sid, data):
+    import_export_registry = {}
+
+
+    @classmethod
+    def create_job(cls, conn, driver, manager, utility, server, sid, data):
         
         # Get the storage path from preference
         storage_dir = get_storage_directory()

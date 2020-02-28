@@ -25,6 +25,43 @@ class DBX(ServerType):
     def instanceOf(self, ver):
         return "PostgreSQL 8.1.2" in ver
 
+    def utility(self, operation, sversion):
+        res = None
+
+        if operation == 'backup':
+            res = 'pg_dump'
+        elif operation == 'backup_server':
+            res = 'pg_dumpall'
+        elif operation == 'restore':
+            res = 'pg_restore'
+        elif operation == 'sql':
+            res = 'psql'
+        elif operation == 'import_export':
+            res = 'dbx-pload'
+        else:
+            raise Exception(
+                _("Could not find the utility for the operation '%s'".format(
+                    operation
+                ))
+            )
+        bin_path = self.utility_path.get()
+        if "$DIR" in bin_path:
+            # When running as an WSGI application, we will not find the
+            # '__file__' attribute for the '__main__' module.
+            main_module_file = getattr(
+                sys.modules['__main__'], '__file__', None
+            )
+
+            if main_module_file is not None:
+                bin_path = bin_path.replace(
+                    "$DIR", os.path.dirname(main_module_file)
+                )
+
+        return os.path.abspath(os.path.join(
+            bin_path,
+            (res if os.name != 'nt' else (res + '.exe'))
+        ))
+
 
 # Default Server Type
 DBX('dbx', gettext("dbX Database"), 4)

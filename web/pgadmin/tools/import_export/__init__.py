@@ -24,6 +24,7 @@ from config import PG_DEFAULT_DRIVER
 from pgadmin.model import Server
 
 from .utils import filename_with_file_manager_path, IEMessage
+from .def_import_export import DefImportExport
 
 MODULE_NAME = 'import_export'
 
@@ -118,7 +119,7 @@ def create_import_export_job(sid):
         return bad_request(errormsg=_("Please connect to the server first..."))
 
     # Get the utility path from the connection manager
-    utility = manager.utility('sql')
+    utility = manager.utility('import_export')
     ret_val = does_utility_exist(utility)
     if ret_val:
         return make_json_response(
@@ -132,97 +133,27 @@ def create_import_export_job(sid):
         is_def_ds = True
 
 
+    if is_def_ds:
+        return DefImportExport.create_job( \
+                conn, \
+                driver, \
+                manager, \
+                utility, \
+                server, \
+                sid, \
+                data)
+
     if not is_def_ds:
-        return bad_request(errormsg=_('Not implemented yet'))
-
-
-    # Get the storage path from preference
-    storage_dir = get_storage_directory()
-
-    if 'filename' in data:
-        try:
-            _file = filename_with_file_manager_path(
-                data['filename'], data['is_import'])
-        except Exception as e:
-            return bad_request(errormsg=str(e))
-
-        if not _file:
-            return bad_request(errormsg=_('Please specify a valid file'))
-
-        if IS_WIN:
-            _file = _file.replace('\\', '/')
-
-        data['filename'] = _file
-    else:
-        return bad_request(errormsg=_('Please specify a valid file'))
-
-    cols = None
-    icols = None
-
-    if data['icolumns']:
-        ignore_cols = data['icolumns']
-
-        # format the ignore column list required as per copy command
-        # requirement
-        if ignore_cols and len(ignore_cols) > 0:
-            icols = ", ".join([
-                driver.qtIdent(conn, col)
-                for col in ignore_cols])
-
-    # format the column import/export list required as per copy command
-    # requirement
-    if data['columns']:
-        columns = data['columns']
-        if columns and len(columns) > 0:
-            for col in columns:
-                if cols:
-                    cols += ', '
-                else:
-                    cols = '('
-                cols += driver.qtIdent(conn, col)
-            cols += ')'
-
-    # Create the COPY FROM/TO  from template
-    query = render_template(
-        'import_export/sql/cmd.sql',
-        conn=conn,
-        data=data,
-        columns=cols,
-        ignore_column_list=icols
-    )
-
-    args = ['--command', query]
-
-    try:
-        p = BatchProcess(
-            desc=IEMessage(
-                sid,
-                data['schema'],
-                data['table'],
-                data['database'],
-                storage_dir,
-                utility, *args
-            ),
-            cmd=utility, args=args
-        )
-        manager.export_password_env(p.id)
-
-        env = dict()
-        env['PGHOST'] = server.host
-        env['PGPORT'] = str(server.port)
-        env['PGUSER'] = server.username
-        env['PGDATABASE'] = data['database']
-        p.set_env_variables(server, env=env)
-        p.start()
-        jid = p.id
-    except Exception as e:
-        current_app.logger.exception(e)
-        return bad_request(errormsg=str(e))
-
-    # Return response
-    return make_json_response(
-        data={'job_id': jid, 'success': 1}
-    )
+        # For now only support for S3 import/exports
+        # todo: loading registered module based on datasource type
+        return S3ImportExport.create_job(
+                conn, \
+                driver, \
+                manager, \
+                utility, \
+                server, \
+                sid, \
+                data)
 
 
 @blueprint.route(
