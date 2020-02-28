@@ -27,6 +27,11 @@ from .utils import filename_with_file_manager_path, IEMessage
 
 MODULE_NAME = 'import_export'
 
+if __debug__:
+    import pdb
+    pdb.set_trace()
+
+
 
 class ImportExportModule(PgAdminModule):
     """
@@ -253,6 +258,8 @@ def check_utility_exists(sid):
     manager = driver.connection_manager(server.id)
 
     utility = manager.utility('sql')
+    current_app.logger.info("###### ver:%s, server_type:%s, sid:%s, utility:%s" \
+            % (manager.version, str(manager.server_type), str(server.id), utility))
     ret_val = does_utility_exist(utility)
     if ret_val:
         return make_json_response(

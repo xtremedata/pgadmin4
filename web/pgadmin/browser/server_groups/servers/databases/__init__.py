@@ -197,6 +197,10 @@ class DatabaseView(PGChildNodeView):
                     self.manager.version
                 )
 
+                if __debug__:
+                    current_app.logger.info("###### s:%s, v:%s, tmpl:%s" \
+                            % (self.manager.server_type, self.manager.version, self.template_path))
+
                 return f(self, *args, **kwargs)
 
             return wrapped

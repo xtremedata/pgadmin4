@@ -929,7 +929,7 @@ define([
 
       while (i) {
         var node_data = pgBrowser.tree.itemData(i);
-        if (check_nodes.includes(node_data._type)) {
+        if (!check_data && check_nodes.includes(node_data._type)) {
           check_data = node_data;
         }
         if (root_nodes.includes(node_data._type)) {
@@ -949,8 +949,8 @@ define([
         return;
       }
 
-      if (source_data.module == 'pgadmin.node.server') {
-        this.load_server_preferences(source_data);
+      if (check_data && check_data.module == 'pgadmin.node.server') {
+        this.load_server_preferences(check_data);
       }
 
       var t = pgBrowser.tree;
@@ -1181,7 +1181,7 @@ define([
 
       if (!StartImportDialog) {
         const baseUrl = url_for('import_export.utility_exists', {
-          'sid': source_data._id,
+          'sid': check_data._id,
         });
 
         // Check psql utility exists or not.
