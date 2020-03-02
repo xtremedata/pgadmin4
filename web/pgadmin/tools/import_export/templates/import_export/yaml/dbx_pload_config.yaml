@@ -1,0 +1,54 @@
+VERSION: "1.0"
+DATABASE: {{ database }}
+DBSERVER: {{ dbserver }}
+USER: "dbxdba"
+DEBUG:
+    DISABLE_LOAD: false
+    DISABLE_STAGE: false
+LOAD:
+    COLUMNS: {{ columns }}
+    DELIMITER_AS: {{ delimiter }}
+    EOL_AS: null
+    ERROR_DATA: null
+    ERROR_LIMIT: null
+    ERROR_LOG: "/dbxvol/node-data/_stage/log/dbx_pload_error.log"
+    ESCAPE_AS: {{ escape }}
+    FIXED_FORMAT: null
+    FIXED_ROW_LENGTH: null
+    FORCE_NOT_NULL_COLUMNS: null
+    HEADER: null
+    IGNORE_EXTRA: null
+    IGNORE_LEADING_SPACES: null
+    IGNORE_TRAILING: null
+    IGNORE_TRAILING_SPACES: null
+    INSTEAD_NULL: null
+    MODE: {{ mode }}
+    NULL_AS: null
+    ON_ERROR: null
+    QUOTE_AS: {{ quote }}
+    TABLE: {{ table }}
+OUTPUT:
+    JSON: false
+    LOG_BACKUP_COUNT: 2
+    LOG_FILE: "/home/dbxdba/loader/loader.log"
+    LOG_SIZE_MB: 100
+SOURCE:
+    CRED1: {{ key_name }}
+    CRED2: {{ key_secret }}
+    CRED3: null
+    FILE_SPEC: {{ import_path }}
+    FORMAT: {{ format }}
+    MANIFEST: null
+    MULTI_PART: false
+    PROTOCOL: "AWS.S3"
+    RETRIES: 1
+    SPEED_LIMIT_MBS: null
+    SPEED_TIME: null
+    STREAM_COUNT: 1
+    TIMEOUT: 1000
+WORK:
+    CLEAN_AFTER: true
+    CLEAN_BEFORE: true
+    JOB_DIR: "/xdlog/temp/job"
+    KEEP_FILES: true
+    STAGE_DIR: "/dbxvol/node-data/_stage/work"
