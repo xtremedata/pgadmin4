@@ -18,7 +18,7 @@ import psutil
 from abc import ABCMeta, abstractproperty, abstractmethod
 from datetime import datetime
 from pickle import dumps, loads
-from subprocess import Popen
+from subprocess import Popen, PIPE
 
 from pgadmin.utils import IS_PY2, u, file_quote, fs_encoding, \
     get_complete_file_path
@@ -216,7 +216,7 @@ class BatchProcess(object):
         db.session.add(j)
         db.session.commit()
 
-    def start(self, cb=None):
+    def start(self, cb=None, data_in=None):
 
         def which(program, paths):
             def is_exe(fpath):
@@ -382,11 +382,14 @@ class BatchProcess(object):
                 # Explicitly ignoring signals in the child process
                 signal.signal(signal.SIGINT, signal.SIG_IGN)
 
+            stdin = None if not data_in else PIPE
             p = Popen(
-                cmd, close_fds=True, stdout=None, stderr=None, stdin=None,
+                cmd, close_fds=True, stdout=None, stderr=None, stdin=stdin,
                 preexec_fn=preexec_function, env=env
             )
 
+        p.stdin.write(str(data_in).encode('ASCII'))
+        p.stdin.flush()
         self.ecode = p.poll()
 
         # Execution completed immediately.

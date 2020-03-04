@@ -7,6 +7,8 @@
 #
 ##########################################################################
 
+from os import environ
+
 from flask import render_template, current_app
 from flask_babelex import gettext as _
 
@@ -79,8 +81,8 @@ class S3ImportExport(object):
                     cols += driver.qtIdent(conn, col)
                 cols += ')'
 
-        cred1 = None
-        cred2 = None
+        cred1 = environ['AWS_ACCESS_KEY_ID'] if 'AWS_ACCESS_KEY_ID' in environ else None
+        cred2 = environ['AWS_SECRET_ACCESS_KEY'] if 'AWS_SECRET_ACCESS_KEY' in environ else None
         cred3 = None
         import_path = filename_url
         # Create pload configuration
@@ -94,6 +96,9 @@ class S3ImportExport(object):
                 'import_export/yaml/dbx_pload_config.yaml')
 
         current_app.logger.debug(pload_config)
+        with open("/tmp/pload_config.yaml", "w") as fd:
+            pload_config.save(fd)
+
 
         storage_dir = 's3'
         # for tests ssh is needed
@@ -128,8 +133,9 @@ class S3ImportExport(object):
             env['PGPORT'] = str(server.port)
             env['PGUSER'] = server.username
             env['PGDATABASE'] = data['database']
+            env['DBX_PLOAD_CONFIG'] = str(pload_config)
             p.set_env_variables(server, env=env)
-            p.start()
+            p.start(data_in=pload_config)
             jid = p.id
 
         except Exception as e:
