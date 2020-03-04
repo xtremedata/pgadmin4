@@ -20,6 +20,7 @@ from pgadmin.utils import \
 from pgadmin.utils.ajax import \
         make_json_response, \
         bad_request
+from pgadmin.utils.s3 import S3
 
 from .utils import \
         filename_with_file_manager_path, \
@@ -40,25 +41,17 @@ class S3ImportExport(object):
     import_export_registry = {}
 
 
+
     @classmethod
     def create_job(cls, conn, driver, manager, utility, server, sid, data):
 
-        if 'filename' in data:
-            try:
-                _file = filename_with_file_manager_path(
-                    data['filename'], data['is_import'])
-            except Exception as e:
-                return bad_request(errormsg=str(e))
-
-            if False and not _file:
-                return bad_request(errormsg=_('Please specify a valid file'))
-
-            if IS_WIN:
-                _file = _file.replace('\\', '/')
-
-            data['filename'] = _file
-        else:
-            return bad_request(errormsg=_('Please specify a valid file'))
+        s3 = S3()
+        filename_url = None
+        try:
+            if s3.exists(data['bucket'], data['filename']):
+                filename_url = S3.create_url(data['bucket'], data['filename'])
+        except KeyError:
+            return bad_request(errormsg=_('Please specify a valid file and/or S3 bucket'))
 
         cols = None
         icols = None
@@ -89,7 +82,7 @@ class S3ImportExport(object):
         cred1 = None
         cred2 = None
         cred3 = None
-        import_path = None
+        import_path = filename_url
         # Create pload configuration
         pload_config = DBXPLoadConfig.from_template( \
                 data, \

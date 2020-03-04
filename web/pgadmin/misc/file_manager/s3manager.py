@@ -16,6 +16,7 @@ from flask import current_app
 from flask_babelex import gettext
 from flask_security import current_user, login_required
 from pgadmin.model import db, DataSource, DataGroup
+from pgadmin.utils.s3 import S3
 
 import config
 from . import Filemanager
@@ -32,12 +33,6 @@ except Exception as e:
 class S3Manager(Filemanager):
 
     TYPE = 'S3'
-
-
-    @classmethod
-    def fix_pgadmin_path(cls, path):
-        return path if not path \
-                else unquote(path).encode('utf-8').decode('utf-8')[1:]
 
 
     @classmethod
@@ -72,32 +67,6 @@ class S3Manager(Filemanager):
 
 
     @classmethod
-    def is_dir(cls, s3key):
-        return s3key.endswith(path.sep)
-
-
-    @classmethod
-    def is_child(cls, o1, o2_path):
-        """ Returns True if o1 is child of o2.
-        """
-        key = o1['Key'] if isinstance(o1, dict) \
-                else o1 if isinstance(o1, str) \
-                else o1.key if o1 \
-                else ''
-        return key.startswith(o2_path) and len(key) != len(o2_path) if key and o2_path \
-                else (key.find(path.sep) == -1 or key[-1] == path.sep) if not o2_path \
-                else False
-
-
-    @classmethod
-    def s3obj_to_s3dict(cls, s3obj):
-        return {
-                'Key': s3obj.key,
-                'LastModified': s3obj.last_modified,
-                'Size': s3obj.content_length }
-
-
-    @classmethod
     def s3dict_to_filedesc(cls, s3obj):
         """ Converts S3 object into filemanger dictionary.
             @returns (is_dir_flag, object name, object description or (None, None, error description)
@@ -120,7 +89,7 @@ class S3Manager(Filemanager):
             Path = ''
             Protected = 0
             FileType = u''
-            IsDir = cls.is_dir(obj_name)
+            IsDir = S3.is_dir(obj_name)
             if IsDir:
                 FileType = u'dir'
                 Path, Filename = path.split(obj_name[:-1])
@@ -150,6 +119,7 @@ class S3Manager(Filemanager):
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         self.ds = None
+        self.s3 = S3()
         if self.ds_info:
             try:
                 self.ds = DataSource.query.filter_by(
@@ -168,11 +138,10 @@ class S3Manager(Filemanager):
 
         self.suspend_windows_warning()
 
-        path = self.fix_pgadmin_path(path)
+        path = self.s3.fix_pgadmin_path(path)
         bucket = self.ds_info['ds_bucket']
 
-        s3 = client('s3')
-        res = s3.list_objects_v2(Bucket=bucket, Prefix=path)
+        res = self.s3.client.list_objects_v2(Bucket=bucket, Prefix=path)
         res_status = res['ResponseMetadata']['HTTPStatusCode']
         contents = []
         objects = {}
@@ -198,7 +167,7 @@ class S3Manager(Filemanager):
             objects = {}
         else:
             for o in contents:
-                if self.is_child(o, path):
+                if self.s3.is_child(o, path):
                     is_dir, name, desc = self.s3dict_to_filedesc(o)
                     if name is None:
                         return desc
@@ -219,22 +188,24 @@ class S3Manager(Filemanager):
         """ Returns a JSON object containing information
             about the given file.
         """
-        path = self.fix_pgadmin_path(path)
+        path = self.s3.fix_pgadmin_path(path)
 
         try:
-            s3 = boto3_resource('s3')
-            s3obj = s3.Object(self.ds_info['ds_bucket'], path)
+            s3obj = self.s3.resource.Object(self.ds_info['ds_bucket'], path)
             s3obj.load()
         except (HTTPClientError, ClientError) as e:
             try:
                 if e.response['ResponseMetadata']['HTTPStatusCode'] == 404:
                     return self.not_found_response(path)
+                
+                else:
+                    return self.fail_response(str(e))
 
             except Exception as e2:
                 return self.fail_response(str(e2))
 
 
-        _, _, desc = self.s3dict_to_filedesc(self.s3obj_to_s3dict(s3obj))
+        _, _, desc = self.s3dict_to_filedesc(self.s3.s3obj_to_s3dict(s3obj))
         return desc
 
 
