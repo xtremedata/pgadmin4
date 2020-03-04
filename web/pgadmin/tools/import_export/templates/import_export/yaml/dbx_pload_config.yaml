@@ -11,7 +11,7 @@ LOAD:
     EOL_AS: null
     ERROR_DATA: null
     ERROR_LIMIT: null
-    ERROR_LOG: "/dbxvol/node-data/_stage/log/dbx_pload_error.log"
+    ERROR_LOG: null
     ESCAPE_AS: {{ escape }}
     FIXED_FORMAT: null
     FIXED_ROW_LENGTH: null
@@ -22,7 +22,7 @@ LOAD:
     IGNORE_TRAILING: null
     IGNORE_TRAILING_SPACES: null
     INSTEAD_NULL: null
-    MODE: {{ mode }}
+    MODE: {{ fmode }}
     NULL_AS: null
     ON_ERROR: null
     QUOTE_AS: {{ quote }}
@@ -30,14 +30,14 @@ LOAD:
 OUTPUT:
     JSON: false
     LOG_BACKUP_COUNT: 2
-    LOG_FILE: "/home/dbxdba/loader/loader.log"
+    LOG_FILE: "/tmp/loader/loader.log"
     LOG_SIZE_MB: 100
 SOURCE:
-    CRED1: {{ key_name }}
-    CRED2: {{ key_secret }}
-    CRED3: null
+    CRED1: {{ cred1 }}
+    CRED2: {{ cred2 }}
+    CRED3: {{ cred3 }}
     FILE_SPEC: {{ import_path }}
-    FORMAT: {{ format }}
+    FORMAT: {{ fformat }}
     MANIFEST: null
     MULTI_PART: false
     PROTOCOL: "AWS.S3"
@@ -49,6 +49,6 @@ SOURCE:
 WORK:
     CLEAN_AFTER: true
     CLEAN_BEFORE: true
-    JOB_DIR: "/xdlog/temp/job"
+    JOB_DIR: null
     KEEP_FILES: true
-    STAGE_DIR: "/dbxvol/node-data/_stage/work"
+    STAGE_DIR: null

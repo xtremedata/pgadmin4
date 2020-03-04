@@ -24,10 +24,11 @@ from pgadmin.utils.ajax import \
 from .utils import \
         filename_with_file_manager_path, \
         IEMessage
+from .dbx_pload_utils import DBXPLoadConfig
 
 
 
-class DefaultImportExport(object):
+class S3ImportExport(object):
     """
 
     Excample:
@@ -41,9 +42,6 @@ class DefaultImportExport(object):
 
     @classmethod
     def create_job(cls, conn, driver, manager, utility, server, sid, data):
-        
-        # Get the storage path from preference
-        storage_dir = get_storage_directory()
 
         if 'filename' in data:
             try:
@@ -52,7 +50,7 @@ class DefaultImportExport(object):
             except Exception as e:
                 return bad_request(errormsg=str(e))
 
-            if not _file:
+            if False and not _file:
                 return bad_request(errormsg=_('Please specify a valid file'))
 
             if IS_WIN:
@@ -88,16 +86,35 @@ class DefaultImportExport(object):
                     cols += driver.qtIdent(conn, col)
                 cols += ')'
 
-        # Create the COPY FROM/TO  from template
-        query = render_template(
-            'import_export/sql/cmd.sql',
-            conn=conn,
-            data=data,
-            columns=cols,
-            ignore_column_list=icols
-        )
+        cred1 = None
+        cred2 = None
+        cred3 = None
+        import_path = None
+        # Create pload configuration
+        pload_config = DBXPLoadConfig.from_template( \
+                data, \
+                cols, \
+                cred1, \
+                cred2, \
+                cred3, \
+                import_path, \
+                'import_export/yaml/dbx_pload_config.yaml')
 
-        args = ['--command', query]
+        current_app.logger.debug(pload_config)
+
+        storage_dir = 's3'
+        # for tests ssh is needed
+        ssh_call = [ \
+                '-l', \
+                'ec2-user', \
+                server.host, \
+                utility, \
+                ]
+        utility = 'ssh'
+        args = ssh_call
+        args.extend(['--file', 'stdin'])
+
+        current_app.logger.debug("#### cmd:%s, args:%s" % (utility, args))
 
         try:
             p = BatchProcess(
@@ -121,6 +138,7 @@ class DefaultImportExport(object):
             p.set_env_variables(server, env=env)
             p.start()
             jid = p.id
+
         except Exception as e:
             current_app.logger.exception(e)
             return bad_request(errormsg=str(e))

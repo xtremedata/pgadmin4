@@ -25,6 +25,7 @@ from pgadmin.model import Server
 
 from .utils import filename_with_file_manager_path, IEMessage
 from .def_import_export import DefImportExport
+from .s3_import_export import S3ImportExport
 
 MODULE_NAME = 'import_export'
 
@@ -121,7 +122,8 @@ def create_import_export_job(sid):
     # Get the utility path from the connection manager
     utility = manager.utility('import_export')
     ret_val = does_utility_exist(utility)
-    if ret_val:
+    # todo: testing remote calls
+    if False and ret_val:
         return make_json_response(
             success=0,
             errormsg=ret_val
@@ -146,7 +148,7 @@ def create_import_export_job(sid):
     if not is_def_ds:
         # For now only support for S3 import/exports
         # todo: loading registered module based on datasource type
-        return S3ImportExport.create_job(
+        return S3ImportExport.create_job( \
                 conn, \
                 driver, \
                 manager, \
@@ -155,12 +157,14 @@ def create_import_export_job(sid):
                 sid, \
                 data)
 
+    return bad_request(errormsg=_("Invalid request parameters, cannot find proper import module"))
+
 
 @blueprint.route(
     '/utility_exists/<int:sid>', endpoint='utility_exists'
 )
 @login_required
-def check_utility_exists(sid):
+def check_utility_exists (sid):
     """
     This function checks the utility file exist on the given path.
 
@@ -187,7 +191,8 @@ def check_utility_exists(sid):
     current_app.logger.info("###### ver:%s, server_type:%s, sid:%s, utility:%s" \
             % (manager.version, str(manager.server_type), str(server.id), utility))
     ret_val = does_utility_exist(utility)
-    if ret_val:
+    # todo: temporarily for tests of remote load
+    if False and ret_val:
         return make_json_response(
             success=0,
             errormsg=ret_val
