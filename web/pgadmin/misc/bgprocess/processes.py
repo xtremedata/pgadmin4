@@ -392,6 +392,7 @@ class BatchProcess(object):
         current_app.logger.info("###### data: %s" % data)
         p.stdin.write(data)
         p.stdin.flush()
+        p.stdin.close()
         self.ecode = p.poll()
 
         # Execution completed immediately.

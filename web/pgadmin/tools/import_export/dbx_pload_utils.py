@@ -28,9 +28,8 @@ class DBXPLoadConfig(object):
 
     @classmethod
     def from_template(cls, data, columns, cred1, cred2, cred3, import_path, template):
-        columns = cls.get_template_value(data['columns'])
         config = safe_load(render_template( \
-            'import_export/yaml/dbx_pload_config.yaml', \
+            template, \
             database=cls.get_template_value(data['database']), \
             dbserver=cls.get_template_value(data['server']), \
             columns=cls.get_template_value(columns), \

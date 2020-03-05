@@ -58,7 +58,7 @@ class S3ImportExport(object):
             return bad_request(errormsg=_('Please specify a valid file and/or S3 bucket'))
 
         if s3.exists(bucket, filename):
-            filename_url = S3.create_url(bucket, filename)
+            filename_url = S3.create_s3_url(bucket, filename)
         else:
             current_app.logger.info( \
                     "Not found import/export file:%s, bucket:%s" % (filename, bucket))
@@ -67,28 +67,26 @@ class S3ImportExport(object):
         cols = None
         icols = None
 
-        if data['icolumns']:
-            ignore_cols = data['icolumns']
+        # format the ignore column list required as per copy command
+        # requirement
+        try:
+            icols = data['icolumns']
+        except KeyError:
+            icols = None
+        else:
+            if icols and len(icols) > 0:
+                icols = [driver.qtIdent(conn, col) for col in icols]
 
-            # format the ignore column list required as per copy command
-            # requirement
-            if ignore_cols and len(ignore_cols) > 0:
-                icols = ", ".join([
-                    driver.qtIdent(conn, col)
-                    for col in ignore_cols])
 
         # format the column import/export list required as per copy command
         # requirement
-        if data['columns']:
-            columns = data['columns']
-            if columns and len(columns) > 0:
-                for col in columns:
-                    if cols:
-                        cols += ', '
-                    else:
-                        cols = '('
-                    cols += driver.qtIdent(conn, col)
-                cols += ')'
+        try:
+            cols = data['cols']
+        except KeyError:
+            cols = None
+        else:
+            if cols and len(cols) > 0:
+                cols = [driver.qtIdent(conn, col) for col in data['cols']]
 
         cred1 = environ['AWS_ACCESS_KEY_ID'] if 'AWS_ACCESS_KEY_ID' in environ else None
         cred2 = environ['AWS_SECRET_ACCESS_KEY'] if 'AWS_SECRET_ACCESS_KEY' in environ else None
@@ -116,8 +114,10 @@ class S3ImportExport(object):
                 'ec2-user', \
                 server.host, \
                 'sudo', \
+                '-i', \
                 '-u', \
                 server.username, \
+                '--', \
                 utility, \
                 '--file', \
                 'stdin']
