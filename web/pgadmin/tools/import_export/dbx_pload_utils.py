@@ -35,15 +35,19 @@ class DBXPLoadConfig(object):
             dbserver=cls.get_template_value(data['server']), \
             columns=cls.get_template_value(columns), \
             delimiter=cls.get_template_value(data['delimiter']), \
+            error_log=cls.get_template_value("/dbxvol/node-data/_stage/log/my_error.log"), \
             escape=cls.get_template_value(data['escape']), \
-            fmode=cls.get_template_value(data['format']), \
+            fmode=cls.get_template_value(data['format'].upper()), \
             quote=cls.get_template_value(data['quote']), \
             table=cls.get_template_value(data['table']), \
+            log_file=cls.get_template_value("/home/dbxdba/loader/loader.log"), \
             cred1=cls.get_template_value(cred1), \
             cred2=cls.get_template_value(cred2), \
             cred3=cls.get_template_value(cred3), \
             import_path=cls.get_template_value(import_path), \
-            fformat=cls.get_template_value('text')))
+            fformat=cls.get_template_value('TEXT'), \
+            job_dir=cls.get_template_value("/xdlog/temp/job"), \
+            stage_dir=cls.get_template_value("/dbxvol/node-data/_stage/work")))
         return cls(config)
 
 

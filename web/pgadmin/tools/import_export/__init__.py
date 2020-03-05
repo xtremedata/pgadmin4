@@ -122,7 +122,7 @@ def create_import_export_job(sid):
     # Get the utility path from the connection manager
     utility = manager.utility('import_export')
     ret_val = does_utility_exist(utility)
-    # todo: testing remote calls
+    # todo: testing remote calls !!!
     if False and ret_val:
         return make_json_response(
             success=0,
@@ -187,11 +187,11 @@ def check_utility_exists (sid):
     driver = get_driver(PG_DEFAULT_DRIVER)
     manager = driver.connection_manager(server.id)
 
-    utility = manager.utility('sql')
+    utility = manager.utility('import_export')
     current_app.logger.info("###### ver:%s, server_type:%s, sid:%s, utility:%s" \
             % (manager.version, str(manager.server_type), str(server.id), utility))
     ret_val = does_utility_exist(utility)
-    # todo: temporarily for tests of remote load
+    # todo: temporarily for tests of remote load !!!
     if False and ret_val:
         return make_json_response(
             success=0,

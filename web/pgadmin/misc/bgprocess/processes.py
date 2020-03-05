@@ -388,7 +388,9 @@ class BatchProcess(object):
                 preexec_fn=preexec_function, env=env
             )
 
-        p.stdin.write(str(data_in).encode('ASCII'))
+        data = str(data_in).encode('ASCII')
+        current_app.logger.info("###### data: %s" % data)
+        p.stdin.write(data)
         p.stdin.flush()
         self.ecode = p.poll()
 

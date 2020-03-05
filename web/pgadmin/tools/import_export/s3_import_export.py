@@ -49,11 +49,20 @@ class S3ImportExport(object):
 
         s3 = S3()
         filename_url = None
+        bucket = None
+        filename = None
         try:
-            if s3.exists(data['bucket'], data['filename']):
-                filename_url = S3.create_url(data['bucket'], data['filename'])
+            bucket = data['bucket']
+            filename = s3.fix_pgadmin_path(data['filename'])
         except KeyError:
             return bad_request(errormsg=_('Please specify a valid file and/or S3 bucket'))
+
+        if s3.exists(bucket, filename):
+            filename_url = S3.create_url(bucket, filename)
+        else:
+            current_app.logger.info( \
+                    "Not found import/export file:%s, bucket:%s" % (filename, bucket))
+            return bad_request(errormsg=_('Please specify a valid file'))
 
         cols = None
         icols = None
@@ -106,11 +115,14 @@ class S3ImportExport(object):
                 '-l', \
                 'ec2-user', \
                 server.host, \
+                'sudo', \
+                '-u', \
+                server.username, \
                 utility, \
-                ]
+                '--file', \
+                'stdin']
         utility = 'ssh'
         args = ssh_call
-        args.extend(['--file', 'stdin'])
 
         current_app.logger.debug("#### cmd:%s, args:%s" % (utility, args))
 

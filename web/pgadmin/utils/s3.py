@@ -20,7 +20,7 @@ class S3(object):
     """
 
     NAME = 's3'
-    PFX = NAME + '://'
+    PFX = 'https'
     AWS_S3 = 's3.amazonaws.com'
     PG_PFX = '/'
 
@@ -28,7 +28,7 @@ class S3(object):
     @classmethod
     def create_url(cls, bucket, obj_path):
         return urlunparse(ParseResult( \
-                scheme=cls.NAME, \
+                scheme=cls.PFX, \
                 netloc=("%s.%s" % (bucket, cls.AWS_S3)), \
                 path=obj_path, \
                 params=None, \

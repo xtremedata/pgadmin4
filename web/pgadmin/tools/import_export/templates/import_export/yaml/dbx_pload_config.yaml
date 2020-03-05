@@ -11,7 +11,7 @@ LOAD:
     EOL_AS: null
     ERROR_DATA: null
     ERROR_LIMIT: null
-    ERROR_LOG: null
+    ERROR_LOG: {{ error_log }}
     ESCAPE_AS: {{ escape }}
     FIXED_FORMAT: null
     FIXED_ROW_LENGTH: null
@@ -30,7 +30,7 @@ LOAD:
 OUTPUT:
     JSON: false
     LOG_BACKUP_COUNT: 2
-    LOG_FILE: "/tmp/loader/loader.log"
+    LOG_FILE: {{ log_file }}
     LOG_SIZE_MB: 100
 SOURCE:
     CRED1: {{ cred1 }}
@@ -49,7 +49,7 @@ SOURCE:
 WORK:
     CLEAN_AFTER: true
     CLEAN_BEFORE: true
-    JOB_DIR: null
+    JOB_DIR: {{ job_dir }}
     KEEP_FILES: true
-    STAGE_DIR: null
+    STAGE_DIR: {{ stage_dir }}
 
