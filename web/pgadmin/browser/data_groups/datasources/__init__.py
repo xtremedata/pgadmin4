@@ -80,7 +80,8 @@ class DataSourceModule(dg.DataGroupPluginModule):
             'pfx': obj.pfx,
             'group-id': parent.id,
             'group-name': parent.name,
-            'datasource_type': obj.ds_type }
+            'datasource_type': obj.ds_type,
+            'has_secret': True if obj.key_secret is not None else False}
 
 
     def get_node(self, gid, sid):
@@ -106,6 +107,7 @@ class DataSourceModule(dg.DataGroupPluginModule):
                 self.node_type,
                 datasource_type=obj.ds_type,
                 pfx=obj.pfx,
+                has_secret=True if obj.key_secret is not None else False,
                 **kwargs)
 
 
@@ -146,6 +148,11 @@ class DataSourceModule(dg.DataGroupPluginModule):
         scripts.extend([{
             'name': 'pgadmin.datasource.supported_datasources',
             'path': url_for('browser.index') + 'datasource/supported_datasources',
+            'is_template': True,
+            'when': self.node_type
+        }, {
+            'name': 'pgadmin.datasource.supported_objtypes',
+            'path': url_for('browser.index') + 'datasource/supported_objtypes',
             'is_template': True,
             'when': self.node_type
         }])
@@ -204,8 +211,12 @@ class DataSourceView(NodeView):
             {'get': 'children'}],
         'supported_datasources.js': [
             {}, {}, {'get': 'supported_datasources'}],
+        'supported_objtypes.js': [
+            {}, {}, {'get': 'supported_objtypes'}],
         'clear_saved_authentication': [
             {'put': 'clear_saved_authentication'}],
+        'change_authentication': [
+            {'post': 'change_authentication'}],
     })
 
 
@@ -298,12 +309,16 @@ class DataSourceView(NodeView):
         }
 
         disp_lbl = {
-            'name': gettext('name'),
             'datasource_type': gettext('Type'),
-            'pfx' : gettext('Objects Prefix'),
             'key_name': gettext('Key Name'),
             'key_secret': gettext('Key Secret'),
         }
+
+        for key in disp_lbl:
+            if key in datasource and datasource[key]:
+                return forbidden(errormsg=gettext(
+                            "'%s' is not allowed to modify" % (disp_lbl[key]))
+                        )
 
         idx = 0
         data = request.form if request.form else json.loads(
@@ -406,6 +421,15 @@ class DataSourceView(NodeView):
                         )
 
         datasource = None
+        key_secret = None
+
+        try:
+            key_secret = data['key_secret']
+        except KeyError:
+            key_secret = None
+        else:
+            if key_secret:
+                key_secret = encrypt(key_secret, crypt_key)
 
         try:
             datasource = DataSource(
@@ -415,7 +439,7 @@ class DataSourceView(NodeView):
                 ds_type=data.get('datasource_type'),
                 pfx=data.get('pfx'),
                 key_name=data.get('key_name'),
-                key_secret=data.get('key_secret'),
+                key_secret=key_secret,
                 bgcolor=data.get('bgcolor', None),
                 fgcolor=data.get('fgcolor', None))
             db.session.add(datasource)
@@ -469,6 +493,36 @@ class DataSourceView(NodeView):
             200, {'Content-Type': 'application/javascript'}
         )
 
+    def supported_objtypes(self, gid, sid):
+        """
+        This property defines (if javascript) exists for this node.
+        Override this property for your own logic.
+        """
+        try:
+            datasource = self.blueprint.get_node(gid, sid)
+
+            if datasource is None:
+                return make_json_response(
+                    success=0,
+                    info=gettext("Could not find the required datasource.")
+                )
+        except Exception as e:
+            current_app.logger.error(
+                "Unable to access requested datasource{0}.\nError: {1}".format(
+                    str(sid), str(e))
+            )
+            return internal_server_error(errormsg=str(e))
+
+        ds_types = DataSourceType.type(datasource.type)
+
+        return make_response(
+            render_template(
+                "datasources/supported_objtypes.js",
+                obj_types=ds_types.obj_types()
+            ),
+            200, {'Content-Type': 'application/javascript'}
+        )
+
     def clear_saved_password(self, gid, sid):
         """
         This function is used to remove database datasource password stored into
@@ -482,10 +536,11 @@ class DataSourceView(NodeView):
             datasource = self.blueprint.get_node(gid, sid)
 
             if datasource is None:
-                return make_json_response(
-                    success=0,
-                    info=gettext("Could not find the required datasource.")
-                )
+                return bad_request(gettext("Data source not found."))
+
+            user = User.query.filter_by(id=current_user.id).first()
+            if user is None:
+                return unauthorized(gettext("Unauthorized request."))
 
             datasource.key_secret = None
             db.session.commit()
@@ -493,13 +548,93 @@ class DataSourceView(NodeView):
             current_app.logger.error(
                 "Unable to clear saved password.\nError: {0}".format(str(e))
             )
-
             return internal_server_error(errormsg=str(e))
 
         return make_json_response(
             success=1,
             info=gettext("The saved password cleared successfully."),
-            data={'is_password_saved': False}
+            data={'has_secret': False}
+        )
+
+    def change_authentication(self, gid, sid):
+        """
+        This function is used to change the authentication for the
+        datasource.
+
+        Args:
+            gid: Data group id
+            sid: Data source id
+        """
+        data = request.form if request.form else json.loads(
+            request.data, encoding='utf-8'
+        )
+        crypt_key_present, crypt_key = get_crypt_key()
+        if not crypt_key_present:
+            raise CryptKeyMissing
+        try:
+            datasource = self.blueprint.get_node(gid, sid)
+            if datasource is None:
+                return bad_request(gettext("Data source not found."))
+
+            user = User.query.filter_by(id=current_user.id).first()
+            if user is None:
+                return unauthorized(gettext("Unauthorized request."))
+
+        except Exception as e:
+            current_app.logger.error(
+                "Unable to change authentication.\nError: {0}".format(str(e))
+            )
+            return internal_server_error(errormsg=str(e))
+
+        req_params = ( \
+                'key_name', \
+                'key_secret', \
+                'new_key_name', \
+                'new_key_secret', \
+                'confirm_new_key_secret')
+        if not all(p in data for p in req_params):
+            return bad_request(gettext("Could not find the required parameter(s)"))
+
+        key_name = data['key_name']
+        key_secret = data['key_secret']
+        new_key_name = data['new_key_name']
+        new_key_secret = data['new_key_secret']
+        confirm_new_key_secret = data['confirm_new_key_secret']
+
+        if not new_key_name or not new_key_secret:
+            return bad_request(gettext("Could not find the required parameter(s)"))
+
+        if new_key_secret != confirm_new_key_secret:
+            return make_json_response(
+                status=200,
+                success=0,
+                errormsg=gettext(
+                    "Secrets do not match."
+                    )
+                )
+
+        decrypted_key_secret = decrypt(datasource.key_secret, crypt_key)
+        if isinstance(decrypted_key_secret, bytes):
+            decrypted_key_secret = decrypted_key_secret.decode()
+        if key_name != datasource.key_name \
+                or decrypted_key_secret != datasource.key_secret:
+                return unauthorized(gettext("Incorrect key and/or secret."))
+
+        try:
+            datasource.key_secret = encrypt(new_key_secret, crypt_key)
+            db.session.commit()
+        except Exception as e:
+            current_app.logger.error(
+                "Unable to change authentication.\nError: {0}".format(str(e))
+            )
+            return internal_server_error(errormsg=str(e))
+
+        return make_json_response(
+            status=200,
+            success=1,
+            info=gettext(
+                "Authentication changed successfully."
+            )
         )
 
 

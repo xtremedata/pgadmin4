@@ -156,6 +156,7 @@ define('pgadmin.node.datasource', [
           pfx: undefined,
           key_name: undefined,
           key_secret: undefined,
+          has_secret: undefined,
         },
         // Default values!
         initialize: function(attrs, args) {
@@ -195,28 +196,36 @@ define('pgadmin.node.datasource', [
         },{
           id: 'pfx', label: gettext('Object Prefix'), type: 'text',
           mode: ['properties', 'edit', 'create'],
-          visible: 'isAWS', group: gettext('Filter'),
-        },{
-          id: 'key_name', label: gettext('AWS key name'), type: 'text',
-          mode: ['properties', 'edit', 'create'],
-          visible: 'isAWS', group: gettext('Auhentication'),
-        },{
-          id: 'key_secret', label: gettext('AWS key secret'), type: 'password',
-          control: 'input',
-          mode: ['properties', 'edit', 'create'],
+          group: gettext('Filter'),
           visible: 'isAWS',
-          group: gettext('Auhentication'),
         },{
-          id: 'save_secret', controlLabel: gettext('Save secret?'), type: 'checkbox',
-          mode: ['create'],
+          id: 'key_name', 
+          label: gettext('AWS key name'), 
+          type: 'text',
+          mode: ['properties', 'edit', 'create'],
+          deps: ['datasource_type'],
           group: gettext('Auhentication'),
-          visible: function(model) {
-            return model.get('datasource_type') == 'S3' && model.isNew();
-          },
+          visible: 'isAWS', 
+          disabled: 'isNotNew',
+        },{
+          id: 'key_secret', 
+          label: gettext('AWS key secret'), 
+          type: 'password',
+          control: 'input',
+          mode: ['create'],
+          deps: ['datasource_type'],
+          group: gettext('Auhentication'),
+          visible: 'isAWSNew',
+        },{
+          id: 'save_secret', 
+          controlLabel: gettext('Save secret?'), 
+          type: 'checkbox',
+          mode: ['create'],
+          deps: ['datasource_type'],
+          group: gettext('Auhentication'),
+          visible: 'isAWSNew',
           disabled: function() {
-            if (!current_user.allow_save_password)
-              return true;
-            return false;
+            return !current_user.allow_save_password;
           },
         }],
 
@@ -228,9 +237,17 @@ define('pgadmin.node.datasource', [
           return true;
         },
 
-        isAws: function(model) {
+        isAWS: function(model) {
           var ds_type = model.get('datasource_type');
           return ds_type == 'S3';
+        },
+
+        isAWSNew: function(model) {
+          return model.isAWS.apply(this, arguments) && model.isNew();
+        },
+
+        isNotNew: function(model) {
+          return !model.isNew();
         },
 
         isfgColorSet: function() {

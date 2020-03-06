@@ -26,6 +26,14 @@ class S3(DataSourceType):
     ID = 'S3'
     AWS_ID = 's3'
 
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+        self._obj_types = { \
+                gettext(u'text'): u'txt', \
+                gettext(u'csv'): u'csv', \
+                gettext(u'parquet'): u'par', \
+                gettext(u'all'): u'*'}
+
     @property
     def required(self):
         s3_required = [u'key_name', u'key_secret']

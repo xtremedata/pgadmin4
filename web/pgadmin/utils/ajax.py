@@ -99,12 +99,12 @@ def internal_server_error(errormsg=''):
     )
 
 
-def forbidden(errmsg=''):
+def forbidden(errormsg=''):
     """Create a response with HTTP status code 403 - Forbidden."""
     return make_json_response(
         status=403,
         success=0,
-        errormsg=errmsg
+        errormsg=errormsg
     )
 
 
