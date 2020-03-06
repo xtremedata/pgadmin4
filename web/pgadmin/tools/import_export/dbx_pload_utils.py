@@ -25,17 +25,36 @@ class DBXPLoadConfig(object):
         """
         return dumps(value)
 
+    @classmethod
+    def get_escape_value(cls, value):
+        """ Special processing for the escape character.
+        """
+        escape = value
+        if escape and escape in "'\\":
+            escape = '\\%s' % escape
+            escape = cls.get_template_value(escape)
+        return escape if escape else None
+
+
+    @classmethod
+    def get_delimiter_value(cls, value):
+        """ Special processing for the delimiter character.
+        """
+        return cls.get_template_value(value) if value else None
+
 
     @classmethod
     def from_template(cls, data, columns, cred1, cred2, cred3, import_path, template):
+        escape = cls.get_escape_value(data['escape'])
+        delimiter = cls.get_delimiter_value(data['delimiter'])
         config = safe_load(render_template( \
             template, \
             database=cls.get_template_value(data['database']), \
             dbserver=cls.get_template_value(data['server']), \
             columns=cls.get_template_value(columns), \
-            delimiter=cls.get_template_value(data['delimiter']), \
+            delimiter=delimiter, \
             error_log=cls.get_template_value("/dbxvol/node-data/_stage/log/my_error.log"), \
-            escape=cls.get_template_value(data['escape']), \
+            escape=escape, \
             fmode=cls.get_template_value(data['format'].upper()), \
             quote=cls.get_template_value(data['quote']), \
             table=cls.get_template_value(data['table']), \
