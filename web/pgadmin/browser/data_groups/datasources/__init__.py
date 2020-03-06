@@ -81,6 +81,7 @@ class DataSourceModule(dg.DataGroupPluginModule):
             'group-id': parent.id,
             'group-name': parent.name,
             'datasource_type': obj.ds_type,
+            'key_name': obj.key_name,
             'has_secret': True if obj.key_secret is not None else False}
 
 
@@ -310,8 +311,8 @@ class DataSourceView(NodeView):
 
         disp_lbl = {
             'datasource_type': gettext('Type'),
-            'key_name': gettext('Key Name'),
-            'key_secret': gettext('Key Secret'),
+            #'key_name': gettext('Key Name'),
+            #'key_secret': gettext('Key Secret'),
         }
 
         for key in disp_lbl:
@@ -561,6 +562,7 @@ class DataSourceView(NodeView):
         This function is used to change the authentication for the
         datasource.
 
+        This operations is not needed for this object, update will do.
         Args:
             gid: Data group id
             sid: Data source id
