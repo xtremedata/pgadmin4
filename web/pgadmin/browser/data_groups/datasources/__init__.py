@@ -23,7 +23,7 @@ from pgadmin.utils.menu import MenuItem
 from pgadmin.utils.master_password import get_crypt_key
 from pgadmin.utils.exception import CryptKeyMissing
 
-from pgadmin.model import db, DataSource, DataGroup
+from pgadmin.model import db, DataSource, DataGroup, User
 
 
 
@@ -77,10 +77,11 @@ class DataSourceModule(dg.DataGroupPluginModule):
         return {
             'id': obj.id, 
             'name': obj.name,
-            'pfx': obj.pfx,
-            'group-id': parent.id,
+            'gid': obj.datagroup_id,
             'group-name': parent.name,
             'datasource_type': obj.ds_type,
+            'pfx': obj.pfx,
+            'obj_type': obj.obj_type,
             'key_name': obj.key_name,
             'has_secret': True if obj.key_secret is not None else False}
 
@@ -101,13 +102,14 @@ class DataSourceModule(dg.DataGroupPluginModule):
     def get_browser_node(self, obj, **kwargs):
         return self.generate_browser_node(
                 "%d" % (obj.id),
-                obj.datagroup_id,
+                "%d" % (obj.datagroup_id),
                 obj.name,
                 datasource_icon_and_background(obj),
                 True,
                 self.node_type,
                 datasource_type=obj.ds_type,
                 pfx=obj.pfx,
+                obj_type=obj.obj_type,
                 has_secret=True if obj.key_secret is not None else False,
                 **kwargs)
 
@@ -303,6 +305,7 @@ class DataSourceView(NodeView):
             'name': 'name',
             'datasource_type': 'ds_type',
             'pfx': 'pfx',
+            'obj_type': 'obj_type',
             'key_name': 'key_name',
             'key_secret': 'key_secret',
             'bgcolor': 'bgcolor',
@@ -311,8 +314,8 @@ class DataSourceView(NodeView):
 
         disp_lbl = {
             'datasource_type': gettext('Type'),
-            #'key_name': gettext('Key Name'),
-            #'key_secret': gettext('Key Secret'),
+            'key_name': gettext('Key Name'),
+            'key_secret': gettext('Key Secret'),
         }
 
         for key in disp_lbl:
@@ -439,6 +442,7 @@ class DataSourceView(NodeView):
                 name=data.get('name'),
                 ds_type=data.get('datasource_type'),
                 pfx=data.get('pfx'),
+                obj_type=data.get('obj_type'),
                 key_name=data.get('key_name'),
                 key_secret=key_secret,
                 bgcolor=data.get('bgcolor', None),
@@ -494,27 +498,21 @@ class DataSourceView(NodeView):
             200, {'Content-Type': 'application/javascript'}
         )
 
-    def supported_objtypes(self, gid, sid):
+    def supported_objtypes(self, **kw):
         """
         This property defines (if javascript) exists for this node.
         Override this property for your own logic.
         """
+        datasource_type = None
         try:
-            datasource = self.blueprint.get_node(gid, sid)
-
-            if datasource is None:
-                return make_json_response(
-                    success=0,
-                    info=gettext("Could not find the required datasource.")
-                )
-        except Exception as e:
+            datasource_type = kw['datasource_type']
+            ds_types = DataSourceType.type(datasource_type)
+        except KeyError as e:
             current_app.logger.error(
-                "Unable to access requested datasource{0}.\nError: {1}".format(
-                    str(sid), str(e))
+                    "Unable to access requested datasource:{0}.\nError: {1}".format(
+                        str(datasource_type)[:20], str(e))
             )
-            return internal_server_error(errormsg=str(e))
-
-        ds_types = DataSourceType.type(datasource.type)
+            return bad_request(errormsg="Not supported data source: %s" % datasource_type)
 
         return make_response(
             render_template(
@@ -524,7 +522,7 @@ class DataSourceView(NodeView):
             200, {'Content-Type': 'application/javascript'}
         )
 
-    def clear_saved_password(self, gid, sid):
+    def clear_saved_authentication(self, gid, sid):
         """
         This function is used to remove database datasource password stored into
         the pgAdmin's db file.
@@ -543,6 +541,7 @@ class DataSourceView(NodeView):
             if user is None:
                 return unauthorized(gettext("Unauthorized request."))
 
+            datasource.key_name = None
             datasource.key_secret = None
             db.session.commit()
         except Exception as e:
@@ -623,6 +622,7 @@ class DataSourceView(NodeView):
                 return unauthorized(gettext("Incorrect key and/or secret."))
 
         try:
+            datasource.key_name = new_key_name
             datasource.key_secret = encrypt(new_key_secret, crypt_key)
             db.session.commit()
         except Exception as e:

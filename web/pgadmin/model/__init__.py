@@ -114,6 +114,10 @@ class DataSource(db.Model):
     pfx = db.Column(
             db.String(16), 
             nullable=True)
+    obj_type = db.Column(
+            db.String(16),
+            db.CheckConstraint("obj_type IN ('text', 'csv', 'parquet', 'all')"),
+            nullable=True)
     key_name = db.Column(
             db.String(128),
             nullable=True)

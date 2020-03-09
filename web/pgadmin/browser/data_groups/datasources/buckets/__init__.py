@@ -10,7 +10,6 @@
 """Implements the Data source Bucket Node"""
 
 from functools import wraps
-from boto3 import client
 from abc import ABCMeta, abstractmethod
 
 import six
@@ -24,6 +23,7 @@ import pgadmin.browser.data_groups.datasources as datasource
 from pgadmin.browser import BrowserPluginModule
 from pgadmin.browser.collection import CollectionNodeModule
 from pgadmin.browser.utils import NodeView
+from pgadmin.utils.s3 import S3
 from pgadmin.utils.ajax import \
          make_json_response, \
          make_response as ajax_response, \
@@ -180,9 +180,14 @@ class BucketView(NodeView):
 
 
 
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+        self.s3 = S3()
+
+
     def _list_buckets(self, gid, sid):
         try:
-            response = client('s3').list_buckets()
+            response = self.s3.client.list_buckets()
         except Exception as e:
             raise 
         else:
@@ -205,7 +210,7 @@ class BucketView(NodeView):
 
     def _get_bucket_acl(self, gid, sid, bid):
         try:
-            response = client('s3').get_bucket_acl(Bucket=bid)
+            response = self.s3.client.get_bucket_acl(Bucket=bid)
         except Exception as e:
             current_app.logger.exception(e)
             raise 

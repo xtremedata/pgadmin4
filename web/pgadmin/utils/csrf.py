@@ -31,6 +31,7 @@ class _PGCSRFProtect(CSRFProtect):
             app.blueprints['redirects'],
             'pgadmin.browser.data_groups.datasources.buckets.dirsobjs.supported_dirsobjs-js',
             'pgadmin.browser.data_groups.datasources.supported_datasources-js',
+            'pgadmin.browser.data_groups.datasources.supported_objtypes-js',
             'pgadmin.browser.server_groups.servers.supported_servers-js',
             'pgadmin.tools.datagrid.initialize_query_tool',
             'pgadmin.tools.datagrid.panel',
