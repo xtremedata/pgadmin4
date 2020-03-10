@@ -15,8 +15,6 @@ define(
       {% for k, v in obj_types.items() %}
 
       {label: '{{ k }}', value: '{{ v }}'},{% endfor %}
-
-      {label: gettext('Unknown'), value: ''}
     ];
   }
 );

@@ -361,8 +361,8 @@ define('pgadmin.node.datasource', [
           group: gettext('Filter'),
           visible: 'isAWS',
         },{
-          id: 'obj_type', label: gettext('Object Type'), type: 'options',
-          mode: ['properties', 'edit', 'create'], select2: {allowClear: false},
+          id: 'obj_type', label: gettext('Object Type'),
+          mode: ['properties', 'edit', 'create'],
           control: 'node-ajax-options', url: 'supported_objtypes', node: 'datasource',
           //options: supported_dirsobjs,
           group: gettext('Filter'),

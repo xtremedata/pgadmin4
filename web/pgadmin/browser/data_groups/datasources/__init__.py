@@ -155,11 +155,6 @@ class DataSourceModule(dg.DataGroupPluginModule):
             'path': url_for('browser.index') + 'datasource/supported_datasources',
             'is_template': True,
             'when': self.node_type
-        }, {
-            'name': 'pgadmin.datasource.supported_objtypes',
-            'path': url_for('browser.index') + 'datasource/supported_objtypes',
-            'is_template': True,
-            'when': self.node_type
         }])
         scripts.extend(super().get_own_javascripts())
 
@@ -217,6 +212,7 @@ class DataSourceView(NodeView):
         'supported_datasources.js': [
             {}, {}, {'get': 'supported_datasources'}],
         'supported_objtypes.js': [
+            {'get': 'supported_objtypes'},
             {'get': 'supported_objtypes'}],
         'clear_saved_authentication': [
             {'put': 'clear_saved_authentication'}],
@@ -494,13 +490,10 @@ class DataSourceView(NodeView):
         Override this property for your own logic.
         """
 
-        return make_response(
-                render_template(
+        return make_response(render_template(
                     "datasources/supported_datasources.js",
-                    datasource_types=DataSourceType.types()
-                    ),
-                200, {'Content-Type': 'application/javascript'}
-                )
+                    datasource_types=DataSourceType.types()),
+                200, {'Content-Type': 'application/javascript'})
 
     def supported_objtypes(self, gid, sid=None):
         """
@@ -524,11 +517,9 @@ class DataSourceView(NodeView):
             else:
                 obj_types = ds_types.obj_types()
 
-        return make_response(render_template(
-                    "datasources/supported_objtypes.js",
-                    obj_types=obj_types),
-                200, {'Content-Type': 'application/javascript'}
-                )
+        res = [{'label': gettext(k), 'value': v} for k,v in obj_types.items()]
+        return make_json_response(data=res, status=200)
+
 
     def clear_saved_authentication(self, gid, sid):
         """
