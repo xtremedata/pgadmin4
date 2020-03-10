@@ -15,11 +15,13 @@ define('pgadmin.node.datasource', [
   'pgadmin.browser',
   'pgadmin.user_management.current_user',
   'pgadmin.datasource.supported_datasources',
+  //'pgadmin.dirobj.supported_dirsobjs',
 ], function(
   gettext, url_for, $, _, Backbone, pgAdmin,
   Alertify, Backform, pgBrowser,
   current_user,
   supported_datasources,
+  // supported_dirsobjs,
 ) {
 
   if (!pgBrowser.Nodes['datasource']) {
@@ -304,6 +306,7 @@ define('pgadmin.node.datasource', [
           name: '',
           username: current_user.name,
           datasource_type: '',
+          pattern: undefined,
           pfx: undefined,
           obj_type: undefined,
           key_name: undefined,
@@ -348,14 +351,20 @@ define('pgadmin.node.datasource', [
           mode: ['edit', 'create'], disabled: 'isConnected',
           group: null,
         },{
-          id: 'pfx', label: gettext('Bucket Prefix'), type: 'text',
+          id: 'pattern', label: gettext('Bucket Pattern'), type: 'text',
+          mode: ['properties', 'edit', 'create'],
+          group: gettext('Filter'),
+          visible: 'isAWS',
+        },{
+          id: 'pfx', label: gettext('Object Prefix'), type: 'text',
           mode: ['properties', 'edit', 'create'],
           group: gettext('Filter'),
           visible: 'isAWS',
         },{
           id: 'obj_type', label: gettext('Object Type'), type: 'options',
           mode: ['properties', 'edit', 'create'], select2: {allowClear: false},
-          control: 'node-ajax-options', url: 'get_encodings', node: 'datasource',
+          control: 'node-ajax-options', url: 'supported_objtypes', node: 'datasource',
+          //options: supported_dirsobjs,
           group: gettext('Filter'),
           visible: 'isAWS',
         },{

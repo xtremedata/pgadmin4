@@ -272,7 +272,6 @@ var webpackShimConfig = {
     'pgadmin.settings': path.join(__dirname, './pgadmin/settings/static/js/settings'),
     'pgadmin.dirobj.supported_dirsobjs': '/browser/dirobj/supported_dirsobjs',
     'pgadmin.datasource.supported_datasources': '/browser/datasource/supported_datasources',
-    'pgadmin.datasource.supported_objtypes': '/browser/datasource/supported_objtypes',
     'pgadmin.server.supported_servers': '/browser/server/supported_servers',
     'pgadmin.sqleditor': path.join(__dirname, './pgadmin/tools/sqleditor/static/js/sqleditor'),
     'pgadmin.tables.js': path.join(__dirname, './pgadmin/browser/server_groups/servers/databases/schemas/tables/static/js/'),
@@ -301,7 +300,6 @@ var webpackShimConfig = {
     'pgadmin.browser.utils',
     'pgadmin.dirobj.supported_dirsobjs',
     'pgadmin.datasource.supported_datasources',
-    'pgadmin.datasource.supported_objtypes',
     'pgadmin.server.supported_servers',
   ],
   // Define list of pgAdmin common libraries to bundle them separately

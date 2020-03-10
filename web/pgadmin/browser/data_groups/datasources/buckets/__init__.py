@@ -11,6 +11,7 @@
 
 from functools import wraps
 from abc import ABCMeta, abstractmethod
+from fnmatch import fnmatch
 
 import six
 import simplejson as json
@@ -28,6 +29,7 @@ from pgadmin.utils.ajax import \
          make_json_response, \
          make_response as ajax_response, \
          internal_server_error, \
+         bad_request, \
          unauthorized, \
          gone
 from pgadmin.model import DataSource
@@ -182,29 +184,73 @@ class BucketView(NodeView):
 
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
-        self.s3 = S3()
+        self._s3 = None
+        self._buckets_owner = None
 
 
-    def _list_buckets(self, gid, sid):
+    @property
+    def s3(self):
+        if not self._s3:
+            self._s3 = S3()
+        return self._s3
+
+    @property
+    def buckets_owner(self):
+        if not self._buckets_owner:
+            self._buckets_owner = self._load_buckets()
+        return self._buckets_owner
+
+
+    def _load_buckets(self):
         try:
             response = self.s3.client.list_buckets()
         except Exception as e:
+            current_app.logger.exception(e)
             raise 
         else:
             return (response['Buckets'], response['Owner']['DisplayName'])
 
 
+    def _reload(self, gid, sid):
+        try:
+            ds = DataSource.query.filter_by(
+                user_id=current_user.id,
+                datagroup_id=gid,
+                id=sid).first()
+        except Exception as e:
+            current_app.logger.exception(e)
+            raise
+        else:
+            if not ds:
+                raise KeyError(_('Not found datasource:%d') % sid)
+
+        self._buckets_owner = None
+        buckets, owner = self.buckets_owner
+        buckets = [b for b in buckets if not ds.pattern or fnmatch(b['Name'], ds.pattern)]
+        self._buckets_owner = (buckets, owner)
+
+
+    def _list_buckets(self, gid, sid):
+        try:
+            self._reload(gid, sid)
+        except Exception as e:
+            current_app.logger.exception(e)
+            raise e
+        return self._buckets_owner
+
+
     def _get_bucket(self, gid, sid, bid):
         try:
-            buckets, owner = self._list_buckets(gid, sid)
+            buckets, owner = self.buckets_owner
         except Exception as e:
-            return internal_server_error(errormsg=str(e))
+            current_app.logger.exception(e)
+            raise
         else:
             for b in buckets:
                 if b['Name'] == bid:
                     return self.blueprint.get_dict_node(gid, sid, b, owner)
 
-            raise KeyError(bid)
+            raise KeyError(_('Not found bucket:%s') % bid[:50])
 
 
 
@@ -222,6 +268,8 @@ class BucketView(NodeView):
     def list(self, gid, sid):
         try:
             buckets, owner = self._list_buckets(gid, sid)
+        except KeyError as e:
+            return bad_request(errormsg=str(e))
         except Exception as e:
             return internal_server_error(errormsg=str(e))
         else:
@@ -231,30 +279,24 @@ class BucketView(NodeView):
 
 
 
-    def get_nodes(self, gid, sid):
-        buckets, owner = self._list_buckets(gid, sid)
-        return [self.blueprint.get_browser_node(gid, sid, b, owner) for b in buckets]
-
-
-
     def nodes(self, gid, sid):
         try:
-            res = self.get_nodes(gid, sid)
+            buckets, owner = self._list_buckets(gid, sid)
+        except KeyError as e:
+            return bad_request(errormsg=str(e))
         except Exception as e:
-            current_app.logger.exception(e)
             return internal_server_error(errormsg=str(e))
         else:
-            return make_json_response(data=res, status=200)
-
+            return make_json_response(data=[self.blueprint.get_browser_node(gid, sid, b, owner) for b in buckets],
+                    status=200)
 
 
     def node(self, gid, sid, bid):
         try:
             bucket = self._get_bucket(gid, sid, bid)
-        except KeyError:
-            return gone(errormsg=_("Could not find the bucket."))
+        except KeyError as e:
+            return gone(errormsg=str(e))
         except Exception as e:
-            current_app.logger.exception(e)
             return internal_server_error(errormsg=str(e))
         else:
             return make_json_response(
@@ -266,8 +308,9 @@ class BucketView(NodeView):
     def get_bucket_acl(self, gid, sid, bid):
         try:
             bucket_acl = self._get_bucket_acl(gid, sid, bid)
+        except KeyError as e:
+            return bad_request(errormsg=str(e))
         except Exception as e:
-            current_app.logger.exception(e)
             return internal_server_error(errormsg=str(e))
         else:
             return ajax_response(response=bucket_acl, status=200)
@@ -280,8 +323,9 @@ class BucketView(NodeView):
             bucket = self._get_bucket(gid, sid, bid)
             bucket_acl = self._get_bucket_acl(gid, sid, bid)
             bucket_acl.update(bucket)
+        except KeyError as e:
+            return bad_request(errormsg=str(e))
         except Exception as e:
-            current_app.logger.exception(e)
             return internal_server_error(errormsg=str(e))
         else:
             return ajax_response(response=bucket_acl, status=200)

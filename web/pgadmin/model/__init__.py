@@ -111,8 +111,11 @@ class DataSource(db.Model):
             db.String(16), 
             db.CheckConstraint("ds_type IN ('S3')"),
             nullable=False)
+    pattern = db.Column(
+            db.String(128), 
+            nullable=True)
     pfx = db.Column(
-            db.String(16), 
+            db.String(128), 
             nullable=True)
     obj_type = db.Column(
             db.String(16),

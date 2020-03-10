@@ -80,6 +80,7 @@ class DataSourceModule(dg.DataGroupPluginModule):
             'gid': obj.datagroup_id,
             'group-name': parent.name,
             'datasource_type': obj.ds_type,
+            'pattern': obj.pattern,
             'pfx': obj.pfx,
             'obj_type': obj.obj_type,
             'key_name': obj.key_name,
@@ -108,6 +109,7 @@ class DataSourceModule(dg.DataGroupPluginModule):
                 True,
                 self.node_type,
                 datasource_type=obj.ds_type,
+                pattern=obj.pattern,
                 pfx=obj.pfx,
                 obj_type=obj.obj_type,
                 has_secret=True if obj.key_secret is not None else False,
@@ -215,7 +217,7 @@ class DataSourceView(NodeView):
         'supported_datasources.js': [
             {}, {}, {'get': 'supported_datasources'}],
         'supported_objtypes.js': [
-            {}, {}, {'get': 'supported_objtypes'}],
+            {'get': 'supported_objtypes'}],
         'clear_saved_authentication': [
             {'put': 'clear_saved_authentication'}],
         'change_authentication': [
@@ -304,6 +306,7 @@ class DataSourceView(NodeView):
         config_param_map = {
             'name': 'name',
             'datasource_type': 'ds_type',
+            'pattern': 'pattern',
             'pfx': 'pfx',
             'obj_type': 'obj_type',
             'key_name': 'key_name',
@@ -318,15 +321,15 @@ class DataSourceView(NodeView):
             'key_secret': gettext('Key Secret'),
         }
 
-        for key in disp_lbl:
-            if key in datasource and datasource[key]:
-                return forbidden(errormsg=gettext(
-                            "'%s' is not allowed to modify" % (disp_lbl[key]))
-                        )
-
         idx = 0
         data = request.form if request.form else json.loads(
             request.data, encoding='utf-8')
+
+        for key in disp_lbl:
+            if key in data:
+                return forbidden(errormsg=gettext(
+                            "'%s' is not allowed to modify" % (disp_lbl[key]))
+                        )
 
         for arg in config_param_map:
             if arg in data:
@@ -441,6 +444,7 @@ class DataSourceView(NodeView):
                 datagroup_id=data.get('gid', gid),
                 name=data.get('name'),
                 ds_type=data.get('datasource_type'),
+                pattern=data.get('pattern'),
                 pfx=data.get('pfx'),
                 obj_type=data.get('obj_type'),
                 key_name=data.get('key_name'),
@@ -491,36 +495,40 @@ class DataSourceView(NodeView):
         """
 
         return make_response(
-            render_template(
-                "datasources/supported_datasources.js",
-                datasource_types=DataSourceType.types()
-            ),
-            200, {'Content-Type': 'application/javascript'}
-        )
+                render_template(
+                    "datasources/supported_datasources.js",
+                    datasource_types=DataSourceType.types()
+                    ),
+                200, {'Content-Type': 'application/javascript'}
+                )
 
-    def supported_objtypes(self, **kw):
+    def supported_objtypes(self, gid, sid=None):
         """
         This property defines (if javascript) exists for this node.
         Override this property for your own logic.
         """
-        datasource_type = None
-        try:
-            datasource_type = kw['datasource_type']
-            ds_types = DataSourceType.type(datasource_type)
-        except KeyError as e:
-            current_app.logger.error(
-                    "Unable to access requested datasource:{0}.\nError: {1}".format(
-                        str(datasource_type)[:20], str(e))
-            )
-            return bad_request(errormsg="Not supported data source: %s" % datasource_type)
+        if not sid:
+            obj_types = {}
 
-        return make_response(
-            render_template(
-                "datasources/supported_objtypes.js",
-                obj_types=ds_types.obj_types()
-            ),
-            200, {'Content-Type': 'application/javascript'}
-        )
+        else:
+            try:
+                ds = DataSource.query.filter_by(
+                    user_id=current_user.id,
+                    datagroup_id=gid,
+                    id=sid).first()
+                
+                ds_types = DataSourceType.type(ds.ds_type)
+            except Exception as e:
+                current_app.logger.exception(e)
+                return bad_request(errormsg=str(e))
+            else:
+                obj_types = ds_types.obj_types()
+
+        return make_response(render_template(
+                    "datasources/supported_objtypes.js",
+                    obj_types=obj_types),
+                200, {'Content-Type': 'application/javascript'}
+                )
 
     def clear_saved_authentication(self, gid, sid):
         """

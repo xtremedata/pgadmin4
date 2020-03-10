@@ -7,7 +7,8 @@
 #
 ##########################################################################
 
-from boto3 import client, resource as boto3_resource
+from fnmatch import fnmatch
+
 from botocore.exceptions import HTTPClientError, ClientError
 
 from flask import render_template, request, make_response, jsonify, \
@@ -15,8 +16,16 @@ from flask import render_template, request, make_response, jsonify, \
 from flask_babelex import gettext
 from flask_security import current_user, login_required
 from pgadmin.browser.utils import NodeView
-from pgadmin.utils.ajax import make_json_response, bad_request, forbidden, \
-    make_response as ajax_response, internal_server_error, unauthorized, gone
+from pgadmin.utils.s3 import S3
+from pgadmin.utils.ajax import \
+        make_json_response, \
+        bad_request, \
+        forbidden, \
+        make_response as ajax_response, \
+        internal_server_error, \
+        unauthorized, \
+        gone
+from pgadmin.model import DataSource
 import pgadmin.browser.data_groups.datasources.buckets as buckets
 
 from .types import DirObjType
@@ -68,6 +77,19 @@ class DirObjModule(buckets.BucketPluginModule):
 
 
 
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+        self._s3 = None
+
+
+    @property
+    def s3(self):
+        if not self._s3:
+            self._s3 = S3()
+        return self._s3
+
+
+
     def _get_dict_node(self, obj):
         return convert_dirobj_to_dict(obj)
 
@@ -93,20 +115,26 @@ class DirObjModule(buckets.BucketPluginModule):
 
 
 
+    def _filter(self, bid, oid, ds):
+        return (not ds.pattern or fnmatch(bid, ds.pattern)) \
+                and (not ds.pfx or oid['Key'].startswith(ds.pfx))
+
+
+
     def _get_node(self, gid, sid, bid, oid):
         try:
-            s3 = boto3_resource('s3')
-            o = s3.Object(bid, oid)
+            o = self.s3.resource.Object(bid, oid)
             o.load()
             return o
         except (HTTPClientError, ClientError) as e:
-            try:
-                if e.response['ResponseMetadata']['HTTPStatusCode'] == 404:
-                    raise KeyError(oid)
-            except:
-                raise e
+            current_app.logger.exception(e)
+            if e.response['ResponseMetadata']['HTTPStatusCode'] == 404:
+                raise KeyError(gettext('Not found object:%s') % oid[:50])
             else:
                 raise
+        except Exception as e:
+            current_app.logger.exception(e)
+            raise
 
 
 
@@ -114,16 +142,36 @@ class DirObjModule(buckets.BucketPluginModule):
         """
         """
         errmsg = None
+        ds = DataSource.query.filter_by(
+            user_id=current_user.id,
+            datagroup_id=gid,
+            id=sid).first()
+        if not oid:
+            oid = ds.pfx
+
         if oid is None:
             oid = ''
 
-        s3 = client('s3')
         #pg = s3.get_paginator('list_objects_v2')
-        res = s3.list_objects_v2(Bucket=bid, Prefix=oid)
-        if res['ResponseMetadata']['HTTPStatusCode'] == 200:
-            return [o for o in res['Contents'] if is_child(o, gid, sid, bid, oid)]
+        try:
+            res = self.s3.client.list_objects_v2(Bucket=bid, Prefix=oid)
+        except (HTTPClientError, ClientError) as e:
+            current_app.logger.exception(e)
+            if e.response['ResponseMetadata']['HTTPStatusCode'] == 404:
+                raise KeyError(gettext('Not found bucket:%s') % bid[:50])
+            else:
+                raise
+        except Exception as e:
+            current_app.logger.exception(e)
+            raise
         else:
-            raise KeyError(bid)
+            if res['ResponseMetadata']['HTTPStatusCode'] != 200:
+                raise KeyError(gettext('Not found bucket:%s') % bid[:50])
+            else:
+                try:
+                    return [o for o in res['Contents'] if self._filter(bid, o, ds) and is_child(o, gid, sid, bid, oid)]
+                except KeyError:
+                    return []
 
 
 
@@ -244,7 +292,12 @@ class DirObjNode(NodeView):
     def get_children_nodes(self, gid, sid, bid, oid, **kwargs):
         """ Returns dependent S3 bucket objects.
         """
-        return [o for o in self.blueprint.get_nodes(gid, sid, bid, oid, **kwargs)]
+        try:
+            return [o for o in self.blueprint.get_nodes(gid, sid, bid, oid, **kwargs)]
+        except KeyError as e:
+            return bad_request(errormsg=str(e))
+        except Exception as e:
+            return internal_server_error(errormsg=str(e))
 
 
 
@@ -267,8 +320,9 @@ class DirObjNode(NodeView):
     def nodes(self, gid, sid, bid, oid=None):
         try:
             dirsobjs = self.get_nodes(gid, sid, bid, oid)
+        except KeyError as e:
+            return bad_request(errormsg=str(e))
         except Exception as e:
-            current_app.logger.exception(e)
             return internal_server_error(errormsg=str(e))
         else:
             return make_json_response(data=dirsobjs, status=200)
@@ -278,10 +332,9 @@ class DirObjNode(NodeView):
     def node(self, gid, sid, bid, oid):
         try:
             dirobj = self.blueprint.get_node(gid, sid, bid, oid)
-        except KeyError:
-            return gone(errormsg=gettext("Could not find the object."))
+        except KeyError as e:
+            return gone(errormsg=str(e))
         except Exception as e:
-            current_app.logger.exception(e)
             return internal_server_error(errormsg=str(e))
         else:
             return make_json_response(data=dirobj, status=200)
@@ -293,8 +346,9 @@ class DirObjNode(NodeView):
     def properties(self, gid, sid, bid, oid):
         try:
             dirobj = self.blueprint.get_dict_node(gid, sid, bid, oid)
+        except KeyError as e:
+            return bad_request(errormsg=str(e))
         except Exception as e:
-            current_app.logger.exception(e)
             return internal_server_error(errormsg=str(e))
         else:
             return ajax_response(response=dirobj, status=200)
