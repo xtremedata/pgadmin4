@@ -82,11 +82,29 @@ class DirObjModule(buckets.BucketPluginModule):
         self._s3 = None
 
 
+
     @property
     def s3(self):
         if not self._s3:
             self._s3 = S3()
         return self._s3
+
+
+
+    def _reload(self, gid, sid, ds=None):
+        try:
+            if ds is None:
+                ds = DataSource.query.filter_by(
+                    user_id=current_user.id,
+                    datagroup_id=gid,
+                    id=sid).first()
+            self.s3.authenticate(gid, sid, ds=ds)
+        except Exception as e:
+            current_app.logger.exception(e)
+            raise
+        else:
+            if not ds:
+                raise KeyError(gettext('Not found datasource:%d') % sid)
 
 
 
@@ -152,6 +170,8 @@ class DirObjModule(buckets.BucketPluginModule):
         if oid is None:
             oid = ''
 
+        self._reload(gid, sid, ds)
+
         #pg = s3.get_paginator('list_objects_v2')
         try:
             res = self.s3.client.list_objects_v2(Bucket=bid, Prefix=oid)
@@ -179,7 +199,8 @@ class DirObjModule(buckets.BucketPluginModule):
     def get_dict_node(self, gid, sid, bid, oid):
         """
         """
-        return self._get_dict_node(convert_s3dirobj_to_dirobj(self._get_node(gid, sid, bid, oid)))
+        return self._get_dict_node( \
+                convert_s3dirobj_to_dirobj(self._get_node(gid, sid, bid, oid)))
 
 
 
@@ -305,6 +326,8 @@ class DirObjNode(NodeView):
     def list(self, gid, sid, bid, oid=None):
         try:
             dirsobjs = self.blueprint.get_dict_nodes(gid, sid, bid, oid)
+        except KeyError as e:
+            return bad_request(errormsg=str(e))
         except Exception as e:
             return internal_server_error(errormsg=str(e))
         else:
