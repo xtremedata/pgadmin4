@@ -217,22 +217,25 @@ define('pgadmin.node.datasource', [
                       new_key_secret = this.get('new_key_secret');
 
                     // Only check password field if pgpass file is not available
-                    if (!(_.isUndefined(new_key_name) || _.isNull(new_key_name) || new_key_name == '' ||
-                        _.isUndefined(new_key_secret) || _.isNull(new_key_secret) || new_key_secret == '')) {
-                      self.__internal.buttons[1].element.disabled = true;
-                    }
+                    self.__internal.buttons[1].element.disabled = _.isUndefined(new_key_name)
+                      || _.isNull(new_key_name)
+                      || new_key_name == ''
+                      || _.isUndefined(new_key_secret)
+                      || _.isNull(new_key_secret)
+                      || new_key_secret == '';
                   });
                 },
                 // Callback functions when click on the buttons of the Alertify dialogs
                 callback: function(e) {
                   if (e.button.element.name == 'submit') {
                     var self = this,
+                      model = this.view.model,
                       args = null;
                       
                     // No need for fancy checking in this case
-                    this.set('key_name', this.get('new_key_name'));
-                    this.set('key_secret', this.get('new_key_secret'));
-                    this.set('confirmed_key_secret', this.get('new_key_secret'));
+                    //model.set('key_name', model.get('new_key_name'));
+                    //model.set('key_secret', model.get('new_key_secret'));
+                    model.set('confirm_new_key_secret', model.get('new_key_secret'));
                     args =  this.view.model.toJSON();
 
                     e.cancel = true;
@@ -300,6 +303,7 @@ define('pgadmin.node.datasource', [
       },
 
       model: pgAdmin.Browser.Node.Model.extend({
+        idAttribute: 'sid',
         defaults: {
           gid: undefined,
           id: undefined,

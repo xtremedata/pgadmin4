@@ -9,9 +9,17 @@
 
 
 from os import path
-from boto3 import client, resource
+from boto3 import client, resource, Session
 from botocore.exceptions import HTTPClientError, ClientError
 from urllib.parse import unquote, urlunparse, ParseResult
+
+from flask_security import current_user
+
+from pgadmin.model import DataSource
+
+from .crypto import encrypt, decrypt, pqencryptpassword
+from .master_password import get_crypt_key
+from .exception import CryptKeyMissing
 
 
 
@@ -94,21 +102,76 @@ class S3(object):
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         self._client = None
+        self._session = None
         self._resource = None
+        self._key_name = None
+        self._key_secret = None
 
 
+
+    @property
+    def key_name(self):
+        return self._key_name
+    
+    @property
+    def key_secret(self):
+        return self._key_secret
 
     @property
     def client(self):
         if not self._client:
-            self._client = client('s3')
+            self._client = client('s3') if not self.has_authentication() \
+                    else client('s3', \
+                    aws_access_key_id=self.key_name, \
+                    aws_secret_access_key=self.key_secret)
         return self._client
+
+    @property
+    def session(self):
+        if not self._session:
+            self._session = Session() if not self.has_authentication() \
+                    else Session(\
+                    aws_access_key_id=self.key_name, \
+                    aws_secret_access_key=self.key_secret)
+        return self._session
 
     @property
     def resource(self):
         if not self._resource:
-            self._resource = resource('s3')
+            self._resource = self.session.resource('s3')
         return self._resource
+
+
+    def reload(self):
+        """ Reloads all S3 sessions.
+        """
+        self._client = None
+        self._session = None
+        self._resource = None
+
+
+    def has_authentication(self):
+        return self.key_name and self.key_secret
+
+
+    def authenticate(self, gid, sid, ds=None):
+        """ Updates S3 authentication from provided datasource Id.
+        """
+        crypt_key_present, crypt_key = get_crypt_key()
+        if not crypt_key_present:
+            raise CryptKeyMissing
+
+        if ds is None:
+            ds = DataSource.query.filter_by( \
+                    user_id=current_user.id, \
+                    datagroup_id=gid, \
+                    id=sid).first()
+        decrypted_key_secret = decrypt(ds.key_secret, crypt_key)
+        if isinstance(decrypted_key_secret, bytes):
+            decrypted_key_secret = decrypted_key_secret.decode()
+        self._key_name = ds.key_name
+        self._key_secret = decrypted_key_secret
+        self.reload()
 
 
     def exists(self, bucket, obj):

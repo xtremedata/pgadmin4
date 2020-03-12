@@ -217,6 +217,7 @@ class BucketView(NodeView):
                 user_id=current_user.id,
                 datagroup_id=gid,
                 id=sid).first()
+            self.s3.authenticate(gid, sid, ds=ds)
         except Exception as e:
             current_app.logger.exception(e)
             raise

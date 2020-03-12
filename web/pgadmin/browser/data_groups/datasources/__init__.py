@@ -258,7 +258,7 @@ class DataSourceView(NodeView):
     @login_required
     def delete(self, gid, sid):
         """Delete a datasource node in the settings database."""
-        datasources = DataSource.query.filter_by(user_id=current_user.id, id=sid)
+        datasources = DataSource.query.filter_by(user_id=current_user.id, datagroup_id=gid, id=sid)
 
         # TODO:: A datasource, which is connected, cannot be deleted
         if datasources is None:
@@ -565,10 +565,9 @@ class DataSourceView(NodeView):
             gid: Data group id
             sid: Data source id
         """
-        data = request.form if request.form else json.loads(
-            request.data, encoding='utf-8'
-        )
+        data = json.loads(request.form['data'], encoding='utf-8')
         crypt_key_present, crypt_key = get_crypt_key()
+
         if not crypt_key_present:
             raise CryptKeyMissing
         try:
@@ -587,16 +586,17 @@ class DataSourceView(NodeView):
             return internal_server_error(errormsg=str(e))
 
         req_params = ( \
-                'key_name', \
-                'key_secret', \
-                'new_key_name', \
-                'new_key_secret', \
-                'confirm_new_key_secret')
-        if not all(p in data for p in req_params):
-            return bad_request(gettext("Could not find the required parameter(s)"))
+                #u'key_name', \
+                #u'key_secret', \
+                u'new_key_name', \
+                u'new_key_secret', \
+                u'confirm_new_key_secret')
+        for p in req_params:
+            if p not in data:
+                return bad_request(gettext("Could not find the required parameter(s):%s" % p[:30]))
 
-        key_name = data['key_name']
-        key_secret = data['key_secret']
+        #key_name = data['key_name']
+        #key_secret = data['key_secret']
         new_key_name = data['new_key_name']
         new_key_secret = data['new_key_secret']
         confirm_new_key_secret = data['confirm_new_key_secret']
@@ -613,12 +613,12 @@ class DataSourceView(NodeView):
                     )
                 )
 
-        decrypted_key_secret = decrypt(datasource.key_secret, crypt_key)
-        if isinstance(decrypted_key_secret, bytes):
-            decrypted_key_secret = decrypted_key_secret.decode()
-        if key_name != datasource.key_name \
-                or decrypted_key_secret != datasource.key_secret:
-                return unauthorized(gettext("Incorrect key and/or secret."))
+        #decrypted_key_secret = decrypt(datasource.key_secret, crypt_key)
+        #if isinstance(decrypted_key_secret, bytes):
+        #    decrypted_key_secret = decrypted_key_secret.decode()
+        #if key_name != datasource.key_name \
+        #        or decrypted_key_secret != datasource.key_secret:
+        #        return unauthorized(gettext("Incorrect key and/or secret."))
 
         try:
             datasource.key_name = new_key_name
