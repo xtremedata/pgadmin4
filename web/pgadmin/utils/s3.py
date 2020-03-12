@@ -166,12 +166,14 @@ class S3(object):
                     user_id=current_user.id, \
                     datagroup_id=gid, \
                     id=sid).first()
-        decrypted_key_secret = decrypt(ds.key_secret, crypt_key)
-        if isinstance(decrypted_key_secret, bytes):
-            decrypted_key_secret = decrypted_key_secret.decode()
-        self._key_name = ds.key_name
-        self._key_secret = decrypted_key_secret
-        self.reload()
+
+        if ds.key_name and ds.key_secret:
+            decrypted_key_secret = decrypt(ds.key_secret, crypt_key)
+            if isinstance(decrypted_key_secret, bytes):
+                decrypted_key_secret = decrypted_key_secret.decode()
+            self._key_name = ds.key_name
+            self._key_secret = decrypted_key_secret
+            self.reload()
 
 
     def exists(self, bucket, obj):

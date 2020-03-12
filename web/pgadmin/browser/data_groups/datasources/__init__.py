@@ -565,7 +565,10 @@ class DataSourceView(NodeView):
             gid: Data group id
             sid: Data source id
         """
-        data = json.loads(request.form['data'], encoding='utf-8')
+        if request.form:
+            data = json.loads(request.form['data'], encoding='utf-8')
+        else:
+            data = json.loads(request.data, encoding='utf-8')
         crypt_key_present, crypt_key = get_crypt_key()
 
         if not crypt_key_present:

@@ -112,15 +112,15 @@ define([
      */
     find_parent_node: function(this_type, parent_type, model) {
       var nodes_info_map = model.get('nodes_info_map') || null,
-        parent_name = undefined;
+        parent_desc = undefined;
 
       if (nodes_info_map) {
-        parent_name = model.get_parent(parent_type) || null;
-        if (parent_name) {
+        parent_desc = model.get_parent(parent_type) || null;
+        if (parent_desc && parent_desc.value) {
           try {
-            return nodes_info_map[parent_type][parent_name];
+            return nodes_info_map[parent_desc.type][parent_desc.value];
           } catch (err) {
-            model.errorModel.set(this_type, gettext('Error or invalid data group selected:'));
+            model.errorModel.set(this_type, gettext('Error or invalid parent selected'));
             return null;
           }
         }
@@ -191,20 +191,30 @@ define([
       if (!value && schema_node && schema_node.type) {
         try {
           selected_node = model.get('selected_info')[schema_node.type] || null;
+          var select2 = this.field.get('select2') || null;
           if (selected_node) {
-            var select2 = this.field.get('select2') || null;
             if (select2) {
               select2.first_empty = false;
-              // this did not work with preselction - solved with: options[].selected 
-              //select2.emptyOptions = true;
-              //select2.tags = true;
               select2.allowClear = false;
               select2.openOnEnter = false;
+              select2.multiple = false;
+              // this did not work with preselection - solved with: options[].selected 
+              //select2.emptyOptions = true;
+              //select2.tags = true;
             }
             //this.field.set('value', model.get(schema_node.type));
             this.field.set('disabled', true);
             // this triggeres 'render'
             //model.set(schema_node.type, selected_node.label);
+          } else {
+            // select2 settings for selectable dropdown options
+            if (select2) {
+              select2.first_empty = true;
+              select2.allowClear = false;
+              select2.allowClear = false;
+              select2.openOnEnter = false;
+              select2.multiple = false;
+            }
           }
         } catch (ignore) {
           // no selected node for this type - ignoring
@@ -427,7 +437,7 @@ define([
           width: '100%',
         },
       }, { /* table selection */
-        id: '',
+        id: 'table',
         label: gettext('Table'),
         cell: 'string',
         type: 'select2',
@@ -791,10 +801,11 @@ define([
     },
     has_parent: function(parent) {
       var self = this,
+        nodes_info_map = self.get('nodes_info_map') || null,
         found_parent=null;
       if (Array.isArray(parent)) {
         found_parent = !parent.every(function(e) {
-          return !self.get(e);
+          return !self.get(e) || nodes_info_map && !(e in nodes_info_map);
         });
       } else {
         found_parent = !!self.get(parent);
@@ -802,14 +813,15 @@ define([
       return found_parent;
     },
     get_parent: function(parent) {
-      var self = this;
+      var self = this,
+        nodes_info_map = self.get('nodes_info_map') || null;
       if (Array.isArray(parent)) {
         for (var e of parent) {
-          if(self.get(e))
-            return self.get(e);
+          if(self.get(e) && (!nodes_info_map || e in nodes_info_map))
+            return {'type': e, 'value': self.get(e)};
         }
       } else {
-        return self.get(parent);
+        return {'type': parent, 'value': self.get(parent)};
       }
 
       return null;
