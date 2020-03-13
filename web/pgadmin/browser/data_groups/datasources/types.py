@@ -78,13 +78,13 @@ class DataSourceType(object):
 
     @property
     def obj_types(self):
-       return self._obj_types
+        return self._obj_types
 
 
     @classmethod
     def types(cls):
         return sorted(
-            DataSourceType.registry.values(),
+            cls.registry.values(),
             key=lambda x: x.priority,
             reverse=True
         )
@@ -95,6 +95,7 @@ class DataSourceType(object):
             return cls.registry[datasource_type]
         except KeyError as e:
             current_app.logger.exception("Not implemented data source type:", e)
+            return None
 
     def get_manager(self):
         return None

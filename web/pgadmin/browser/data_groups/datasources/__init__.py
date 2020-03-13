@@ -211,7 +211,7 @@ class DataSourceView(NodeView):
             {'get': 'children'}],
         'supported_datasources.js': [
             {}, {}, {'get': 'supported_datasources'}],
-        'supported_objtypes.js': [
+        'supported_objtypes': [
             {'get': 'supported_objtypes'},
             {'get': 'supported_objtypes'}],
         'clear_saved_authentication': [
@@ -281,7 +281,7 @@ class DataSourceView(NodeView):
                 current_app.logger.exception(e)
                 return make_json_response(
                     success=0,
-                    errormsg=e)
+                    errormsg=str(e))
 
         return make_json_response(success=1,
                                   info=gettext("Data source deleted"))
@@ -344,7 +344,7 @@ class DataSourceView(NodeView):
             current_app.logger.exception(e)
             return make_json_response(
                 success=0,
-                errormsg=e)
+                errormsg=str(e))
 
         return jsonify(node=self.blueprint.get_browser_node(datasource))
 
@@ -510,14 +510,17 @@ class DataSourceView(NodeView):
                     datagroup_id=gid,
                     id=sid).first()
                 
-                ds_types = DataSourceType.type(ds.ds_type)
+                ds_type = DataSourceType.type(ds.ds_type)
             except Exception as e:
                 current_app.logger.exception(e)
                 return bad_request(errormsg=str(e))
             else:
-                obj_types = ds_types.obj_types()
+                if ds_type:
+                    obj_types = ds_type.obj_types
 
         res = [{'label': gettext(k), 'value': v} for k,v in obj_types.items()]
+        current_app.logger.info("####### gid:%s, sid:%s, types:%s, res:%s" % \
+                (str(gid), str(sid), str(obj_types), str(res)))
         return make_json_response(data=res, status=200)
 
 

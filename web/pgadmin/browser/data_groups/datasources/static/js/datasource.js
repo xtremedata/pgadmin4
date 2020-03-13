@@ -337,7 +337,7 @@ define('pgadmin.node.datasource', [
         },{
           id: 'gid', label: gettext('Data group'), type: 'int',
           control: 'node-list-by-id', node: 'data_group',
-          mode: ['create', 'edit'], select2: {allowClear: false},
+          mode: ['create', 'edit'], select2: {allowClear: false, first_empty: false},
           group: null,
         },{
           id: 'datasource_type', label: gettext('Data source type'), type: 'options',
@@ -367,7 +367,10 @@ define('pgadmin.node.datasource', [
         },{
           id: 'obj_type', label: gettext('Object Type'),
           mode: ['properties', 'edit', 'create'],
-          control: 'node-ajax-options', url: 'supported_objtypes', node: 'datasource',
+          control: 'node-ajax-options',
+          url: 'supported_objtypes',
+          url_with_id: true,
+          node: 'datasource',
           //options: supported_dirsobjs,
           group: gettext('Filter'),
           visible: 'isAWS',
