@@ -371,9 +371,9 @@ define('pgadmin.node.datasource', [
           url: 'supported_objtypes',
           url_with_id: true,
           node: 'datasource',
-          //options: supported_dirsobjs,
           group: gettext('Filter'),
           visible: 'isAWS',
+          select2: {allowClear: true, first_empty: true},
         },{
           id: 'key_name', 
           label: gettext('AWS key name'), 

@@ -32,7 +32,7 @@ class S3(DataSourceType):
                 gettext(u'text'): u'txt', \
                 gettext(u'csv'): u'csv', \
                 gettext(u'parquet'): u'par', \
-                gettext(u'all'): u'*'}
+                gettext(u'all'): u''}
 
     @property
     def required(self):

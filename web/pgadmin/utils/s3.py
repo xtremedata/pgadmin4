@@ -13,6 +13,7 @@ from boto3 import client, resource, Session
 from botocore.exceptions import HTTPClientError, ClientError
 from urllib.parse import unquote, urlunparse, ParseResult
 
+from flask import current_app
 from flask_security import current_user
 
 from pgadmin.model import DataSource
@@ -20,6 +21,17 @@ from pgadmin.model import DataSource
 from .crypto import encrypt, decrypt, pqencryptpassword
 from .master_password import get_crypt_key
 from .exception import CryptKeyMissing
+
+
+
+
+def check_session(f):
+    def wrapped(self, *args, **kw):
+        if self.current_user != current_user.id:
+            self.reset()
+        return self.f(*args, **kw)
+    return wrapped
+
 
 
 
@@ -31,6 +43,7 @@ class S3(object):
     PFX = 'https'
     AWS_S3 = 's3.amazonaws.com'
     PG_PFX = '/'
+
 
 
     @classmethod
@@ -106,6 +119,7 @@ class S3(object):
         self._resource = None
         self._key_name = None
         self._key_secret = None
+        self._current_user = current_user.id
 
 
 
@@ -140,6 +154,17 @@ class S3(object):
         if not self._resource:
             self._resource = self.session.resource('s3')
         return self._resource
+
+
+    def reset(self):
+        """ Resets all access on not authorized session request.
+        """
+        current_app.logger.info("Reset s3 authentication due to changed user from:%s to %s" \
+                % (self._current_user, current_user.id))
+        self.reload()
+        self._key_name = None
+        self._key_secret = None
+        self._current_user = current_user.id
 
 
     def reload(self):

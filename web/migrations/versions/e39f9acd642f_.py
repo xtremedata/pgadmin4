@@ -37,7 +37,7 @@ def upgrade():
                 ds_type VARCHAR(16) NOT NULL CHECK(ds_type IN ('S3')),
                 pattern VARCHAR(128),
                 pfx VARCHAR(128),
-                obj_type VARCHAR(16) NOT NULL CHECK(obj_type IN ('text', 'csv', 'parquet', 'all')),
+                obj_type VARCHAR(16) CHECK(obj_type IN ('txt', 'csv', 'par', '')),
                 key_name VARCHAR(128),
                 key_secret VARCHAR(128),
                 bgcolor VARCHAR(10),
