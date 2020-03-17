@@ -20,7 +20,7 @@ from pgadmin.model import DataSource
 
 from .crypto import encrypt, decrypt, pqencryptpassword
 from .master_password import get_crypt_key
-from .exception import CryptKeyMissing
+from .exception import CryptKeyMissing, AuthCredMissing
 
 
 
@@ -186,11 +186,16 @@ class S3(object):
         if not crypt_key_present:
             raise CryptKeyMissing
 
+        current_app.logger.info("Authenticating S3 for data source:%s and data group:%s" \
+                % (sid, gid))
         if ds is None:
             ds = DataSource.query.filter_by( \
                     user_id=current_user.id, \
                     datagroup_id=gid, \
                     id=sid).first()
+
+        if ds is None:
+            raise AuthCredMissing
 
         if ds.key_name and ds.key_secret:
             decrypted_key_secret = decrypt(ds.key_secret, crypt_key)

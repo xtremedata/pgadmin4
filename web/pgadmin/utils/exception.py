@@ -128,3 +128,30 @@ class ObjectGone(HTTPException):
 
     def __repr__(self):
         return self.error_msg
+
+
+class AuthCredMissing(HTTPException):
+    """
+    Exception on missing authentication credentials.
+    """
+
+    ERRMSG = "Authentication credentials not found"
+
+    def __init__(self):
+        HTTPException.__init__(self)
+
+    @property
+    def name(self):
+        return HTTP_STATUS_CODES.get(503, 'Service Unavailable')
+
+    def get_response(self, environ=None):
+        return service_unavailable(
+            _(self.ERRMSG),
+            info="AUTHCRED_MISSING",
+        )
+
+    def __str__(self):
+        return self.ERRMSG
+
+    def __repr__(self):
+        return self.ERRMSG

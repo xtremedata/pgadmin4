@@ -51,23 +51,21 @@ class S3ImportExport(object):
         filename_url = None
         bucket = None
         filename = None
-        ds = None
-        gd = None
-        mapper = None
         ds_id = None
         gd_id = None
         try:
             bucket = data['bucket']
             filename = s3.fix_pgadmin_path(data['filename'])
             mapper = data['nodes_info_map']
-            ds = data['database']
-            gd = data['datagroup']
-            ds_id = mapper['datasource'][ds]['id']
-            gd_id = mapper['datagroup'][gd]['id']
-        except KeyError:
-            return bad_request(errormsg=_('Please specify a valid file and/or S3 bucket'))
+            ds = data['datasource']
+            gd = data['data_group']
+            ds_id = mapper['datasource'][ds]['_id']
+            gd_id = mapper['data_group'][gd]['_id']
+        except KeyError as e:
+            return bad_request(errormsg=_( \
+                    'Please specify a valid file and/or S3 bucket ({0})').format(str(e)))
 
-        s3.authenticate(gd_id, ds_id) 
+        s3.authenticate(gd_id, ds_id)
         if s3.exists(bucket, filename):
             filename_url = S3.create_s3_url(bucket, filename)
         else:
