@@ -203,7 +203,7 @@ define([
               //select2.tags = true;
               var select2_own_sel = this.field.get('select2_own_sel') || null;
               if (select2_own_sel) {
-                select2.extend(select2_own_sel);
+                select2 = _.extend(select2, select2_own_sel);
               }
             }
             //this.field.set('value', model.get(schema_node.type));
@@ -219,15 +219,13 @@ define([
               select2.multiple = false;
               var select2_own_nsel = this.field.get('select2_own_nsel') || null;
               if (select2_own_nsel) {
-                select2.extend(select2_own_nsel);
+                select2 = _.extend(select2, select2_own_nsel);
               }
             }
           }
-          if (select2) {
-            var select2_own = this.field.get('select2_own') || null;
-            if (select2_own) {
-              select2.extend(select2_own);
-            }
+          var select2_own = this.field.get('select2_own') || null;
+          if (select2 && select2_own) {
+            select2 = _.extend(select2, select2_own);
           }
         } catch (ignore) {
           // no selected node for this type - ignoring
@@ -533,32 +531,33 @@ define([
         initialize: function() {
           ImExNodeListByNameControl.prototype.initialize.apply(this, arguments);
           var self = this,
-            options = self.field.get('options'),
-            op_vals = [];
+            options = self.field.get('options');
 
           if (_.isFunction(options)) {
             try {
-              var all_cols = options.apply(self);
-              for (var idx in all_cols) {
-                op_vals.push((all_cols[idx])['value']);
-              }
+              options.apply(self);
             } catch (e) {
               // Do nothing
               options = [];
               console.warn(e.stack || e);
             }
-          } else {
-            for (idx in options) {
-              op_vals.push((options[idx])['value']);
-            }
           }
-
-          self.model.set('columns', op_vals);
         },
       }),
+      transform_hook: function(options) {
+        var op_vals = [];
+        if (options) {
+          for (var idx in options) {
+            op_vals.push((options[idx])['value']);
+          }
+        }
+
+        this.model.set('columns', op_vals);
+      },
       transform: function(rows) {
         var self = this,
           node = self.field.get('schema_node'),
+          hook = self.field.get('transform_hook'),
           res = [];
 
         _.each(rows, function(r) {
@@ -580,16 +579,22 @@ define([
           }
         });
 
+        if (hook && _.isFunction(hook)) {
+          hook.apply(self, [res]);
+        }
+
         return res;
       },
       node: 'column',
       url: 'nodes',
       group: gettext('Columns'),
+      select2: {
+      },
       select2_own: {
         multiple: true,
         allowClear: false,
-        placeholder: gettext('Columns for importing...'),
         first_empty: false,
+        placeholder: gettext('Columns for importing...'),
         preserveSelectionOrder: true,
       },
       visible: 'importing',
