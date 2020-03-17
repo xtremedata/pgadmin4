@@ -371,6 +371,7 @@ class Filemanager(object):
             except (KeyError, ImportError):
                 return internal_server_error(errormsg=("Unknown data type:%s" % ds_type[:20]))
 
+        current_app.logger.info("####### trans_id:%s, ds_info:%s" % (trans_id, str(ds_info)))
         return ds_class(trans_id, ds_info)
 
 

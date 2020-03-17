@@ -201,6 +201,10 @@ define([
               // this did not work with preselection - solved with: options[].selected 
               //select2.emptyOptions = true;
               //select2.tags = true;
+              var select2_own_sel = this.field.get('select2_own_sel') || null;
+              if (select2_own_sel) {
+                select2.extend(select2_own_sel);
+              }
             }
             //this.field.set('value', model.get(schema_node.type));
             this.field.set('disabled', true);
@@ -211,9 +215,18 @@ define([
             if (select2) {
               select2.first_empty = true;
               select2.allowClear = false;
-              select2.allowClear = false;
               select2.openOnEnter = false;
               select2.multiple = false;
+              var select2_own_nsel = this.field.get('select2_own_nsel') || null;
+              if (select2_own_nsel) {
+                select2.extend(select2_own_nsel);
+              }
+            }
+          }
+          if (select2) {
+            var select2_own = this.field.get('select2_own') || null;
+            if (select2_own) {
+              select2.extend(select2_own);
             }
           }
         } catch (ignore) {
@@ -307,6 +320,7 @@ define([
           'offText': gettext('Selected'),
           width: '65',
         },
+        helpMessage: gettext('"Default" for local filesystem, otherwise "Selected"'),
       }],
     }, { /* data source/destination selection panel */
       type: 'nested',
@@ -511,13 +525,13 @@ define([
       id: 'columns',
       label: gettext('Columns to import'),
       cell: 'string',
-      deps: ['is_import'],
+      deps: ['is_import', 'table'],
       type: 'array',
       first_empty: false,
-      control: Backform.NodeListByNameControl.extend({
+      control: ImExNodeListByNameControl.extend({
         // By default, all the import columns should be selected
         initialize: function() {
-          Backform.NodeListByNameControl.prototype.initialize.apply(this, arguments);
+          ImExNodeListByNameControl.prototype.initialize.apply(this, arguments);
           var self = this,
             options = self.field.get('options'),
             op_vals = [];
@@ -571,7 +585,7 @@ define([
       node: 'column',
       url: 'nodes',
       group: gettext('Columns'),
-      select2: {
+      select2_own: {
         multiple: true,
         allowClear: false,
         placeholder: gettext('Columns for importing...'),
@@ -584,7 +598,7 @@ define([
       id: 'columns',
       label: gettext('Columns to export'),
       cell: 'string',
-      deps: ['is_import'],
+      deps: ['is_import', 'table'],
       type: 'array',
       control: 'node-list-by-name',
       first_empty: false,
@@ -837,6 +851,7 @@ define([
         var ds = mapper['datasource'][sel_ds] || null;
         ds_info = { 
           ds_type: ds.datasource_type,
+          dg_id: ds.gid,
           ds_id: ds._id,
           ds_name: ds.name,
           ds_bucket: sel_bucket,

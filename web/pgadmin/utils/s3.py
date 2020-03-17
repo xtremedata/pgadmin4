@@ -199,6 +199,7 @@ class S3(object):
             self._key_name = ds.key_name
             self._key_secret = decrypted_key_secret
             self.reload()
+        return ds
 
 
     def exists(self, bucket, obj):

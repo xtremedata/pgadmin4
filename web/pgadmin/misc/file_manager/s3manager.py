@@ -124,9 +124,15 @@ class S3Manager(Filemanager):
             try:
                 self.ds = DataSource.query.filter_by(
                         user_id=current_user.id,
-                        id=ds_info['ds_id']).first()
-            except:
+                        id=self.ds_info['ds_id']).first()
+            except Exception as e:
+                current_app.logger.debug("No authenticatation, exception:%s" % str(e))
                 pass
+
+            else:
+                self.s3.authenticate(self.ds.datagroup_id, self.ds.id)
+                current_app.logger.debug("Authenticated %s with datasource %s credentials" \
+                        % (self.TYPE, self.ds.id))
 
 
 
@@ -179,7 +185,6 @@ class S3Manager(Filemanager):
                     elif is_dir or sel_filter(desc) and supp_filter(desc):
                         objects[name] = desc
 
-        current_app.logger.info("####### path:%s, st:%i, res:%s, obj:%s" % (path,res_status, str(res), str(objects)))
         self.resume_windows_warning()
         return objects
 
