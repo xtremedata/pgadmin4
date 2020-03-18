@@ -193,12 +193,13 @@ class DatabaseView(PGChildNodeView):
                     self.conn = self.manager.connection()
 
                 # set template path for sql scripts
-                self.template_path = 'databases/sql/#{0}#'.format(
+                self.template_path = '#{0}#/databases/sql/#{1}#'.format(
+                    self.manager.server_type,
                     self.manager.version
                 )
 
                 if __debug__:
-                    current_app.logger.info("###### s:%s, v:%s, tmpl:%s" \
+                    current_app.logger.info("Generating Template path for server:%s, version:%s result:%s" \
                             % (self.manager.server_type, self.manager.version, self.template_path))
 
                 return f(self, *args, **kwargs)
@@ -510,6 +511,7 @@ class DatabaseView(PGChildNodeView):
         This function to return list of avialable encodings
         """
         res = [{'label': '', 'value': ''}]
+        current_app.logger.info("###### get_enc, template_path:%s" % self.template_path)
         SQL = render_template(
             "/".join([self.template_path, 'get_encodings.sql'])
         )

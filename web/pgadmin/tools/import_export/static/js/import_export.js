@@ -531,7 +531,8 @@ define([
         initialize: function() {
           ImExNodeListByNameControl.prototype.initialize.apply(this, arguments);
           var self = this,
-            options = self.field.get('options');
+            update_model = this.field.get('update_model'),
+            options = this.field.get('options');
 
           if (_.isFunction(options)) {
             try {
@@ -542,9 +543,14 @@ define([
               console.warn(e.stack || e);
             }
           }
+
+          if (update_model && _.isFunction(update_model)) {
+            update_model.apply(this, [options]);
+          }
         },
       }),
-      transform_hook: function(options) {
+      transform_hook: null,
+      update_model: function(options) {
         var op_vals = [];
         if (options) {
           for (var idx in options) {
@@ -575,6 +581,7 @@ define([
               'value': r.label,
               'image': image,
               'label': l,
+              'selected': true,
             });
           }
         });
@@ -605,42 +612,86 @@ define([
       cell: 'string',
       deps: ['is_import', 'table'],
       type: 'array',
-      control: 'node-list-by-name',
       first_empty: false,
+      control: ImExNodeListByNameControl.extend({
+        // By default, all the import columns should be selected
+        initialize: function() {
+          ImExNodeListByNameControl.prototype.initialize.apply(this, arguments);
+          var self = this,
+            update_model = this.field.get('update_model'),
+            options = this.field.get('options');
+
+          if (_.isFunction(options)) {
+            try {
+              options.apply(self);
+            } catch (e) {
+              // Do nothing
+              options = [];
+              console.warn(e.stack || e);
+            }
+          }
+
+          if (update_model && _.isFunction(update_model)) {
+            update_model.apply(this, [options]);
+          }
+        },
+      }),
+      transform_hook: null,
+      update_model: function(options) {
+        var op_vals = [];
+        if (options) {
+          for (var idx in options) {
+            op_vals.push((options[idx])['value']);
+          }
+        }
+
+        this.model.set('columns', op_vals);
+      },
+      transform: function(rows) {
+        var self = this,
+          node = self.field.get('schema_node'),
+          hook = self.field.get('transform_hook'),
+          res = [];
+
+        _.each(rows, function(r) {
+          // System columns with id less than 0 should not be added.
+          if ('_id' in r && r._id > 0) {
+            var l = (_.isFunction(node['node_label']) ?
+                (node['node_label']).apply(node, [r, self.model, self]) :
+                r.label),
+              image = (_.isFunction(node['node_image']) ?
+                (node['node_image']).apply(
+                  node, [r, self.model, self]
+                ) :
+                (node['node_image'] || ('icon-' + node.type)));
+            res.push({
+              'value': r.label,
+              'image': image,
+              'label': l,
+              'selected': true,
+            });
+          }
+        });
+
+        if (hook && _.isFunction(hook)) {
+          hook.apply(self, [res]);
+        }
+
+        return res;
+      },
       node: 'column',
       url: 'nodes',
       group: gettext('Columns'),
       select2: {
+      },
+      select2_own: {
         multiple: true,
-        allowClear: true,
+        allowClear: false,
         first_empty: false,
         placeholder: gettext('Colums for exporting...'),
         preserveSelectionOrder: true,
       },
       visible: 'exporting',
-      transform: function(rows) {
-        var self = this,
-          node = self.field.get('schema_node'),
-          res = [];
-
-        _.each(rows, function(r) {
-          var l = (_.isFunction(node['node_label']) ?
-              (node['node_label']).apply(node, [r, self.model, self]) :
-              r.label),
-            image = (_.isFunction(node['node_image']) ?
-              (node['node_image']).apply(
-                node, [r, self.model, self]
-              ) :
-              (node['node_image'] || ('icon-' + node.type)));
-          res.push({
-            'value': r.label,
-            'image': image,
-            'label': l,
-          });
-        });
-
-        return res;
-      },
       helpMessage: gettext('An optional list of columns to be copied. If no column list is specified, all columns of the table will be copied.'),
     }, {
       id: 'null_string',

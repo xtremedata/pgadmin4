@@ -40,7 +40,7 @@ class VersionedTemplateLoader(DispatchingJinjaLoader):
 
 
 def parse_version(template):
-    template_path_parts = template.split("#", 3)
+    template_path_parts = template.split("#", 4)
     if len(template_path_parts) == 1:
         return "", False
 
@@ -52,13 +52,32 @@ def parse_version(template):
         _, _, version, _ = template_path_parts
         return int(version), True
 
+    if len(template_path_parts) == 5:
+        _, _, _, version, _ = template_path_parts
+        return int(version), True
+
     raise TemplateNotFound(template)
 
 
 def parse_template(template):
-    template_path_parts = template.split("#", 3)
-    return template_path_parts[0].strip('\\').strip('/'), \
-        template_path_parts[-1].strip('\\').strip('/')
+    template_path_parts = template.split("#", 4)
+
+    if len(template_path_parts) == 1:
+        return (template_path_parts, "")
+
+    if len(template_path_parts) == 3:
+        return template_path_parts[0].strip('\\').strip('/'), \
+            template_path_parts[-1].strip('\\').strip('/')
+
+    if len(template_path_parts) == 4:
+        return template_path_parts[1].strip('\\').strip('/'), \
+            template_path_parts[-1].strip('\\').strip('/')
+
+    if len(template_path_parts) == 5:
+        return template_path_parts[2].strip('\\').strip('/'), \
+            template_path_parts[-1].strip('\\').strip('/')
+
+    return TemplateNotFound(template)
 
 
 def get_version_mapping(template):
@@ -81,6 +100,12 @@ def get_version_mapping_directories(server_type):
         return (
             {'name': "gpdb_5.0_plus", 'number': 80323},
             {'name': "5_plus", 'number': 80323},
+            {'name': "default", 'number': 0}
+        )
+
+    if server_type == 'dbx':
+        return (
+            {'name': "dbx_4.2_plus", 'number': 80102},
             {'name': "default", 'number': 0}
         )
 

@@ -34,3 +34,4 @@ LOG_FILE = os.path.join( \
 SESSION_DB_PATH = os.path.join(DATA_DIR, "lib", "sessions")
 STORAGE_DIR = os.path.join(DATA_DIR, "lib", "storage")
 HELP_PATH = '/usr/share/doc/pgadmin4-docs/en_US/html'
+EXPLAIN_TEMPLATE_LOADING = True
