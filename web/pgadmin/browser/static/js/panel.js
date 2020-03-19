@@ -183,19 +183,26 @@ define(
         }
       },
       handleVisibility: function(eventName) {
-        // Currently this function only works with dashboard panel but
-        // as per need it can be extended
-        if (this._type != 'dashboard' || _.isUndefined(pgAdmin.Dashboard))
+        var panel = null;
+
+        if (this._type == 'dashboard' && !_.isUndefined(pgAdmin.Dashboard)) {
+          // detected dashboard
+          panel = pgAdmin.Dashboard;
+        } else if (this._type == 'profiling' && !_.isUndefined(pgAdmin.Profiling)) {
+          // detected profiling
+          panel = pgAdmin.Profiling;
+        } else {
           return;
+        }
 
         if (eventName == 'panelClosed') {
           /* Pass the closed flag also */
-          pgAdmin.Dashboard.toggleVisibility(false, true);
+          panel.toggleVisibility(false, true);
         } else if (eventName == 'panelVisibilityChanged') {
           if (pgBrowser.tree) {
             var selectedNode = pgBrowser.tree.selected();
-            if (!_.isUndefined(pgAdmin.Dashboard)) {
-              pgAdmin.Dashboard.toggleVisibility(pgBrowser.panels.dashboard.panel.isVisible());
+            if (!_.isUndefined(panel)) {
+              panel.toggleVisibility(pgBrowser.panels.dashboard.panel.isVisible());
             }
             // Explicitly trigger tree selected event when we add the tab.
             if(selectedNode.length) {

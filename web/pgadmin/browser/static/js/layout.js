@@ -35,13 +35,17 @@ _.extend(pgBrowser, {
     docker.addPanel('properties', wcDocker.DOCK.STACKED, dashboardPanel, {
       tabOrientation: wcDocker.TAB.TOP,
     });
-    docker.addPanel('sql', wcDocker.DOCK.STACKED, dashboardPanel);
+    docker.addPanel(
+      'sql', wcDocker.DOCK.STACKED, dashboardPanel);
     docker.addPanel(
       'statistics', wcDocker.DOCK.STACKED, dashboardPanel);
     docker.addPanel(
       'dependencies', wcDocker.DOCK.STACKED, dashboardPanel);
     docker.addPanel(
       'dependents', wcDocker.DOCK.STACKED, dashboardPanel);
+    docker.addPanel(
+      'profiling', wcDocker.DOCK.STACKED, dashboardPanel);
+    docker.trigger('object selected', dashboardPanel);
   },
 
   save_current_layout: function(layout_id, docker) {

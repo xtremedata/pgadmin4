@@ -204,6 +204,7 @@ var webpackShimConfig = {
     'pgadmin.browser.utils': '/browser/js/utils',
     'pgadmin.browser.wizard': path.join(__dirname, './pgadmin/browser/static/js/wizard'),
     'pgadmin.dashboard': path.join(__dirname, './pgadmin/dashboard/static/js/dashboard'),
+    'pgadmin.profiling': path.join(__dirname, './pgadmin/profiling/static/js/profiling'),
     'pgadmin.datagrid': path.join(__dirname, './pgadmin/tools/datagrid/static/js/datagrid'),
     'pgadmin.file_manager': path.join(__dirname, './pgadmin/misc/file_manager/static/js/file_manager'),
     'pgadmin.file_utility': path.join(__dirname, './pgadmin/misc/file_manager/static/js/utility'),
