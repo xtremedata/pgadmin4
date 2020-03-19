@@ -445,16 +445,6 @@ class BaseTableView(PGChildNodeView, BasePartitionTable):
         else:
             # For Individual table stats
 
-            # Check if pgstattuple extension is already created?
-            # if created then only add extended stats
-            status, is_pgstattuple = self.conn.execute_scalar("""
-            SELECT (count(extname) > 0) AS is_pgstattuple
-            FROM pg_extension
-            WHERE extname='pgstattuple'
-            """)
-            if not status:
-                return internal_server_error(errormsg=is_pgstattuple)
-
             # Fetch Table name
             status, table_name = self.conn.execute_scalar(
                 render_template(
@@ -467,10 +457,10 @@ class BaseTableView(PGChildNodeView, BasePartitionTable):
 
             status, res = self.conn.execute_dict(
                 render_template(
-                    "/".join([self.table_template_path, 'stats.sql']),
+                    "/".join([self.table_template_path, 'profiling.sql']),
                     conn=self.conn, schema_name=schema_name,
                     table_name=table_name,
-                    is_pgstattuple=is_pgstattuple, tid=tid
+                    tid=tid
                 )
             )
 
