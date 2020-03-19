@@ -421,6 +421,7 @@ module.exports = [{
         ',pgadmin.browser.object_statistics' +
         ',pgadmin.browser.dependencies' +
         ',pgadmin.browser.dependents' +
+        ',pgadmin.browser.profiling' +
         ',pgadmin.browser.object_sql' +
         ',pgadmin.browser.bgprocess' +
         ',pgadmin.node.data_group' +

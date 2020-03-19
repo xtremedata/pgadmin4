@@ -65,6 +65,7 @@ define('pgadmin.node.datasource', [
       dropPriority: 5,
       hasStatistics: false,
       hasCollectiveStatistics: false,
+      hasProfiling: false,
       can_expand: true,
       Init: function() {
 

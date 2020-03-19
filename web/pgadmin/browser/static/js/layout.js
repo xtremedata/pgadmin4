@@ -45,7 +45,6 @@ _.extend(pgBrowser, {
       'dependents', wcDocker.DOCK.STACKED, dashboardPanel);
     docker.addPanel(
       'profiling', wcDocker.DOCK.STACKED, dashboardPanel);
-    docker.trigger('object selected', dashboardPanel);
   },
 
   save_current_layout: function(layout_id, docker) {

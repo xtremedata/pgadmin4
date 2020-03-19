@@ -72,6 +72,11 @@ class BaseTableView(PGChildNodeView, BasePartitionTable):
       - Returns the statistics for a particular table if tid is specified,
         otherwise it will return statistics for all the tables in that
         schema.
+
+    * get_table_profiling(self, scid, tid):
+      - This function get the profiling and return ajax response
+        for the table node.
+
     * get_reverse_engineered_sql(self, did, scid, tid, main_sql, data):
       - This function will creates reverse engineered sql for
         the table object.
@@ -348,6 +353,75 @@ class BaseTableView(PGChildNodeView, BasePartitionTable):
         Returns the statistics for a particular table if tid is specified,
         otherwise it will return statistics for all the tables in that
         schema.
+        """
+
+        # Fetch schema name
+        status, schema_name = self.conn.execute_scalar(
+            render_template(
+                "/".join([self.table_template_path, 'get_schema.sql']),
+                conn=self.conn, scid=scid
+            )
+        )
+        if not status:
+            return internal_server_error(errormsg=schema_name)
+
+        if tid is None:
+            status, res = self.conn.execute_dict(
+                render_template(
+                    "/".join([self.table_template_path,
+                              'coll_table_stats.sql']), conn=self.conn,
+                    schema_name=schema_name
+                )
+            )
+        else:
+            # For Individual table stats
+
+            # Check if pgstattuple extension is already created?
+            # if created then only add extended stats
+            status, is_pgstattuple = self.conn.execute_scalar("""
+            SELECT (count(extname) > 0) AS is_pgstattuple
+            FROM pg_extension
+            WHERE extname='pgstattuple'
+            """)
+            if not status:
+                return internal_server_error(errormsg=is_pgstattuple)
+
+            # Fetch Table name
+            status, table_name = self.conn.execute_scalar(
+                render_template(
+                    "/".join([self.table_template_path, 'get_table.sql']),
+                    conn=self.conn, scid=scid, tid=tid
+                )
+            )
+            if not status:
+                return internal_server_error(errormsg=table_name)
+
+            status, res = self.conn.execute_dict(
+                render_template(
+                    "/".join([self.table_template_path, 'stats.sql']),
+                    conn=self.conn, schema_name=schema_name,
+                    table_name=table_name,
+                    is_pgstattuple=is_pgstattuple, tid=tid
+                )
+            )
+
+        if not status:
+            return internal_server_error(errormsg=res)
+
+        return make_json_response(
+            data=res,
+            status=200
+        )
+
+    def get_table_profiling(self, scid, tid):
+        """
+        Profiling
+
+        Args:
+            scid: Schema Id
+            tid: Table Id
+
+        Returns the profiling for a particular table if tid is specified.
         """
 
         # Fetch schema name

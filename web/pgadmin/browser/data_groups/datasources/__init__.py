@@ -207,6 +207,8 @@ class DataSourceView(NodeView):
             {'get': 'dependencies'}],
         'dependent': [
             {'get': 'dependents'}],
+        'profiling': [
+            {'get': 'profiling'}],
         'children': [
             {'get': 'children'}],
         'supported_datasources.js': [
@@ -482,6 +484,10 @@ class DataSourceView(NodeView):
 
     @login_required
     def dependents(self, gid, sid):
+        return make_json_response(status=422)
+
+    @login_required
+    def profiling(self, gid, sid):
         return make_json_response(status=422)
 
     def supported_datasources(self, **kwargs):

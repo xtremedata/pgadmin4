@@ -250,6 +250,17 @@ define('pgadmin.browser', [
         content: '<div class="negative-space p-2"><div class="alert alert-info pg-panel-message pg-panel-depends-message">' + select_object_msg + '</div><div class="pg-panel-dependents-container d-none"></div></div>',
         events: panelEvents,
       }),
+      // Profiling of the object
+      'profiling': new pgAdmin.Browser.Panel({
+        name: 'profiling',
+        title: gettext('Profiling'),
+        icon: '',
+        width: 500,
+        isCloseable: false,
+        isPrivate: true,
+        content: '<div class="negative-space p-2"><div class="alert alert-info pg-panel-message pg-panel-depends-message">' + select_object_msg + '</div><div class="pg-panel-profiling-container d-none"></div></div>',
+        events: panelEvents,
+      }),
     },
     // We also support showing dashboards, HTML file, external URL
     frames: {},

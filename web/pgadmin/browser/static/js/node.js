@@ -947,6 +947,7 @@ define('pgadmin.browser.node', [
         // + Properties
         // + Query (if applicable, otherwise empty)
         // + Dependents
+        // + Profiling
         // + Dependencies
         // + Statistics
         var b = browser || pgBrowser,
@@ -1359,7 +1360,8 @@ define('pgadmin.browser.node', [
                   pnlSql = pgBrowser.docker.findPanels('sql')[0],
                   pnlStats = pgBrowser.docker.findPanels('statistics')[0],
                   pnlDependencies = pgBrowser.docker.findPanels('dependencies')[0],
-                  pnlDependents = pgBrowser.docker.findPanels('dependents')[0];
+                  pnlDependents = pgBrowser.docker.findPanels('dependents')[0],
+                  pnlProfiling = pgBrowser.docker.findPanels('profiling')[0];
 
                 if (pnlProperties)
                   $(pnlProperties).removeData('node-prop');
@@ -1371,6 +1373,8 @@ define('pgadmin.browser.node', [
                   $(pnlDependencies).removeData('node-prop');
                 if (pnlDependents)
                   $(pnlDependents).removeData('node-prop');
+                if (pnlProfiling)
+                  $(pnlProfiling).removeData('node-prop');
               },
               error: function(m, jqxhr) {
                 Alertify.pgNotifier(

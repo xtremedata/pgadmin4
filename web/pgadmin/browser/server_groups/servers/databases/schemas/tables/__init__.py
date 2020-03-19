@@ -270,6 +270,7 @@ class TableView(BaseTableView, DataTypeReader, VacuumSettings,
         'stats': [{'get': 'statistics'}, {'get': 'statistics'}],
         'dependency': [{'get': 'dependencies'}],
         'dependent': [{'get': 'dependents'}],
+        'profiling': [{'get': 'profiling'}],
         'get_oftype': [{'get': 'get_oftype'}, {'get': 'get_oftype'}],
         'get_inherits': [{'get': 'get_inherits'}, {'get': 'get_inherits'}],
         'get_relations': [{'get': 'get_relations'}, {'get': 'get_relations'}],
@@ -1344,6 +1345,21 @@ class TableView(BaseTableView, DataTypeReader, VacuumSettings,
             tid: Table ID
         """
         return BaseTableView.get_table_dependencies(self, tid)
+
+    @BaseTableView.check_precondition
+    def profiling(self, gid, sid, did, scid, tid):
+        """
+        This function get the profiling and return ajax response
+        for the table node.
+
+        Args:
+            gid: Server Group ID
+            sid: Server ID
+            did: Database ID
+            scid: Schema ID
+            tid: Table ID
+        """
+        return BaseTableView.get_table_profiling(self, scid, tid)
 
     @BaseTableView.check_precondition
     def sql(self, gid, sid, did, scid, tid):

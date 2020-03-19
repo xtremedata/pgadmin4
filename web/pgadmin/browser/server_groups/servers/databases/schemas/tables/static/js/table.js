@@ -30,6 +30,7 @@ define('pgadmin.node.table', [
         type: 'coll-table',
         columns: ['name', 'relowner', 'is_partitioned', 'description'],
         hasStatistics: true,
+        hasProfiling: false,
         statsPrettifyFields: [gettext('Size'), gettext('Indexes size'), gettext('Table size'),
           gettext('TOAST table size'), gettext('Tuple length'),
           gettext('Dead tuple length'), gettext('Free space')],
@@ -46,6 +47,8 @@ define('pgadmin.node.table', [
       hasSQL: true,
       hasDepends: true,
       hasStatistics: true,
+      // todo: to change to a function depending on server type !!!!
+      hasProfiling: true,
       statsPrettifyFields: [gettext('Size'), gettext('Indexes size'), gettext('Table size'),
         gettext('TOAST table size'), gettext('Tuple length'),
         gettext('Dead tuple length'), gettext('Free space')],
