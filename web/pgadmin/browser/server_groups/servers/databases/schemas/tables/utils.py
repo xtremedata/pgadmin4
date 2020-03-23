@@ -415,55 +415,20 @@ class BaseTableView(PGChildNodeView, BasePartitionTable):
 
     def get_table_profiling(self, scid, tid):
         """
-        Profiling
+        Returns profiling for prvided table id.
 
         Args:
             scid: Schema Id
             tid: Table Id
-
-        Returns the profiling for a particular table if tid is specified.
         """
 
-        # Fetch schema name
-        status, schema_name = self.conn.execute_scalar(
-            render_template(
-                "/".join([self.table_template_path, 'get_schema.sql']),
-                conn=self.conn, scid=scid
-            )
-        )
-        if not status:
-            return internal_server_error(errormsg=schema_name)
+        # Specific sql to fetch profiling
+        SQL = render_template(
+                "/".join([self.table_template_path, 'profiling.sql']),
+                conn=self.conn,
+                tid=tid)
 
-        if tid is None:
-            status, res = self.conn.execute_dict(
-                render_template(
-                    "/".join([self.table_template_path,
-                              'coll_table_stats.sql']), conn=self.conn,
-                    schema_name=schema_name
-                )
-            )
-        else:
-            # For Individual table stats
-
-            # Fetch Table name
-            status, table_name = self.conn.execute_scalar(
-                render_template(
-                    "/".join([self.table_template_path, 'get_table.sql']),
-                    conn=self.conn, scid=scid, tid=tid
-                )
-            )
-            if not status:
-                return internal_server_error(errormsg=table_name)
-
-            status, res = self.conn.execute_dict(
-                render_template(
-                    "/".join([self.table_template_path, 'profiling.sql']),
-                    conn=self.conn, schema_name=schema_name,
-                    table_name=table_name,
-                    tid=tid
-                )
-            )
-
+        status, res = self.conn.execute_dict(SQL)
         if not status:
             return internal_server_error(errormsg=res)
 

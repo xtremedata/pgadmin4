@@ -9,473 +9,249 @@
 
 define('misc.profiling', [
   'sources/gettext', 'underscore', 'jquery', 'backbone',
-  'sources/pgadmin', 'pgadmin.browser', 'pgadmin.backgrid', 'alertify',
-  'sources/size_prettify',
-  'sources/misc/profiling/profiling',
-], function(
-  gettext, _, $, Backbone, pgAdmin, pgBrowser, Backgrid, Alertify, sizePrettify,
-  profilingHelper
-) {
+  'sources/pgadmin', 'pgadmin.browser', 'pgadmin.alertifyjs', 'pgadmin.backgrid',
+  'sources/utils',
+], function(gettext, _, $, Backbone, pgAdmin, pgBrowser, Alertify, Backgrid, pgadminUtils) {
 
   if (pgBrowser.NodeProfiling)
     return pgBrowser.NodeProfiling;
 
+  var wcDocker = window.wcDocker;
+
   pgBrowser.NodeProfiling = pgBrowser.NodeProfiling || {};
-
-  if (pgBrowser.NodeProfiling.initialized) {
-    return pgBrowser.NodeProfiling;
-  }
-
-  var SizeFormatter = Backgrid.SizeFormatter = function() {};
-  _.extend(SizeFormatter.prototype, {
-    /**
-       Takes a raw value from a model and returns the human readable formatted
-       string for display.
-
-       @member Backgrid.SizeFormatter
-       @param {*} rawData
-       @param {Backbone.Model} model Used for more complicated formatting
-       @return {*}
-    */
-    fromRaw: function(rawData) {
-      return sizePrettify(rawData);
-    },
-    toRaw: function(formattedData) {
-      return formattedData;
-    },
-  });
-
-  var PGBooleanCell = Backgrid.Extension.SwitchCell.extend({
-      defaults: _.extend({}, Backgrid.Extension.SwitchCell.prototype.defaults),
-    }),
-    typeCellMapper = {
-      // boolean
-      16: PGBooleanCell,
-      // int8
-      20: Backgrid.IntegerCell,
-      // int2
-      21: Backgrid.IntegerCell,
-      // int4
-      23: Backgrid.IntegerCell,
-      // float4
-      700: Backgrid.NumberCell,
-      // float8
-      701: Backgrid.NumberCell,
-      // numeric
-      1700: Backgrid.NumberCell,
-      // abstime
-      702: Backgrid.DatetimeCell,
-      // reltime
-      703: Backgrid.DatetimeCell,
-      // date
-      1082: Backgrid.DatetimeCell.extend({
-        includeDate: true,
-        includeTime: false,
-        includeMilli: false,
-      }),
-      // time
-      1083: Backgrid.DatetimeCell.extend({
-        includeDate: false,
-        includeTime: true,
-        includeMilli: true,
-      }),
-      // timestamp
-      1114: Backgrid.DatetimeCell.extend({
-        includeDate: true,
-        includeTime: true,
-        includeMilli: true,
-      }),
-      // timestamptz
-      1184: 'string'
-      /* Backgrid.DatetimeCell.extend({
-              includeDate: true, includeTime: true, includeMilli: true
-            }) */
-      ,
-      1266: 'string',
-      /* Backgrid.DatetimeCell.extend({
-            includeDate: false, includeTime: true, includeMilli: true
-          }) */
-    },
-    GRID_CLASSES = 'backgrid presentation table table-bordered table-noouter-border table-hover',
-    wcDocker = window.wcDocker;
-
-  _.extend(
-    PGBooleanCell.prototype.defaults.options, {
-      onText: gettext('True'),
-      offText: gettext('False'),
-      onColor: 'success',
-      offColor: 'primary',
-      size: 'mini',
-    }
-  );
 
   _.extend(pgBrowser.NodeProfiling, {
     init: function() {
       if (this.initialized) {
         return;
       }
-      this.initialized = true;
-      _.bindAll(
-        this,
-        'showProfiling', 'panelVisibilityChanged',
-        '__createMultiLineProfiling', '__createSingleLineProfiling', '__loadMoreRows');
 
-      _.extend(
-        this, {
-          initialized: true,
-          collection: new(Backbone.Collection)(null),
-          statistic_columns: [{
+      this.initialized = true;
+      this.profilingPanel = pgBrowser.docker.findPanels('profiling')[0];
+      /* Parameter is used to set the proper label of the
+       * backgrid header cell.
+       */
+      _.bindAll(this, 'showProfiling', '__loadMoreRows', '__appendGridToPanel');
+
+      // Defining Backbone Model for Profiling.
+      var Model = Backbone.Model.extend({
+        defaults: {
+          icon: 'icon-unknown',
+          type: undefined,
+          name: undefined,
+          /* field contains 'Database Name' for 'Tablespace and Role node',
+           * for other node it contains 'Restriction'.
+           */
+          field: undefined,
+        },
+        // This function is used to fetch/set the icon for the type(Function, Role, Database, ....)
+        parse: function(res) {
+          var node = pgBrowser.Nodes[res.type];
+          if(res.icon == null || res.icon == '') {
+            res.icon = node ? (_.isFunction(node['node_image']) ?
+              (node['node_image']).apply(node, [null, null]) :
+              (node['node_image'] || ('icon-' + res.type))) :
+              ('icon-' + res.type);
+          }
+          res.type = pgadminUtils.titleize(res.type.replace(/_/g, ' '), true);
+          return res;
+        },
+      });
+
+      // Defining Backbone Collection for Profiling.
+      this.profilingCollection = new(Backbone.Collection.extend({
+        model: Model,
+      }))(null);
+
+      pgBrowser.Events.on('pgadmin-browser:tree:selected', this.showProfiling);
+      pgBrowser.Events.on('pgadmin-browser:tree:refreshing', this.refreshProfiling, this);
+      this.__appendGridToPanel();
+    },
+
+    /* Function is used to create and render backgrid with
+       * empty collection. We just want to add backgrid into the
+       * panel only once.
+    */
+    __appendGridToPanel: function() {
+      var $container = this.profilingPanel.layout().scene().find('.pg-panel-content'),
+        $gridContainer = $container.find('.pg-panel-profiling-container'),
+        grid = new Backgrid.Grid({
+          emptyText: 'No data found',
+          columns: [{
+            name: 'type',
+            label: gettext('Type'),
+            // Extend it to render the icon as per the type.
+            cell: Backgrid.Cell.extend({
+              render: function() {
+                Backgrid.Cell.prototype.render.apply(this, arguments);
+                this.$el.prepend($('<i>', {
+                  class: 'wcTabIcon ' + this.model.get('icon'),
+                }));
+                return this;
+              },
+            }),
             editable: false,
-            name: 'profiling',
-            label: gettext('Profiling'),
+          },
+          {
+            name: 'name',
+            label: gettext('Name'),
             cell: 'string',
-            headerCell: Backgrid.Extension.CustomHeaderCell,
-            cellHeaderClasses: 'width_percent_25',
-          }, {
             editable: false,
-            name: 'value',
-            label: gettext('Value'),
+          },
+          {
+            name: 'field',
+            label: '', // label kept blank, it will change dynamically
             cell: 'string',
-          }],
-          panel: pgBrowser.docker.findPanels('profiling'),
-          columns: null,
-          grid: null,
+            editable: false,
+          },
+          ],
+
+          collection: this.profilingCollection,
+          className: 'backgrid table presentation table-bordered table-noouter-border table-hover',
         });
 
-      var self = this;
+      // Condition is used to save grid object to change the label of the header.
+      this.profilingGrid = grid;
 
-      // We will listen to the visibility change of the profiling panel
-      pgBrowser.Events.on(
-        'pgadmin-browser:panel-profiling:' +
-        wcDocker.EVENT.VISIBILITY_CHANGED,
-        this.panelVisibilityChanged
-      );
+      $gridContainer.append(grid.render().el);
 
-      pgBrowser.Events.on(
-        'pgadmin:browser:node:updated',
-        function() {
-          if (this.panel && this.panel.length) {
-            $(this.panel[0]).data('node-prop', '');
-            this.panelVisibilityChanged(this.panel[0]);
-          }
-        }, this
-      );
-
-      // Hmm.. Did we find the profiling panel, and is it visible (openned)?
-      // If that is the case - we need to listen the browser tree selection
-      // events.
-      if (this.panel.length == 0) {
-        pgBrowser.Events.on(
-          'pgadmin-browser:panel-profiling:' + wcDocker.EVENT.INIT,
-          function() {
-            self.panel = pgBrowser.docker.findPanels('profiling');
-            if (self.panel[0].isVisible() ||
-              self.panel.length != 1) {
-              pgBrowser.Events.on(
-                'pgadmin-browser:tree:selected', this.showProfiling
-              );
-              pgBrowser.Events.on(
-                'pgadmin-browser:tree:refreshing', this.refreshProfiling, this
-              );
-            }
-          }.bind(this)
-        );
-      } else {
-        if (self.panel[0].isVisible() ||
-          self.panel.length != 1) {
-          pgBrowser.Events.on(
-            'pgadmin-browser:tree:selected', this.showProfiling
-          );
-          pgBrowser.Events.on(
-            'pgadmin-browser:tree:refreshing', this.refreshProfiling, this
-          );
-        }
-      }
-      if (self.panel.length > 0 && self.panel[0].isVisible()) {
-        pgBrowser.Events.on(
-          'pgadmin-browser:tree:selected', this.showProfiling
-        );
-        pgBrowser.Events.on(
-          'pgadmin-browser:tree:refreshing', this.refreshProfiling, this
-        );
-      }
+      return true;
     },
 
     // Fetch the actual data and update the collection
-    __updateCollection: function(url, node, item, node_type) {
-      var $container = this.panel[0].layout().scene().find('.pg-panel-content'),
+    showProfiling: function(item, data, node) {
+      let self = this,
+        msg = gettext('Please select an object in the tree view.'),
+        panel = this.profilingPanel,
+        $container = panel.layout().scene().find('.pg-panel-content'),
         $msgContainer = $container.find('.pg-panel-profiling-message'),
         $gridContainer = $container.find('.pg-panel-profiling-container'),
-        panel = this.panel,
-        self = this,
-        msg = '',
-        n_type = node_type;
+        treeHierarchy = node.getTreeNodeHierarchy(item),
+        n_type = data._type,
+        url = node.generate_url(item, 'profiling', data, true);
 
       if (node) {
-        msg = gettext('No profiling are available for the selected object.');
-        /* We fetch the profiling only for those node who set the parameter
-         * showProfiling function.
+        /* We fetch the Profiling tab only for
+         * those node who set the parameter hasProfiling to true.
          */
+        msg = gettext('No profiling information is available for the selected object.');
+        if (node.hasProfiling) {
+          /* Updating the label for the 'field' type of the backbone model.
+           * Label should be "Database" if the node type is tablespace or role
+           * and profiling tab is selected. For other nodes and dependencies tab
+           * it should be 'Restriction'.
+           */
+          if (node.type == 'tablespace' || node.type == 'role') {
+            this.profilingGrid.columns.models[2].set({
+              'label': gettext('Database'),
+            });
+          } else {
+            this.profilingGrid.columns.models[2].set({
+              'label': gettext('Restriction'),
+            });
+          }
 
-        // Avoid unnecessary reloads
-        var treeHierarchy = node.getTreeNodeHierarchy(item);
-        var cache_flag = {
-          node_type: node_type,
-          url: url,
-        };
-        if (_.isEqual($(panel[0]).data('node-prop'), cache_flag)) {
-          return;
-        }
-        // Cache the current IDs for next time
-        $(panel[0]).data('node-prop', cache_flag);
+          // Hide message container and show grid container.
+          $msgContainer.addClass('d-none');
+          $gridContainer.removeClass('d-none');
 
-        if (profilingHelper.nodeHasProfiling(node, item)) {
-          msg = '';
-          var timer;
-          // Set the url, fetch the data and update the collection
-          var ajaxHook = function() {
-            $.ajax({
-              url: url,
-              type: 'GET',
-              beforeSend: function(xhr) {
-                xhr.setRequestHeader(
-                  pgAdmin.csrf_token_header, pgAdmin.csrf_token
+          var timer = '';
+          $.ajax({
+            url: url,
+            type: 'GET',
+            beforeSend: function(xhr) {
+              xhr.setRequestHeader(pgAdmin.csrf_token_header, pgAdmin.csrf_token);
+              // Generate a timer for the request
+              timer = setTimeout(function() {
+                // notify user if request is taking longer than 1 second
+
+                $msgContainer.text(gettext('Fetching profiling information from the server...'));
+                $msgContainer.removeClass('d-none');
+                msg = '';
+
+              }, 1000);
+            },
+          })
+            .done(function(res) {
+              clearTimeout(timer);
+
+              if (res.data) {
+
+                if (!$msgContainer.hasClass('d-none')) {
+                  $msgContainer.addClass('d-none');
+                }
+                $gridContainer.removeClass('d-none');
+
+                self.profilingData = res;
+
+                // Load only 100 rows
+                self.profilingCollection.reset(self.profilingData.splice(1, 100), {parse: true});
+
+                // Load more rows on scroll down
+                pgBrowser.Events.on(
+                  'pgadmin-browser:panel-profiling:' +
+                wcDocker.EVENT.SCROLLED,
+                  self.__loadMoreRows
                 );
-                // Generate a timer for the request
-                timer = setTimeout(function() {
-                  // notify user if request is taking longer than 1 second
 
-                  $msgContainer.text(gettext('Retrieving data from the server...'));
-                  $msgContainer.removeClass('d-none');
-                  if (self.grid) {
-                    self.grid.remove();
-                  }
-                }, 1000);
-              },
+              } else {
+                // Do not listen the scroll event
+                pgBrowser.Events.off(
+                  'pgadmin-browser:panel-profiling:' +
+                wcDocker.EVENT.SCROLLED
+                );
+
+                self.profilingCollection.reset({silent: true});
+                $msgContainer.text(msg);
+                $msgContainer.removeClass('d-none');
+
+                if (!$gridContainer.hasClass('d-none')) {
+                  $gridContainer.addClass('d-none');
+                }
+              }
+
+
             })
-              .done(function(res) {
-              // clear timer and reset message.
-                clearTimeout(timer);
-                $msgContainer.text('');
-                if (res.data) {
-                  var data = self.data = res.data;
-                  if (node.hasCollectiveProfiling || data['rows'].length > 1) {
-                  // Listen scroll event to load more rows
-                    pgBrowser.Events.on(
-                      'pgadmin-browser:panel-profiling:' +
-                    wcDocker.EVENT.SCROLLED,
-                      self.__loadMoreRows
-                    );
-                    self.__createMultiLineProfiling.call(self, data, node.statsPrettifyFields);
-                  } else {
-                  // Do not listen the scroll event
-                    pgBrowser.Events.off(
-                      'pgadmin-browser:panel-profiling:' +
-                    wcDocker.EVENT.SCROLLED,
-                      self.__loadMoreRows
-                    );
-                    self.__createSingleLineProfiling.call(self, data, node.statsPrettifyFields);
-                  }
-
-                  if (self.grid) {
-                    delete self.grid;
-                    self.grid = null;
-                  }
-
-                  self.grid = new Backgrid.Grid({
-                    emptyText: 'No data found',
-                    columns: self.columns,
-                    collection: self.collection,
-                    className: GRID_CLASSES,
-                  });
-                  self.grid.render();
-                  $gridContainer.empty();
-                  $gridContainer.append(self.grid.$el);
-
-                  if (!$msgContainer.hasClass('d-none')) {
-                    $msgContainer.addClass('d-none');
-                  }
-                  $gridContainer.removeClass('d-none');
-
-                } else if (res.info) {
-                  if (!$gridContainer.hasClass('d-none')) {
-                    $gridContainer.addClass('d-none');
-                  }
-                  $msgContainer.text(res.info);
-                  $msgContainer.removeClass('d-none');
-                }
-              })
-              .fail(function(xhr, error, message) {
-                var _label = treeHierarchy[n_type].label;
-                pgBrowser.Events.trigger(
-                  'pgadmin:node:retrieval:error', 'profiling', xhr, error, message, item
-                );
-                if (!Alertify.pgHandleItemError(xhr, error, message, {
-                  item: item,
-                  info: treeHierarchy,
-                })) {
-                  Alertify.pgNotifier(
-                    error, xhr,
-                    gettext('Error retrieving the information - %s', message || _label),
-                    function(msg) {
-                      if(msg === 'CRYPTKEY_SET') {
-                        ajaxHook();
-                      } else {
-                        console.warn(arguments);
-                      }
+            .fail(function(xhr, error, message) {
+              var _label = treeHierarchy[n_type].label;
+              pgBrowser.Events.trigger(
+                'pgadmin:node:retrieval:error', 'depends', xhr, error, message
+              );
+              if (!Alertify.pgHandleItemError(xhr, error, message, {
+                item: item,
+                info: treeHierarchy,
+              })) {
+                Alertify.pgNotifier(
+                  error, xhr,
+                  gettext('Error retrieving data from the server: %s', message || _label),
+                  function(msg) {
+                    if(msg === 'CRYPTKEY_SET') {
+                      self.showProfiling(item, data, node);
+                    } else {
+                      console.warn(arguments);
                     }
-                  );
-                }
-                // show failed message.
-                $msgContainer.text(gettext('Failed to retrieve data from the server.'));
-              });
-          };
-
-          ajaxHook();
+                  });
+              }
+              // show failed message.
+              $msgContainer.text(gettext('Failed to retrieve data from the server.'));
+            });
         }
-      }
-      if (msg != '') {
-        // Hide the grid container and show the default message container
-        if (!$gridContainer.hasClass('d-none'))
-          $gridContainer.addClass('d-none');
-        $msgContainer.removeClass('d-none');
-
+      } if (msg != '') {
         $msgContainer.text(msg);
-      }
-    },
-    refreshProfiling: function(item, data, node) {
-      var that = this,
-        cache_flag = {
-          node_type: data._type,
-          url: node.generate_url(item, 'profiling', data, true),
-        };
-
-      if (_.isEqual($(that.panel[0]).data('node-prop'), cache_flag)) {
-        // Reset the current item selection
-        $(that.panel[0]).data('node-prop', '');
-        that.showProfiling(item, data, node);
-      }
-    },
-    showProfiling: function(item, data, node) {
-      var self = this;
-      if (!node) {
-        return;
-      }
-      /**
-       * We can't start fetching the profiling immediately, it is possible -
-       * the user is just using keyboards to select the node, and just
-       * traversing through.
-       *
-       * We will wait for some time before fetching the profiling for the
-       * selected node.
-       **/
-      if (node) {
-        if (self.timeout) {
-          clearTimeout(self.timeout);
+        $msgContainer.removeClass('d-none');
+        if (!$gridContainer.hasClass('d-none')) {
+          $gridContainer.addClass('d-none');
         }
-        self.timeout = setTimeout(
-          function() {
-            self.__updateCollection.call(
-              self, node.generate_url(item, 'profiling', data, true), node, item, data._type
-            );
-          }, 400);
       }
     },
-
-    __createMultiLineProfiling: function(data, prettifyFields) {
-      var rows = data['rows'],
-        columns = data['columns'];
-
-      this.columns = [];
-      for (var idx in columns) {
-        var rawColumn = columns[idx],
-          cell_type = typeCellMapper[rawColumn['type_code']] || 'string';
-
-        // Don't show PID comma separated
-        if (rawColumn['name'] == 'PID') {
-          cell_type = cell_type.extend({
-            orderSeparator: '',
-          });
-        }
-
-        var col = {
-          editable: false,
-          name: rawColumn['name'],
-          cell: cell_type,
-        };
-        if (_.indexOf(prettifyFields, rawColumn['name']) != -1) {
-          col['formatter'] = SizeFormatter;
-        }
-        this.columns.push(col);
-
-      }
-
-      this.collection.reset(rows.splice(0, 50));
-    },
-
     __loadMoreRows: function() {
-      let elem = $('.pg-panel-profiling-container').closest('.wcFrameCenter')[0];
+      if (this.profilingPanel.length < 1) return ;
+
+      let elem = this.profilingPanel.$container.find('.pg-panel-profiling-container').closest('.wcFrameCenter')[0];
       if ((elem.scrollHeight - 10) < elem.scrollTop + elem.offsetHeight) {
-        var rows = this.data['rows'];
-        if (rows.length > 0) {
-          this.collection.add(rows.splice(0, 50));
+        if (this.profilingData.length > 0) {
+          this.profilingCollection.add(this.profilingData.splice(0, 100), {parse: true});
         }
-      }
-    },
-
-    __createSingleLineProfiling: function(data, prettifyFields) {
-      var row = data['rows'][0],
-        columns = data['columns'],
-        res = [],
-        name;
-
-      this.columns = this.statistic_columns;
-      for (var idx in columns) {
-        name = (columns[idx])['name'];
-        res.push({
-          'profiling': name,
-          // Check if row is undefined?
-          'value': row && row[name] ?
-            ((_.indexOf(prettifyFields, name) != -1) ?
-              sizePrettify(row[name]) : row[name]) : null,
-        });
-      }
-
-      this.collection.reset(res);
-    },
-
-    panelVisibilityChanged: function(panel) {
-      if (panel.isVisible()) {
-        var t = pgBrowser.tree,
-          i = t.selected(),
-          d = i && t.itemData(i),
-          n = i && d && pgBrowser.Nodes[d._type];
-
-        pgBrowser.NodeProfiling.showProfiling.apply(
-          pgBrowser.NodeProfiling, [i, d, n]
-        );
-
-        // We will start listening the tree selection event.
-        pgBrowser.Events.on(
-          'pgadmin-browser:tree:selected',
-          pgBrowser.NodeProfiling.showProfiling
-        );
-        pgBrowser.Events.on(
-          'pgadmin-browser:tree:refreshing',
-          pgBrowser.NodeProfiling.refreshProfiling,
-          this
-        );
-      } else {
-        // We don't need to listen the tree item selection event.
-        pgBrowser.Events.off(
-          'pgadmin-browser:tree:selected',
-          pgBrowser.NodeProfiling.showProfiling
-        );
-        pgBrowser.Events.off(
-          'pgadmin-browser:tree:refreshing',
-          pgBrowser.NodeProfiling.refreshProfiling,
-          this
-        );
       }
     },
   });
