@@ -424,9 +424,9 @@ class BaseTableView(PGChildNodeView, BasePartitionTable):
 
         # Specific sql to fetch profiling
         SQL = render_template(
-                "/".join([self.table_template_path, 'profiling.sql']),
-                conn=self.conn,
-                tid=tid)
+            "/".join([self.table_template_path, 'profiling.sql']),
+            conn=self.conn,
+            tid=tid)
 
         status, res = self.conn.execute_dict(SQL)
         if not status:

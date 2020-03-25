@@ -34,6 +34,9 @@ define('pgadmin.node.table', [
         statsPrettifyFields: [gettext('Size'), gettext('Indexes size'), gettext('Table size'),
           gettext('TOAST table size'), gettext('Tuple length'),
           gettext('Dead tuple length'), gettext('Free space')],
+        profilingPrettifyFields: [gettext('Size'), gettext('Indexes size'), gettext('Table size'),
+          gettext('TOAST table size'), gettext('Tuple length'),
+          gettext('Dead tuple length'), gettext('Free space')],
         canDrop: SchemaChildTreeNode.isTreeItemOfChildOfSchema,
         canDropCascade: SchemaChildTreeNode.isTreeItemOfChildOfSchema,
       });
@@ -50,6 +53,9 @@ define('pgadmin.node.table', [
       // todo: to change to a function depending on server type !!!!
       hasProfiling: true,
       statsPrettifyFields: [gettext('Size'), gettext('Indexes size'), gettext('Table size'),
+        gettext('TOAST table size'), gettext('Tuple length'),
+        gettext('Dead tuple length'), gettext('Free space')],
+      profilingPrettifyFields: [gettext('Size'), gettext('Indexes size'), gettext('Table size'),
         gettext('TOAST table size'), gettext('Tuple length'),
         gettext('Dead tuple length'), gettext('Free space')],
       sqlAlterHelp: 'sql-altertable.html',
