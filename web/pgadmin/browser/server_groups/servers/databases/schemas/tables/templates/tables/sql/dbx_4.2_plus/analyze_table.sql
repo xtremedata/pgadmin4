@@ -1,0 +1,1 @@
+ANALYZE {{table_name}};

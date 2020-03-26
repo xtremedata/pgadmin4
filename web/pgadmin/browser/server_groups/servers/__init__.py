@@ -616,7 +616,7 @@ class ServerNode(PGChildNodeView):
                 self.node_type,
                 connected=connected,
                 user=manager.user_info if connected else None,
-                server_type='pg'  # default server type
+                server_type=manager.server_type if connected else 'pg'
             )
         )
 

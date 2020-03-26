@@ -119,6 +119,16 @@ define('pgadmin.node.table', [
           applies: ['object', 'context'], callback: 'count_table_rows',
           category: 'Count', priority: 2, label: gettext('Count Rows'),
           enable: true,
+        },{
+          name: 'analyze', node: 'table', module: this,
+          applies: ['object', 'context'], callback: 'analyze',
+          category: 'Profiling', priority: 1, label: gettext('Analyze'),
+          enable: 'hasProfiling',
+        },{
+          name: 'profile', node: 'table', module: this,
+          applies: ['object', 'context'], callback: 'profile',
+          category: 'Profiling', priority: 2, label: gettext('Profile'),
+          enable: 'hasProfiling',
         },
         ]);
         pgBrowser.Events.on(
@@ -268,6 +278,62 @@ define('pgadmin.node.table', [
             .done(function(res) {
               Alertify.success(res.info);
               d.rows_cnt = res.data.total_rows;
+              t.unload(i);
+              t.setInode(i);
+              t.deselect(i);
+              setTimeout(function() {
+                t.select(i);
+              }, 10);
+            })
+            .fail(function(xhr, status, error) {
+              Alertify.pgRespErrorNotify(xhr, error);
+              t.unload(i);
+            });
+        },
+        analyze: function(args) {
+          var input = args || {},
+            obj = this,
+            t = pgBrowser.tree,
+            i = input.item || t.selected(),
+            d = i && i.length == 1 ? t.itemData(i) : undefined;
+          if (!d)
+            return false;
+
+          // Fetch the total rows of a table
+          $.ajax({
+            url: obj.generate_url(i, 'analyze' , d, true),
+            type:'GET',
+          })
+            .done(function(res) {
+              Alertify.success(res.info);
+              t.unload(i);
+              t.setInode(i);
+              t.deselect(i);
+              setTimeout(function() {
+                t.select(i);
+              }, 10);
+            })
+            .fail(function(xhr, status, error) {
+              Alertify.pgRespErrorNotify(xhr, error);
+              t.unload(i);
+            });
+        },
+        profile: function(args) {
+          var input = args || {},
+            obj = this,
+            t = pgBrowser.tree,
+            i = input.item || t.selected(),
+            d = i && i.length == 1 ? t.itemData(i) : undefined;
+          if (!d)
+            return false;
+
+          // Fetch the total rows of a table
+          $.ajax({
+            url: obj.generate_url(i, 'profile' , d, true),
+            type:'GET',
+          })
+            .done(function(res) {
+              Alertify.success(res.info);
               t.unload(i);
               t.setInode(i);
               t.deselect(i);
@@ -1344,6 +1410,13 @@ define('pgadmin.node.table', [
         return itemData.tigger_count > 0 && itemData.has_enable_triggers > 0 &&
           this.canCreate.apply(this, [itemData, item, data]);
       },
+      // Check if profiling is available
+      canProfile: function(itemData) {
+        var node_has_profiling = itemData.get('has_profiling') || null,
+          has_profiling = this.get('has_profiling') || null;
+        return has_profiling && node_has_profiling;
+      },
+
       onTableUpdated: function(_node, _oldNodeData, _newNodeData) {
         var key, childIDs;
         if (

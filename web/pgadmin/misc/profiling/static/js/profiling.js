@@ -126,7 +126,7 @@ define('misc.profiling', [
           profiling_columns: [{
             editable: false,
             name: 'profiling',
-            label: gettext('Profiling'),
+            label: gettext('Profiling Parameter'),
             cell: 'string',
             headerCell: Backgrid.Extension.CustomHeaderCell,
             cellHeaderClasses: 'width_percent_25',

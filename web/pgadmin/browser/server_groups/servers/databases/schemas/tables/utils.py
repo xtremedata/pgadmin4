@@ -111,13 +111,14 @@ class BaseTableView(PGChildNodeView, BasePartitionTable):
             ver = self.manager.version
             server_type = self.manager.server_type
             # Set the template path for the SQL scripts
-            self.table_template_path = compile_template_path('tables/sql',
-                                                             server_type, ver)
-            self.data_type_template_path = compile_template_path(
-                'datatype/sql',
-                server_type, ver)
+            self.table_template_path = compile_template_path( \
+                    'tables/sql',
+                    server_type, ver)
+            self.data_type_template_path = compile_template_path( \
+                    'datatype/sql',
+                    server_type, ver)
             self.partition_template_path = \
-                'partitions/sql/{0}/#{0}#{1}#'.format(server_type, ver)
+                    'partitions/sql/{0}/#{0}#{1}#'.format(server_type, ver)
 
             # Template for Column ,check constraint and exclusion
             # constraint node
@@ -405,30 +406,6 @@ class BaseTableView(PGChildNodeView, BasePartitionTable):
                 )
             )
 
-        if not status:
-            return internal_server_error(errormsg=res)
-
-        return make_json_response(
-            data=res,
-            status=200
-        )
-
-    def get_table_profiling(self, scid, tid):
-        """
-        Returns profiling for prvided table id.
-
-        Args:
-            scid: Schema Id
-            tid: Table Id
-        """
-
-        # Specific sql to fetch profiling
-        SQL = render_template(
-            "/".join([self.table_template_path, 'profiling.sql']),
-            conn=self.conn,
-            tid=tid)
-
-        status, res = self.conn.execute_dict(SQL)
         if not status:
             return internal_server_error(errormsg=res)
 

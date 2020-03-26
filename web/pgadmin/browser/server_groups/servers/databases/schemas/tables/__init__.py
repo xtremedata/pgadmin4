@@ -243,6 +243,12 @@ class TableView(BaseTableView, DataTypeReader, VacuumSettings,
     * compare(**kwargs):
       - This function will compare the table nodes from two
         different schemas.
+
+    * analyze(gid, sid, did, scid, tid)
+      - Analyzes the table (required for profiling)
+
+    * profile(gid, sid, did, scid, tid)
+      - Generate profiling data for the table
 """
 
     node_type = blueprint.node_type
@@ -293,7 +299,9 @@ class TableView(BaseTableView, DataTypeReader, VacuumSettings,
         'update_sql': [{'get': 'update_sql'}],
         'delete_sql': [{'get': 'delete_sql'}],
         'count_rows': [{'get': 'count_rows'}],
-        'compare': [{'get': 'compare'}, {'get': 'compare'}]
+        'compare': [{'get': 'compare'}, {'get': 'compare'}],
+        'analyze': [{'get': 'analyze'}],
+        'profile': [{'get': 'profile'}]
     })
 
     @BaseTableView.check_precondition
@@ -1359,7 +1367,31 @@ class TableView(BaseTableView, DataTypeReader, VacuumSettings,
             scid: Schema ID
             tid: Table ID
         """
-        return BaseTableView.get_table_profiling(self, scid, tid)
+        schema_name, table_name = \
+            super(TableView, self).get_schema_and_table_name(tid)
+        prof_table_name = "prof_%s" % table_name
+        data = { \
+                'schema_name': schema_name, \
+                'table_name': table_name, \
+                'prof_table_name': prof_table_name, \
+                'prof_table_name_profile': ("%s_profile" % prof_table_name)
+        }
+
+        # Specific sql to fetch profiling
+        SQL = render_template(
+            "/".join([self.table_template_path, 'profiling.sql']),
+            conn=self.conn,
+            tid=tid,
+            **data)
+
+        status, res = self.conn.execute_dict(SQL)
+        if not status:
+            return internal_server_error(errormsg=res)
+
+        return make_json_response(
+            data=res,
+            status=200
+        )
 
     @BaseTableView.check_precondition
     def sql(self, gid, sid, did, scid, tid):
@@ -1676,6 +1708,78 @@ class TableView(BaseTableView, DataTypeReader, VacuumSettings,
                     res[row['name']] = data
 
             return res
+
+    @BaseTableView.check_precondition
+    def analyze(self, gid, sid, did, scid, tid):
+        """
+        Analyzes the table.
+        Args:
+            gid: Server Group Id
+            sid: Server Id
+            did: Database Id
+            scid: Schema Id
+            tid: Table Id
+
+        """
+        schema_name, table_name = \
+            super(TableView, self).get_schema_and_table_name(tid)
+        data = { \
+                'schema_name': schema_name, \
+                'table_name': table_name}
+
+        SQL = render_template(
+            "/".join(
+                [self.table_template_path, 'analyze_table.sql']
+            ), data=data
+        )
+
+        status, count = self.conn.execute_scalar(SQL)
+
+        if not status:
+            return internal_server_error(errormsg=count)
+
+        return make_json_response(
+            status=200,
+            info=gettext("Table %s analyzed" % table_name),
+            data={}
+        )
+
+    @BaseTableView.check_precondition
+    def profile(self, gid, sid, did, scid, tid):
+        """
+        Generates table profile data.
+        Args:
+            gid: Server Group Id
+            sid: Server Id
+            did: Database Id
+            scid: Schema Id
+            tid: Table Id
+
+        """
+        schema_name, table_name = \
+            super(TableView, self).get_schema_and_table_name(tid)
+        prof_table_name = "prof_%s" % table_name
+        data = { \
+                'schema_name': schema_name, \
+                'table_name': table_name, \
+                'prof_table_name': prof_table_name}
+
+        SQL = render_template(
+            "/".join(
+                [self.table_template_path, 'profile_table.sql']
+            ), **data
+        )
+
+        status, count = self.conn.execute_scalar(SQL)
+
+        if not status:
+            return internal_server_error(errormsg=count)
+
+        return make_json_response(
+            status=200,
+            info=gettext("Generated profile data for table %s" % table_name),
+            data={}
+        )
 
 
 SchemaDiffRegistry(blueprint.node_type, TableView)
