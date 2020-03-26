@@ -21,8 +21,12 @@ from pgadmin.browser.server_groups.servers.databases.schemas.utils \
 from pgadmin.browser.server_groups.servers.utils import parse_priv_from_db, \
     parse_priv_to_db
 from pgadmin.browser.utils import PGChildNodeView
-from pgadmin.utils.ajax import make_json_response, internal_server_error, \
-    make_response as ajax_response, gone
+from pgadmin.utils.ajax import \
+        make_json_response, \
+        internal_server_error, \
+        bad_request, \
+        make_response as ajax_response, \
+        gone
 from pgadmin.browser.server_groups.servers.databases.schemas.tables.\
     columns import utils as column_utils
 from pgadmin.utils.driver import get_driver
@@ -188,7 +192,8 @@ class ColumnsView(PGChildNodeView, DataTypeReader):
         'msql': [{'get': 'msql'}, {'get': 'msql'}],
         'stats': [{'get': 'statistics'}],
         'dependency': [{'get': 'dependencies'}],
-        'dependent': [{'get': 'dependents'}]
+        'dependent': [{'get': 'dependents'}],
+        'profiling': [{'post': 'profiling'}]
     })
 
     def check_precondition(f):
@@ -211,8 +216,9 @@ class ColumnsView(PGChildNodeView, DataTypeReader):
             self.qtTypeIdent = driver.qtTypeIdent
 
             # Set the template path for the SQL scripts
-            self.template_path = 'columns/sql/#{0}#'.format(
-                self.manager.version)
+            self.template_path = '#{0}#/columns/sql/#{1}#'.format(
+                    self.manager.server_type,
+                    self.manager.version)
 
             # Allowed ACL for column 'Select/Update/Insert/References'
             self.acl = ['a', 'r', 'w', 'x']
@@ -868,6 +874,51 @@ class ColumnsView(PGChildNodeView, DataTypeReader):
             )
         )
 
+        if not status:
+            return internal_server_error(errormsg=res)
+
+        return make_json_response(
+            data=res,
+            status=200
+        )
+
+    @check_precondition
+    def profiling(self, gid, sid, did, scid, tid, clid):
+        """
+        This function get the profiling and return ajax response
+        for the column node.
+
+        Args:
+            gid: Server Group ID
+            sid: Server ID
+            did: Database ID
+            scid: Schema ID
+            tid: Table ID
+            clid: Column ID
+        """
+        post_data = json.loads(request.form['data'], encoding='utf-8')
+        try:
+            table_name = post_data['table_name']
+            col_name = post_data['col_name']
+        except KeyError as e:
+            return internal_server_error(errormsg=str(e))
+
+        prof_table_name = "prof_%s" % table_name
+        data = { \
+                'table_name': table_name, \
+                'prof_table_name': prof_table_name, \
+                'prof_table_name_profile': ("%s_profile" % prof_table_name), \
+                'col_name': col_name
+        }
+
+        # Specific sql to fetch profiling
+        SQL = render_template(
+            "/".join([self.table_template_path, 'profiling.sql']),
+            conn=self.conn,
+            tid=tid,
+            **data)
+
+        status, res = self.conn.execute_dict(SQL)
         if not status:
             return internal_server_error(errormsg=res)
 

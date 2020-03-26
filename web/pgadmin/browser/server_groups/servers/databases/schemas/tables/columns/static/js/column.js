@@ -105,6 +105,7 @@ define('pgadmin.node.column', [
       type: 'column',
       label: gettext('Column'),
       hasSQL:  true,
+      hasProfiling: true,
       sqlAlterHelp: 'sql-altertable.html',
       sqlCreateHelp: 'sql-altertable.html',
       dialogHelp: url_for('help.static', {'filename': 'column_dialog.html'}),

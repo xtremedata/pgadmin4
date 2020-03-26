@@ -31,8 +31,9 @@ def get_template_path(f):
         # Here args[0] will hold the connection object
         conn_obj = args[0]
         if 'template_path' not in kwargs:
-            kwargs['template_path'] = 'columns/sql/#{0}#'.format(
-                conn_obj.manager.version)
+            kwargs['template_path'] = '#{0}#/columns/sql/#{1}#'.format(
+                    conn_obj.manager.server_type,
+                    conn_obj.manager.version)
 
         return f(*args, **kwargs)
     return wrap

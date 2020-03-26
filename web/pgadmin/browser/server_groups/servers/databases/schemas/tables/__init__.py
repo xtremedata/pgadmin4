@@ -276,7 +276,7 @@ class TableView(BaseTableView, DataTypeReader, VacuumSettings,
         'stats': [{'get': 'statistics'}, {'get': 'statistics'}],
         'dependency': [{'get': 'dependencies'}],
         'dependent': [{'get': 'dependents'}],
-        'profiling': [{'get': 'profiling'}],
+        'profiling': [{'post': 'profiling'}],
         'get_oftype': [{'get': 'get_oftype'}, {'get': 'get_oftype'}],
         'get_inherits': [{'get': 'get_inherits'}, {'get': 'get_inherits'}],
         'get_relations': [{'get': 'get_relations'}, {'get': 'get_relations'}],
@@ -1367,31 +1367,7 @@ class TableView(BaseTableView, DataTypeReader, VacuumSettings,
             scid: Schema ID
             tid: Table ID
         """
-        schema_name, table_name = \
-            super(TableView, self).get_schema_and_table_name(tid)
-        prof_table_name = "prof_%s" % table_name
-        data = { \
-                'schema_name': schema_name, \
-                'table_name': table_name, \
-                'prof_table_name': prof_table_name, \
-                'prof_table_name_profile': ("%s_profile" % prof_table_name)
-        }
-
-        # Specific sql to fetch profiling
-        SQL = render_template(
-            "/".join([self.table_template_path, 'profiling.sql']),
-            conn=self.conn,
-            tid=tid,
-            **data)
-
-        status, res = self.conn.execute_dict(SQL)
-        if not status:
-            return internal_server_error(errormsg=res)
-
-        return make_json_response(
-            data=res,
-            status=200
-        )
+        return BaseTableView.get_table_profiling(self, tid)
 
     @BaseTableView.check_precondition
     def sql(self, gid, sid, did, scid, tid):

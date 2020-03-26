@@ -136,7 +136,6 @@ define('misc.profiling', [
             label: gettext('Value'),
             cell: 'string',
           }],
-          panel: pgBrowser.docker.findPanels('profiling'),
           columns: null,
           grid: null,
         });
@@ -319,7 +318,8 @@ define('misc.profiling', [
           var ajaxHook = function() {
             $.ajax({
               url: url,
-              type: 'GET',
+              type: 'POST',
+              data: {'table_name': null, 'column_name': null},
               beforeSend: function(xhr) {
                 xhr.setRequestHeader(
                   pgAdmin.csrf_token_header, pgAdmin.csrf_token
@@ -339,7 +339,7 @@ define('misc.profiling', [
                 clearTimeout(timer);
                 $msgContainer.text('');
                 if (res.data) {
-                  var data = self.data = res.data;
+                  var data = self.profilingData = res.data;
                   if (data['rows'].length > 1) {
                   // Listen scroll event to load more rows
                     pgBrowser.Events.on(

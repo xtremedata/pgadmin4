@@ -50,7 +50,6 @@ define('pgadmin.node.table', [
       hasSQL: true,
       hasDepends: true,
       hasStatistics: true,
-      // todo: to change to a function depending on server type !!!!
       hasProfiling: true,
       statsPrettifyFields: [gettext('Size'), gettext('Indexes size'), gettext('Table size'),
         gettext('TOAST table size'), gettext('Tuple length'),
