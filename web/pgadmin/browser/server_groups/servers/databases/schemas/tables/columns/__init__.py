@@ -915,7 +915,7 @@ class ColumnsView(PGChildNodeView, DataTypeReader):
 
         # Specific sql to fetch profiling
         SQL = render_template(
-            "/".join([self.table_template_path, 'profiling.sql']),
+            "/".join([self.template_path, 'profiling.sql']),
             conn=self.conn,
             tid=tid,
             **data)
