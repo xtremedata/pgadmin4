@@ -896,7 +896,9 @@ class ColumnsView(PGChildNodeView, DataTypeReader):
             tid: Table ID
             clid: Column ID
         """
-        post_data = json.loads(request.form['data'], encoding='utf-8')
+        post_data = request.form if request.form else json.loads(
+            request.data, encoding='utf-8'
+        )
         try:
             table_name = post_data['table_name']
             col_name = post_data['col_name']

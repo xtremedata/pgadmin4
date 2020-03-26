@@ -252,9 +252,14 @@ define('misc.profiling', [
       }
     },
 
-    __hasProfiling: function(node, item) {
-      var server = null,
-        i = item;
+    __collectProfilingData: function(node, item) {
+      var i = item,
+        server = null,
+        table = null,
+        col = null,
+        hasProfiling = false,
+        tableName = null,
+        colName = null;
 
       if(_.isFunction(node.hasProfiling)) {
         const treeHierarchy = node.getTreeNodeHierarchy(item);
@@ -263,6 +268,12 @@ define('misc.profiling', [
 
       while(i) {
         var n = pgBrowser.tree.itemData(i);
+        if (n._type == 'table') {
+          table = n;
+        }
+        if (n._type == 'column') {
+          col = n;
+        }
         if (n._type == 'server') {
           server = n;
           break;
@@ -276,7 +287,13 @@ define('misc.profiling', [
         }
       }
 
-      return node.hasProfiling && server && server.server_type == 'dbx';
+      hasProfiling = node.hasProfiling && server && server.server_type == 'dbx';
+      tableName = table && table._label;
+      colName = col && col._label;
+
+      return { 'has_profiling': hasProfiling,
+        'table_name': tableName,
+        'col_name': colName };
     },
 
     // Fetch the actual data and update the collection
@@ -307,7 +324,9 @@ define('misc.profiling', [
         // Cache the current IDs for next time
         $(panel[0]).data('node-prof', cache_flag);
 
-        if (this.__hasProfiling(node, item)) {
+        var post_data = this.__collectProfilingData(node, item);
+
+        if (post_data && post_data['has_profiling']) {
 
           // Hide message container and show grid container.
           $msgContainer.addClass('d-none');
@@ -319,7 +338,7 @@ define('misc.profiling', [
             $.ajax({
               url: url,
               type: 'POST',
-              data: {'table_name': null, 'column_name': null},
+              data: post_data,
               beforeSend: function(xhr) {
                 xhr.setRequestHeader(
                   pgAdmin.csrf_token_header, pgAdmin.csrf_token
