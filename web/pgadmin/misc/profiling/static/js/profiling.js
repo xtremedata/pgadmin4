@@ -282,7 +282,6 @@ define('misc.profiling', [
         if (pgBrowser.tree.hasParent(i)) {
           i = $(pgBrowser.tree.parent(i));
         } else {
-          Alertify.alert(gettext('Please select a server or child node from tree.'));
           break;
         }
       }

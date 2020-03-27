@@ -909,7 +909,6 @@ class ColumnsView(PGChildNodeView, DataTypeReader):
         data = { \
                 'table_name': table_name, \
                 'prof_table_name': prof_table_name, \
-                'prof_table_name_profile': ("%s_profile" % prof_table_name), \
                 'col_name': col_name
         }
 
