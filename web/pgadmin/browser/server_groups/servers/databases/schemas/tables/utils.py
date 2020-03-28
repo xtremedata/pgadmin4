@@ -443,8 +443,8 @@ class BaseTableView(PGChildNodeView, BasePartitionTable):
             return internal_server_error(errormsg=res)
 
         return make_json_response(
-            data=res,
-            status=200
+                data={'profile': res},
+                status=200
         )
 
     def get_reverse_engineered_sql(self, did, scid, tid, main_sql, data,

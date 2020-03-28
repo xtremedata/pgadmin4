@@ -176,9 +176,9 @@ define('misc.profiling', [
     },
 
     /* Function is used to create and render backgrid with
-       * empty collection. We just want to add backgrid into the
-       * panel only once.
-    */
+     * empty collection. We just want to add backgrid into the
+     * panel only once.
+     */
     __appendGridToPanel: function() {
       var $container = this.profilingPanel.layout().scene().find('.pg-panel-content'),
         $gridContainer = $container.find('.pg-panel-profiling-container'),
@@ -359,7 +359,7 @@ define('misc.profiling', [
                 if (res.data) {
                   var data = self.profilingData = res.data;
                   if (data['rows'].length > 1) {
-                  // Listen scroll event to load more rows
+                    // Listen scroll event to load more rows
                     pgBrowser.Events.on(
                       'pgadmin-browser:panel-profiling:' +
                     wcDocker.EVENT.SCROLLED,
@@ -367,7 +367,7 @@ define('misc.profiling', [
                     );
                     self.__createMultiLineProfiling.call(self, data, node.profilingPrettifyFields);
                   } else {
-                  // Do not listen the scroll event
+                    // Do not listen the scroll event
                     pgBrowser.Events.off(
                       'pgadmin-browser:panel-profiling:' +
                     wcDocker.EVENT.SCROLLED,

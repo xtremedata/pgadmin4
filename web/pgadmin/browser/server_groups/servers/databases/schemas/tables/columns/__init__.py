@@ -912,19 +912,24 @@ class ColumnsView(PGChildNodeView, DataTypeReader):
                 'col_name': col_name
         }
 
-        # Specific sql to fetch profiling
-        SQL = render_template(
-            "/".join([self.template_path, 'profiling.sql']),
-            conn=self.conn,
-            tid=tid,
-            **data)
+        tables_sfxs = ['pattern', 'histo', 'rank', 'topn']
+        tables_res = {}
 
-        status, res = self.conn.execute_dict(SQL)
-        if not status:
-            return internal_server_error(errormsg=res)
+        for sfx in tables_sfxs:
+            # Specific sql to fetch profiling
+            SQL = render_template(
+                "/".join([self.template_path, ('profiling_%s.sql' % sfx)]),
+                conn=self.conn,
+                tid=tid,
+                **data)
+
+            status, res = self.conn.execute_dict(SQL)
+            if not status:
+                return internal_server_error(errormsg=res)
+            tables_res[sfx] = res
 
         return make_json_response(
-            data=res,
+            data=tables_res,
             status=200
         )
 
