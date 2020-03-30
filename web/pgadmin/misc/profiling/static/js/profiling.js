@@ -354,7 +354,7 @@ define('misc.profiling', [
     // Process single tab data
     __processSingleData: function(node, data, key) {
       var self = this;
-      if (data['rows'].length > 1) {
+      if (data[key]['rows'].length > 1) {
         // Listen scroll event to load more rows
         pgBrowser.Events.on(
           'pgadmin-browser:panel-profiling:' +
@@ -460,15 +460,10 @@ define('misc.profiling', [
                 $msgContainer.text('');
                 if (res.data) {
                   var data = self.profilingData = res.data;
-                  if (data.length > 1) {
-                    self.__processSingleData(node, data);
-                  } else {
-                    self.__processMultipleData(node, data);
-                  }
 
                   if (self.grids && Object.keys(self.grids).length) {
                     delete self.grids;
-                    self.grid = {};
+                    self.grids = {};
                   }
 
                   self.__processMultipleData($dataContainer, $msgContainer, node, data);

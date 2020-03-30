@@ -231,6 +231,11 @@ class BucketView(NodeView):
         self._buckets_owner = (buckets, owner)
 
 
+    def _check_reload(self, gid, sid):
+        if not self.s3.has_authentication():
+            self._reload(gid, sid)
+
+
     def _list_buckets(self, gid, sid):
         try:
             self._reload(gid, sid)
@@ -242,6 +247,7 @@ class BucketView(NodeView):
 
     def _get_bucket(self, gid, sid, bid):
         try:
+            self._check_reload(gid, sid)
             buckets, owner = self.buckets_owner
         except Exception as e:
             current_app.logger.exception(e)
@@ -257,6 +263,7 @@ class BucketView(NodeView):
 
     def _get_bucket_acl(self, gid, sid, bid):
         try:
+            self._check_reload(gid, sid)
             response = self.s3.client.get_bucket_acl(Bucket=bid)
         except Exception as e:
             current_app.logger.exception(e)
