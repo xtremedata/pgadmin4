@@ -443,7 +443,7 @@ class BaseTableView(PGChildNodeView, BasePartitionTable):
             return internal_server_error(errormsg=res)
 
         return make_json_response(
-                data={'profile': res},
+                data={'profile': {'profile': res}},
                 status=200
         )
 

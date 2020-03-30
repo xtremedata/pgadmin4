@@ -12,10 +12,12 @@ define('misc.profiling', [
   'sources/pgadmin', 'pgadmin.browser', 'pgadmin.alertifyjs', 'pgadmin.backgrid',
   'sources/size_prettify',
   'sources/utils',
+  'sources/url_for',
 ], function(gettext, _, $, Backbone,
   pgAdmin, pgBrowser, Alertify, Backgrid,
   pgadminUtils,
-  sizePrettify) {
+  sizePrettify,
+  url_for) {
 
   if (pgBrowser.NodeProfiling)
     return pgBrowser.NodeProfiling;
@@ -117,12 +119,17 @@ define('misc.profiling', [
       /* Parameter is used to set the proper label of the
        * backgrid header cell.
        */
-      _.bindAll(this, 'showProfiling', '__loadMoreRows', '__appendGridToPanel');
+      _.bindAll(this, 
+        'showProfiling',
+        '__initProfilingPanel',
+        '__loadMoreRows',
+        '__appendGridToPanel');
 
       _.extend(
         this, {
           initialized: true,
-          collection: new(Backbone.Collection)(null),
+          main_url: url_for('profiling.index'),
+          collections: new(Backbone.Collection)(null),
           profiling_columns: [{
             editable: false,
             name: 'profiling',
@@ -136,12 +143,12 @@ define('misc.profiling', [
             label: gettext('Value'),
             cell: 'string',
           }],
-          columns: null,
-          grid: null,
+          columns: {},
+          grids: {},
         });
 
       // Defining Backbone Model for Profiling.
-      var Model = Backbone.Model.extend({
+      this.model = Backbone.Model.extend({
         defaults: {
           icon: 'icon-unknown',
           type: undefined,
@@ -165,23 +172,70 @@ define('misc.profiling', [
         },
       });
 
-      // Defining Backbone Collection for Profiling.
-      this.profilingCollection = new(Backbone.Collection.extend({
-        model: Model,
-      }))(null);
-
       pgBrowser.Events.on('pgadmin-browser:tree:selected', this.showProfiling);
       pgBrowser.Events.on('pgadmin-browser:tree:refreshing', this.refreshProfiling, this);
       this.__appendGridToPanel();
+    },
+
+    /**
+     * Initializes Profiling panel based on server template.
+     * Profiling contains pills panel presenting various metrics for profiling.
+     */
+    __initProfilingPanel: function() {
+
+      if (this.profilingPanel) {
+        var $container = this.profilingPanel.layout().scene().find('.pg-panel-content'),
+          $msgContainer = $container.find('.pg-panel-profiling-message'),
+          $dataContainer = $container.find('.pg-panel-profiling-container'),
+          msg = gettext('Please select an object in the tree view.'),
+          self = this;
+
+        // Hide message container and show grid container.
+        $msgContainer.removeClass('d-none');
+        $dataContainer.addClass('d-none');
+
+        if ($container) {
+          var ajaxHook = function() {
+            $.ajax({
+              url: self.main_url,
+              type: 'GET',
+              dataType: 'html',
+            })
+              .done(function(data) {
+                $dataContainer.html(data);
+              })
+              .fail(function(xhr, error) {
+                Alertify.pgNotifier(
+                  error, xhr,
+                  gettext('An error occurred whilst loading the profiling template.'),
+                  function(msg) {
+                    if(msg === 'CRYPTKEY_SET') {
+                      ajaxHook();
+                    } else {
+                      console.warn(arguments);
+                    }
+                  }
+                );
+                // show failed message.
+                $msgContainer.text(gettext('Failed to retrieve profiling template from the server.'));
+              });
+          };
+          $msgContainer.text(gettext('Fetching profiling template from the server...'));
+          ajaxHook();
+        }
+
+        $msgContainer.text(msg);
+      }
     },
 
     /* Function is used to create and render backgrid with
      * empty collection. We just want to add backgrid into the
      * panel only once.
      */
-    __appendGridToPanel: function() {
+    __appendGridToPanel: function(key) {
       var $container = this.profilingPanel.layout().scene().find('.pg-panel-content'),
-        $gridContainer = $container.find('.pg-panel-profiling-container'),
+        $dataContainer = $container.find('.pg-panel-profiling-container'),
+        $gridContainer = $dataContainer.find('.nav-tabs a[href="#' + key + '"]'),
         grid = new Backgrid.Grid({
           emptyText: 'No data found',
           columns: [{
@@ -213,12 +267,14 @@ define('misc.profiling', [
           },
           ],
 
-          collection: this.profilingCollection,
+          collection: new(Backbone.Collection.extend({
+            model: this.model,
+          }))(null),
           className: 'backgrid table presentation table-bordered table-noouter-border table-hover',
         });
 
       // Condition is used to save grid object to change the label of the header.
-      this.profilingGrid = grid;
+      this.grids.key = grid;
 
       $gridContainer.append(grid.render().el);
 
@@ -295,11 +351,57 @@ define('misc.profiling', [
         'col_name': colName };
     },
 
+    // Process single tab data
+    __processSingleData: function(node, data, key) {
+      var self = this;
+      if (data['rows'].length > 1) {
+        // Listen scroll event to load more rows
+        pgBrowser.Events.on(
+          'pgadmin-browser:panel-profiling:' +
+        wcDocker.EVENT.SCROLLED,
+          self.__loadMoreRows
+        );
+        self.__createMultiLineProfiling.call(self, data, key, node.profilingPrettifyFields);
+      } else {
+        // Do not listen the scroll event
+        pgBrowser.Events.off(
+          'pgadmin-browser:panel-profiling:' +
+        wcDocker.EVENT.SCROLLED
+        );
+        self.__createSingleLineProfiling.call(self, data, key, node.profilingPrettifyFields);
+      }
+    },
+
+    // Process multiple tabs data
+    __processMultipleData: function($dataContainer, $msgContainer, node, data) {
+      var self = this,
+        gridContainers = {};
+
+      for (var key in data) {
+        self.__processSingleData(node, data, key);
+        gridContainers.key = $dataContainer.find('.nav-tabs a[href="#' + key +'"]'),
+        self.grids.key = new Backgrid.Grid({
+          emptyText: 'No data found',
+          columns: self.columns.key,
+          collection: self.collection,
+          className: GRID_CLASSES,
+        });
+        self.grids.key.render();
+        $(gridContainers.key).empty();
+        $(gridContainers.key).append(self.grids.key.$el);
+      }
+
+      if (!$msgContainer.hasClass('d-none')) {
+        $msgContainer.addClass('d-none');
+      }
+      $dataContainer.removeClass('d-none');
+    },
+
     // Fetch the actual data and update the collection
     __updateCollection: function(url, node, item, node_type) {
       var $container = this.profilingPanel.layout().scene().find('.pg-panel-content'),
         $msgContainer = $container.find('.pg-panel-profiling-message'),
-        $gridContainer = $container.find('.pg-panel-profiling-container'),
+        $dataContainer = $container.find('.pg-panel-profiling-container'),
         panel = this.profilingPanel,
         self = this,
         msg = gettext('Please select an object in the tree view.'),
@@ -329,7 +431,7 @@ define('misc.profiling', [
 
           // Hide message container and show grid container.
           $msgContainer.addClass('d-none');
-          $gridContainer.removeClass('d-none');
+          $dataContainer.removeClass('d-none');
 
           var timer = '';
           // Set the url, fetch the data and update the collection
@@ -353,52 +455,27 @@ define('misc.profiling', [
               },
             })
               .done(function(res) {
-              // clear timer and reset message.
+                // clear timer and reset message.
                 clearTimeout(timer);
                 $msgContainer.text('');
                 if (res.data) {
                   var data = self.profilingData = res.data;
-                  if (data['rows'].length > 1) {
-                    // Listen scroll event to load more rows
-                    pgBrowser.Events.on(
-                      'pgadmin-browser:panel-profiling:' +
-                    wcDocker.EVENT.SCROLLED,
-                      self.__loadMoreRows
-                    );
-                    self.__createMultiLineProfiling.call(self, data, node.profilingPrettifyFields);
+                  if (data.length > 1) {
+                    self.__processSingleData(node, data);
                   } else {
-                    // Do not listen the scroll event
-                    pgBrowser.Events.off(
-                      'pgadmin-browser:panel-profiling:' +
-                    wcDocker.EVENT.SCROLLED,
-                      self.__loadMoreRows
-                    );
-                    self.__createSingleLineProfiling.call(self, data, node.profilingPrettifyFields);
+                    self.__processMultipleData(node, data);
                   }
 
-                  if (self.grid) {
-                    delete self.grid;
-                    self.grid = null;
+                  if (self.grids && Object.keys(self.grids).length) {
+                    delete self.grids;
+                    self.grid = {};
                   }
 
-                  self.grid = new Backgrid.Grid({
-                    emptyText: 'No data found',
-                    columns: self.columns,
-                    collection: self.collection,
-                    className: GRID_CLASSES,
-                  });
-                  self.grid.render();
-                  $gridContainer.empty();
-                  $gridContainer.append(self.grid.$el);
-
-                  if (!$msgContainer.hasClass('d-none')) {
-                    $msgContainer.addClass('d-none');
-                  }
-                  $gridContainer.removeClass('d-none');
+                  self.__processMultipleData($dataContainer, $msgContainer, node, data);
 
                 } else if (res.info) {
-                  if (!$gridContainer.hasClass('d-none')) {
-                    $gridContainer.addClass('d-none');
+                  if (!$dataContainer.hasClass('d-none')) {
+                    $dataContainer.addClass('d-none');
                   }
                   $msgContainer.text(res.info);
                   $msgContainer.removeClass('d-none');
@@ -437,17 +514,17 @@ define('misc.profiling', [
         // Hide the grid container and show the default message container
         $msgContainer.text(msg);
         $msgContainer.removeClass('d-none');
-        if (!$gridContainer.hasClass('d-none')) {
-          $gridContainer.addClass('d-none');
+        if (!$dataContainer.hasClass('d-none')) {
+          $dataContainer.addClass('d-none');
         }
       }
     },
 
-    __createMultiLineProfiling: function(data, prettifyFields) {
-      var rows = data['rows'],
-        columns = data['columns'];
+    __createMultiLineProfiling: function(data, key, prettifyFields) {
+      var rows = data.key['rows'],
+        columns = data.key['columns'];
 
-      this.columns = [];
+      this.columns.key = [];
       for (var idx in columns) {
         var rawColumn = columns[idx],
           cell_type = typeCellMapper[rawColumn['type_code']] || 'string';
@@ -467,20 +544,20 @@ define('misc.profiling', [
         if (_.indexOf(prettifyFields, rawColumn['name']) != -1) {
           col['formatter'] = SizeFormatter;
         }
-        this.columns.push(col);
+        this.columns.key.push(col);
 
       }
 
-      this.collection.reset(rows.splice(0, 50));
+      this.collections.key.reset(rows.splice(0, 50));
     },
 
-    __createSingleLineProfiling: function(data, prettifyFields) {
+    __createSingleLineProfiling: function(data, key, prettifyFields) {
       var row = data['rows'][0],
         columns = data['columns'],
         res = [],
         name;
 
-      this.columns = this.profiling_columns;
+      this.columns.key = this.profiling_columns;
       for (var idx in columns) {
         name = (columns[idx])['name'];
         res.push({
@@ -492,7 +569,7 @@ define('misc.profiling', [
         });
       }
 
-      this.collection.reset(res);
+      this.collections.key.reset(res);
     },
 
     __loadMoreRows: function() {

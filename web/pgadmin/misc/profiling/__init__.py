@@ -9,8 +9,14 @@
 
 """A blueprint module providing utility functions for the application."""
 
-from flask import url_for
-from pgadmin.utils import PgAdminModule
+from flask import \
+        url_for, \
+        render_template
+from flask_security import \
+        current_user, \
+        login_required
+from pgadmin.utils import \
+        PgAdminModule
 
 MODULE_NAME = 'profiling'
 
@@ -30,8 +36,35 @@ class ProfilingModule(PgAdminModule):
             'when': None
         }]
 
+    def get_exposed_url_endpoints(self):
+        """
+        Returns:
+            list: a list of url endpoints exposed to the client.
+        """
+        return [
+            'dashboard.index'
+            ]
+
 
 # Initialise the module
 blueprint = ProfilingModule(
     MODULE_NAME, __name__, url_prefix='/misc/profiling'
 )
+
+
+
+@blueprint.route('/', endpoint='index')
+@login_required
+def index():
+    """
+    Renders profiling template.
+    Args:
+
+    Returns: 
+        Profiling template
+
+    """
+
+    return render_template(
+        '/profiling/index.html',
+    )
