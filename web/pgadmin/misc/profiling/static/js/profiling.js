@@ -128,8 +128,7 @@ define('misc.profiling', [
       _.extend(
         this, {
           initialized: true,
-          main_url: url_for('profiling.index'),
-          collections: new(Backbone.Collection)(null),
+          collections: {},
           profiling_columns: [{
             editable: false,
             name: 'profiling',
@@ -174,7 +173,7 @@ define('misc.profiling', [
 
       pgBrowser.Events.on('pgadmin-browser:tree:selected', this.showProfiling);
       pgBrowser.Events.on('pgadmin-browser:tree:refreshing', this.refreshProfiling, this);
-      this.__appendGridToPanel();
+      this.__initProfilingPanel();
     },
 
     /**
@@ -188,7 +187,7 @@ define('misc.profiling', [
           $msgContainer = $container.find('.pg-panel-profiling-message'),
           $dataContainer = $container.find('.pg-panel-profiling-container'),
           msg = gettext('Please select an object in the tree view.'),
-          self = this;
+          url = url_for('profiling.index');
 
         // Hide message container and show grid container.
         $msgContainer.removeClass('d-none');
@@ -197,7 +196,7 @@ define('misc.profiling', [
         if ($container) {
           var ajaxHook = function() {
             $.ajax({
-              url: self.main_url,
+              url: url,
               type: 'GET',
               dataType: 'html',
             })
@@ -267,14 +266,12 @@ define('misc.profiling', [
           },
           ],
 
-          collection: new(Backbone.Collection.extend({
-            model: this.model,
-          }))(null),
+          collection: self.collections[key],
           className: 'backgrid table presentation table-bordered table-noouter-border table-hover',
         });
 
       // Condition is used to save grid object to change the label of the header.
-      this.grids.key = grid;
+      this.grids[key] = grid;
 
       $gridContainer.append(grid.render().el);
 
@@ -378,17 +375,19 @@ define('misc.profiling', [
         gridContainers = {};
 
       for (var key in data) {
+        self.collections[key] = new(Backbone.Collection)(null),
         self.__processSingleData(node, data, key);
-        gridContainers.key = $dataContainer.find('.nav-tabs a[href="#' + key +'"]'),
-        self.grids.key = new Backgrid.Grid({
+        gridContainers[key] = $dataContainer.find('.nav-tabs a[href="#' + key +'"]'),
+        self.grids[key] = new Backgrid.Grid({
           emptyText: 'No data found',
-          columns: self.columns.key,
-          collection: self.collection,
+          columns: self.columns[key],
+          collection: self.collections[key],
           className: GRID_CLASSES,
         });
-        self.grids.key.render();
-        $(gridContainers.key).empty();
-        $(gridContainers.key).append(self.grids.key.$el);
+        self.grids[key].render();
+        $(gridContainers[key]).empty();
+        $(gridContainers[key]).append(self.grids[key].$el);
+        //this.__appendGridToPanel(key);
       }
 
       if (!$msgContainer.hasClass('d-none')) {
@@ -516,10 +515,10 @@ define('misc.profiling', [
     },
 
     __createMultiLineProfiling: function(data, key, prettifyFields) {
-      var rows = data.key['rows'],
-        columns = data.key['columns'];
+      var rows = data[key]['rows'],
+        columns = data[key]['columns'];
 
-      this.columns.key = [];
+      this.columns[key] = [];
       for (var idx in columns) {
         var rawColumn = columns[idx],
           cell_type = typeCellMapper[rawColumn['type_code']] || 'string';
@@ -539,20 +538,20 @@ define('misc.profiling', [
         if (_.indexOf(prettifyFields, rawColumn['name']) != -1) {
           col['formatter'] = SizeFormatter;
         }
-        this.columns.key.push(col);
+        this.columns[key].push(col);
 
       }
 
-      this.collections.key.reset(rows.splice(0, 50));
+      this.collections[key].reset(rows.splice(0, 50));
     },
 
     __createSingleLineProfiling: function(data, key, prettifyFields) {
-      var row = data['rows'][0],
-        columns = data['columns'],
+      var row = data[key]['rows'][0],
+        columns = data[key]['columns'],
         res = [],
         name;
 
-      this.columns.key = this.profiling_columns;
+      this.columns[key] = this.profiling_columns;
       for (var idx in columns) {
         name = (columns[idx])['name'];
         res.push({
@@ -564,7 +563,7 @@ define('misc.profiling', [
         });
       }
 
-      this.collections.key.reset(res);
+      this.collections[key].reset(res);
     },
 
     __loadMoreRows: function() {
