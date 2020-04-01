@@ -42,7 +42,7 @@ class ProfilingModule(PgAdminModule):
             list: a list of url endpoints exposed to the client.
         """
         return [
-            'dashboard.index'
+            'profiling.index'
             ]
 
 
