@@ -5,12 +5,12 @@
 
   <div class="container-fluid">
     <div class="header">
-      <ul class="nav nav-pills">
+      <ul class="nav nav-pills" role="tablist">
         <li class="active"><a data-toggle="pill" href="#profile">{{ _('Profile') }}</a></li>
-        <li><a data-toggle="pill" href="#rank">{{ _('Rank') }}</a></li>
-        <li><a data-toggle="pill" href="#topn">{{ _('Top N') }}</a></li>
-        <li><a data-toggle="pill" href="#histo">{{ _('Histogram') }}</a></li>
-        <li><a data-toggle="pill" href="#pattern">{{ _('Pattern') }}</a></li>
+        <li><a role="tab" data-toggle="pill" href="#rank">{{ _('Rank') }}</a></li>
+        <li><a role="tab" data-toggle="pill" href="#topn">{{ _('Top N') }}</a></li>
+        <li><a role="tab" data-toggle="pill" href="#histo">{{ _('Histogram') }}</a></li>
+        <li><a role="tab" data-toggle="pill" href="#pattern">{{ _('Pattern') }}</a></li>
       </ul>
       <div class="pg-panel-profiling-progress-container">
         <div class="progress-bar" id="pg-panel-profiling-progressbar"></div>
@@ -18,19 +18,19 @@
     </div>
     <div class="content">
       <div class="tab-content">
-        <div id="profile" class="tab-pane fade in active">
+        <div id="profile" class="tab-pane fade in active" role="tabpanel">
           <div id="profile_grid" class="grid-container"></div>
         </div>
-        <div id="rank" class="tab-pane fade">
+        <div id="rank" class="tab-pane fade" role="tabpanel">
           <div id="rank_grid" class="grid-container"></div>
         </div>
-        <div id="topn" class="tab-pane fade">
+        <div id="topn" class="tab-pane fade" role="tabpanel">
           <div id="topn_grid" class="grid-container"></div>
         </div>
-        <div id="histo" class="tab-pane fade">
+        <div id="histo" class="tab-pane fade" role="tabpanel">
           <div id="histo_grid" class="grid-container"></div>
         </div>
-        <div id="pattern" class="tab-pane fade">
+        <div id="pattern" class="tab-pane fade" role="tabpanel">
           <div id="pattern_grid" class="grid-container"></div>
         </div>
       </div>

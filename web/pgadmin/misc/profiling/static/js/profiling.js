@@ -377,7 +377,8 @@ define('misc.profiling', [
       for (var key in data) {
         self.collections[key] = new(Backbone.Collection)(null),
         self.__processSingleData(node, data, key);
-        gridContainers[key] = $dataContainer.find('.nav-tabs a[href="#' + key +'"]'),
+        gridContainers[key] = $dataContainer.find(key +'_grid');
+        //gridContainers[key] = $dataContainer.find('.nav-tabs a[href="#' + key +'"]');
         self.grids[key] = new Backgrid.Grid({
           emptyText: 'No data found',
           columns: self.columns[key],
@@ -385,9 +386,11 @@ define('misc.profiling', [
           className: GRID_CLASSES,
         });
         self.grids[key].render();
-        $(gridContainers[key]).empty();
-        $(gridContainers[key]).append(self.grids[key].$el);
-        //this.__appendGridToPanel(key);
+        if (gridContainers[key]) {
+          gridContainers[key].empty();
+          gridContainers[key].append(self.grids[key].$el, '<strong>TESTING</strong>');
+          //this.__appendGridToPanel(key);
+        }
       }
 
       if (!$msgContainer.hasClass('d-none')) {
