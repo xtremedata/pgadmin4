@@ -4,34 +4,116 @@
 <body>
 
   <div class="container-fluid">
-    <div class="header">
-      <ul class="nav nav-pills" role="tablist">
-        <li class="active"><a data-toggle="pill" href="#profile">{{ _('Profile') }}</a></li>
-        <li><a role="tab" data-toggle="pill" href="#rank">{{ _('Rank') }}</a></li>
-        <li><a role="tab" data-toggle="pill" href="#topn">{{ _('Top N') }}</a></li>
-        <li><a role="tab" data-toggle="pill" href="#histo">{{ _('Histogram') }}</a></li>
-        <li><a role="tab" data-toggle="pill" href="#pattern">{{ _('Pattern') }}</a></li>
-      </ul>
-      <div class="pg-panel-profiling-progress-container">
-        <div class="progress-bar" id="pg-panel-profiling-progressbar"></div>
-      </div>  
+    <div class="card-header">
+      <span id="profiling-activity-header">{{ _('Profiling data') }}</span>
     </div>
-    <div class="content">
-      <div class="tab-content">
-        <div id="profile" class="tab-pane fade in active" role="tabpanel">
-          <div id="profile_grid" class="grid-container"></div>
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-9 col-12 pr-0">
+          <ul class="nav nav-tabs" role="tablist" aria-labelledby="profiling-activity-header">
+            <li class="nav-item">
+              <a class="nav-link active show"
+                 id="tab_panel_profiling_profile_tab"
+                 role="tab" data-toogle="tab"
+                 aria-controls="tab_profiling_profile"
+                 href="#tab_panel_profiling_profile">{{ _('Profile') }}</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link"
+                 id="tab_panel_profiling_rank_tab"
+                 role="tab" data-toogle="tab"
+                 aria-controls="tab_profiling_rank"
+                 href="#tab_panel_profiling_rank">{{ _('Rank') }}</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link"
+                 id="tab_panel_profiling_topn_tab"
+                 role="tab" data-toogle="tab"
+                 aria-controls="tab_profiling_topn"
+                 href="#tab_panel_profiling_topn">{{ _('Top N') }}</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link"
+                 id="tab_panel_profiling_pattern_tab"
+                 role="tab" data-toogle="tab"
+                 aria-controls="tab_profiling_pattern"
+                 href="#tab_panel_profiling_pattern">{{ _('Pattern') }}</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link"
+                 id="tab_panel_profiling_histo_tab"
+                 role="tab" data-toogle="tab"
+                 aria-controls="tab_profiling_histo"
+                 href="#tab_panel_profiling_histo">{{ _('Histogram') }}</a>
+            </li>
+          </ul>
         </div>
-        <div id="rank" class="tab-pane fade" role="tabpanel">
-          <div id="rank_grid" class="grid-container"></div>
+        <div class="col-md-3 col-12 pl-0 text-right">
+          <div class="navtab-inline-controls">
+            <div class="input-group">
+              <div class="input-group-prepend">
+                <span class="input-group-text fa fa-search"
+                      id="labelSearch"
+                      aria-label="{{ _('Search') }}"></span>
+              </div>
+              <input type="search"
+                     class="form-control"
+                     id="txtGridSearch"
+                     placeholder="{{ _('Search') }}"
+                     aria-describedby="labelSearch"
+                     aria-labelledby="labelSearch"/>
+            </div>
+            <button id="btn_refresh"
+                    type="button"
+                    class="btn btn-secondary btn-navtab-inline"
+                    title="{{ _('Refresh') }}"
+                    aria-label="{{ _('Refresh') }}">
+              <span class="fa fa-refresh" aria-hidden="true"></span>
+            </button>
+          </div>
         </div>
-        <div id="topn" class="tab-pane fade" role="tabpanel">
-          <div id="topn_grid" class="grid-container"></div>
+      </div>
+      <div class="row">
+        <div class="pg-panel-profiling-progress-container">
+          <div class="progress-bar" id="pg-panel-profiling-progressbar"></div>
         </div>
-        <div id="histo" class="tab-pane fade" role="tabpanel">
-          <div id="histo_grid" class="grid-container"></div>
-        </div>
-        <div id="pattern" class="tab-pane fade" role="tabpanel">
-          <div id="pattern_grid" class="grid-container"></div>
+      </div>
+      <!-- Nav tabs -->
+
+
+      <!-- Tab panes -->
+      <div class="content">
+        <div class="tab-content">
+          <div id="tab_panel_profiling_profile"
+               aria-labelledby="tab_panel_profiling_profile_tab"
+               class="tab-pane negative-space p-2 active show"
+               role="tabpanel">
+            <div id="profile_grid" class="grid-container"></div>
+          </div>
+          <div id="tab_panel_profiling_rank"
+               aria-labelledby="tab_panel_profiling_rank_tab"
+               class="tab-pane negative-space p-2 active show"
+               role="tabpanel">
+            <div id="rank_grid" class="grid-container"></div>
+          </div>
+          <div id="tab_panel_profiling_tabn"
+               aria-labelledby="tab_panel_profiling_tabn_tab"
+               class="tab-pane negative-space p-2 active show"
+               role="tabpanel">
+            <div id="tabn_grid" class="grid-container"></div>
+          </div>
+          <div id="tab_panel_profiling_pattern"
+               aria-labelledby="tab_panel_profiling_pattern_tab"
+               class="tab-pane negative-space p-2 active show"
+               role="tabpanel">
+            <div id="pattern_grid" class="grid-container"></div>
+          </div>
+          <div id="tab_panel_profiling_histo"
+               aria-labelledby="tab_panel_profiling_histo_tab"
+               class="tab-pane negative-space p-2 active show"
+               role="tabpanel">
+            <div id="histo_grid" class="grid-container"></div>
+          </div>
         </div>
       </div>
     </div>
