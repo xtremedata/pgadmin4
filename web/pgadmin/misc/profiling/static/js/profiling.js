@@ -377,7 +377,7 @@ define('misc.profiling', [
       for (var key in data) {
         self.collections[key] = new(Backbone.Collection)(null),
         self.__processSingleData(node, data, key);
-        gridContainers[key] = $dataContainer.find(key +'_grid');
+        gridContainers[key] = $dataContainer.find('#' + key +'_grid');
         //gridContainers[key] = $dataContainer.find('.nav-tabs a[href="#' + key +'"]');
         self.grids[key] = new Backgrid.Grid({
           emptyText: 'No data found',
