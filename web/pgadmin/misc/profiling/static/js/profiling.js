@@ -378,17 +378,19 @@ define('misc.profiling', [
         self.collections[key] = new(Backbone.Collection)(null),
         self.__processSingleData(node, data, key);
         gridContainers[key] = $dataContainer.find('#' + key +'_grid');
-        //gridContainers[key] = $dataContainer.find('.nav-tabs a[href="#' + key +'"]');
         self.grids[key] = new Backgrid.Grid({
           emptyText: 'No data found',
           columns: self.columns[key],
           collection: self.collections[key],
           className: GRID_CLASSES,
+          scrollX: true,
+          scrollY: 200,
+          scrollCollapse: true,
         });
         self.grids[key].render();
         if (gridContainers[key]) {
           gridContainers[key].empty();
-          gridContainers[key].append(self.grids[key].$el, '<strong>TESTING</strong>');
+          gridContainers[key].append(self.grids[key].$el);
           //this.__appendGridToPanel(key);
         }
       }
