@@ -436,7 +436,7 @@ class BaseTableView(PGChildNodeView, BasePartitionTable):
         for sfx in XdProfiling.TABLES_SFXS:
             # Specific sql to fetch profiling
             SQL = render_template(
-                "/".join([self.template_path, ('profiling_%s.sql' % sfx)]),
+                "/".join([self.table_template_path, ('profiling_%s.sql' % sfx)]),
                 conn=self.conn,
                 tid=tid,
                 **data)
