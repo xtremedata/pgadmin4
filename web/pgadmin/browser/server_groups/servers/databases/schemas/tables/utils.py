@@ -43,6 +43,7 @@ from pgadmin.browser.server_groups.servers.databases.schemas.tables.\
     triggers import utils as trigger_utils
 from pgadmin.browser.server_groups.servers.databases.schemas.tables.\
     compound_triggers import utils as compound_trigger_utils
+from pgadmin.misc.profiling.utils import XdProfiling
 
 
 class BaseTableView(PGChildNodeView, BasePartitionTable):
@@ -427,23 +428,26 @@ class BaseTableView(PGChildNodeView, BasePartitionTable):
         data = { \
                 'schema_name': schema_name, \
                 'table_name': table_name, \
-                'prof_table_name': prof_table_name, \
-                'prof_table_name_profile': ("%s_profile" % prof_table_name)
+                'prof_table_name': prof_table_name \
         }
 
-        # Specific sql to fetch profiling
-        SQL = render_template(
-            "/".join([self.table_template_path, 'profiling.sql']),
-            conn=self.conn,
-            tid=tid,
-            **data)
+        tables_res = {}
 
-        status, res = self.conn.execute_dict(SQL)
-        if not status:
-            return internal_server_error(errormsg=res)
+        for sfx in XdProfiling.TABLES_SFXS:
+            # Specific sql to fetch profiling
+            SQL = render_template(
+                "/".join([self.template_path, ('profiling_%s.sql' % sfx)]),
+                conn=self.conn,
+                tid=tid,
+                **data)
+
+            status, res = self.conn.execute_dict(SQL)
+            if not status:
+                return internal_server_error(errormsg=res)
+            tables_res[sfx] = res
 
         return make_json_response(
-                data={'profile': res},
+                data=tables_res,
                 status=200
         )
 

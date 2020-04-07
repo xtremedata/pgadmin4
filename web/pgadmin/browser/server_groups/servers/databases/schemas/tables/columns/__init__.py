@@ -33,6 +33,7 @@ from pgadmin.utils.driver import get_driver
 from config import PG_DEFAULT_DRIVER
 from pgadmin.utils import IS_PY2
 from pgadmin.utils.ajax import ColParamsJSONDecoder
+from pgadmin.misc.profiling.utils import XdProfiling
 
 # If we are in Python3
 if not IS_PY2:
@@ -912,10 +913,9 @@ class ColumnsView(PGChildNodeView, DataTypeReader):
                 'col_name': col_name
         }
 
-        tables_sfxs = ['pattern', 'histo', 'rank', 'topn']
         tables_res = {}
 
-        for sfx in tables_sfxs:
+        for sfx in XdProfiling.TABLES_SFXS:
             # Specific sql to fetch profiling
             SQL = render_template(
                 "/".join([self.template_path, ('profiling_%s.sql' % sfx)]),
