@@ -1,4 +1,5 @@
 SELECT
+    colname AS {{ conn|qtIdent(_('Column name')) }},
     rank AS {{ conn|qtIdent(_('Rank')) }},
     val_min AS {{ conn|qtIdent(_('Value min')) }},
     val_max AS {{ conn|qtIdent(_('Value max')) }},

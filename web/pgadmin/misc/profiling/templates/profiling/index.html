@@ -12,38 +12,43 @@
         <div class="col-md-9 col-12 pr-0">
           <ul class="nav nav-tabs" role="tablist" aria-labelledby="profiling-activity-header">
             <li class="nav-item">
-              <a class="nav-link active show"
+              <a class="nav-link active"
                  id="tab_panel_profiling_profile_tab"
-                 role="tab" data-toogle="tab"
+                 role="tab" data-toggle="tab"
                  aria-controls="tab_profiling_profile"
+                 aria-selected="true"
                  href="#tab_panel_profiling_profile">{{ _('Profile') }}</a>
             </li>
             <li class="nav-item">
               <a class="nav-link"
                  id="tab_panel_profiling_rank_tab"
-                 role="tab" data-toogle="tab"
+                 role="tab" data-toggle="tab"
                  aria-controls="tab_profiling_rank"
+                 aria-selected="false"
                  href="#tab_panel_profiling_rank">{{ _('Rank') }}</a>
             </li>
             <li class="nav-item">
               <a class="nav-link"
                  id="tab_panel_profiling_topn_tab"
-                 role="tab" data-toogle="tab"
+                 role="tab" data-toggle="tab"
                  aria-controls="tab_profiling_topn"
+                 aria-selected="false"
                  href="#tab_panel_profiling_topn">{{ _('Top N') }}</a>
             </li>
             <li class="nav-item">
               <a class="nav-link"
                  id="tab_panel_profiling_pattern_tab"
-                 role="tab" data-toogle="tab"
+                 role="tab" data-toggle="tab"
                  aria-controls="tab_profiling_pattern"
+                 aria-selected="false"
                  href="#tab_panel_profiling_pattern">{{ _('Pattern') }}</a>
             </li>
             <li class="nav-item">
               <a class="nav-link"
                  id="tab_panel_profiling_histo_tab"
-                 role="tab" data-toogle="tab"
+                 role="tab" data-toggle="tab"
                  aria-controls="tab_profiling_histo"
+                 aria-selected="false"
                  href="#tab_panel_profiling_histo">{{ _('Histogram') }}</a>
             </li>
           </ul>
@@ -86,31 +91,31 @@
         <div class="tab-content">
           <div id="tab_panel_profiling_profile"
                aria-labelledby="tab_panel_profiling_profile_tab"
-               class="tab-pane negative-space p-2 active show"
+               class="tab-pane negative-space p-2 active show fade"
                role="tabpanel">
             <div id="profile_grid" class="grid-container"></div>
           </div>
           <div id="tab_panel_profiling_rank"
                aria-labelledby="tab_panel_profiling_rank_tab"
-               class="tab-pane negative-space p-2 active show"
+               class="tab-pane negative-space p-2 fade"
                role="tabpanel">
             <div id="rank_grid" class="grid-container"></div>
           </div>
           <div id="tab_panel_profiling_tabn"
                aria-labelledby="tab_panel_profiling_tabn_tab"
-               class="tab-pane negative-space p-2 active show"
+               class="tab-pane negative-space p-2 fade"
                role="tabpanel">
             <div id="tabn_grid" class="grid-container"></div>
           </div>
           <div id="tab_panel_profiling_pattern"
                aria-labelledby="tab_panel_profiling_pattern_tab"
-               class="tab-pane negative-space p-2 active show"
+               class="tab-pane negative-space p-2 fade"
                role="tabpanel">
             <div id="pattern_grid" class="grid-container"></div>
           </div>
           <div id="tab_panel_profiling_histo"
                aria-labelledby="tab_panel_profiling_histo_tab"
-               class="tab-pane negative-space p-2 active show"
+               class="tab-pane negative-space p-2 fade"
                role="tabpanel">
             <div id="histo_grid" class="grid-container"></div>
           </div>

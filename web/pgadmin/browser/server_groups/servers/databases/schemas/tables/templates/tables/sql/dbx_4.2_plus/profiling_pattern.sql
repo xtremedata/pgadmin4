@@ -1,4 +1,5 @@
 SELECT
+    colname AS {{ conn|qtIdent(_('Column name')) }},
     pattern AS {{ conn|qtIdent(_('Pattern')) }},
     freq_count AS {{ conn|qtIdent(_('Occurance')) }},
     freq_ratio AS {{ conn|qtIdent(_('Ratio')) }}
