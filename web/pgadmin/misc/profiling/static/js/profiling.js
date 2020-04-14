@@ -122,8 +122,7 @@ define('misc.profiling', [
       _.bindAll(this, 
         'showProfiling',
         '__initProfilingPanel',
-        '__loadMoreRows',
-        '__appendGridToPanel');
+        '__loadMoreRows');
 
       _.extend(
         this, {
@@ -225,57 +224,6 @@ define('misc.profiling', [
 
         $msgContainer.text(msg);
       }
-    },
-
-    /* Function is used to create and render backgrid with
-     * empty collection. We just want to add backgrid into the
-     * panel only once.
-     */
-    __appendGridToPanel: function(key) {
-      var $container = this.profilingPanel.layout().scene().find('.pg-panel-content'),
-        $dataContainer = $container.find('.pg-panel-profiling-container'),
-        $gridContainer = $dataContainer.find('.nav-tabs a[href="#' + key + '"]'),
-        grid = new Backgrid.Grid({
-          emptyText: 'No data found',
-          columns: [{
-            name: 'type',
-            label: gettext('Type'),
-            // Extend it to render the icon as per the type.
-            cell: Backgrid.Cell.extend({
-              render: function() {
-                Backgrid.Cell.prototype.render.apply(this, arguments);
-                this.$el.prepend($('<i>', {
-                  class: 'wcTabIcon ' + this.model.get('icon'),
-                }));
-                return this;
-              },
-            }),
-            editable: false,
-          },
-          {
-            name: 'name',
-            label: gettext('Name'),
-            cell: 'string',
-            editable: false,
-          },
-          {
-            name: 'field',
-            label: '', // label kept blank, it will change dynamically
-            cell: 'string',
-            editable: false,
-          },
-          ],
-
-          collection: self.collections[key],
-          className: 'backgrid table presentation table-bordered table-noouter-border table-hover',
-        });
-
-      // Condition is used to save grid object to change the label of the header.
-      this.grids[key] = grid;
-
-      $gridContainer.append(grid.render().el);
-
-      return true;
     },
 
     // Fetch the actual data and update the collection
@@ -391,7 +339,6 @@ define('misc.profiling', [
         if (gridContainers[key]) {
           gridContainers[key].empty();
           gridContainers[key].append(self.grids[key].$el);
-          //this.__appendGridToPanel(key);
         }
       }
 

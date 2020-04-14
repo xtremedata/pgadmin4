@@ -49,7 +49,15 @@
                  role="tab" data-toggle="tab"
                  aria-controls="tab_profiling_histo"
                  aria-selected="false"
-                 href="#tab_panel_profiling_histo">{{ _('Histogram') }}</a>
+                 href="#tab_panel_profiling_histo">{{ _('Histogram Table') }}</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link"
+                 id="tab_panel_profiling_histochart_tab"
+                 role="tab" data-toggle="tab"
+                 aria-controls="tab_profiling_histochart"
+                 aria-selected="false"
+                 href="#tab_panel_profiling_histochart">{{ _('Histogram Chart') }}</a>
             </li>
           </ul>
         </div>
@@ -101,11 +109,11 @@
                role="tabpanel">
             <div id="rank_grid" class="grid-container"></div>
           </div>
-          <div id="tab_panel_profiling_tabn"
-               aria-labelledby="tab_panel_profiling_tabn_tab"
+          <div id="tab_panel_profiling_topn"
+               aria-labelledby="tab_panel_profiling_topn_tab"
                class="tab-pane negative-space p-2 fade"
                role="tabpanel">
-            <div id="tabn_grid" class="grid-container"></div>
+            <div id="topn_grid" class="grid-container"></div>
           </div>
           <div id="tab_panel_profiling_pattern"
                aria-labelledby="tab_panel_profiling_pattern_tab"
@@ -118,6 +126,12 @@
                class="tab-pane negative-space p-2 fade"
                role="tabpanel">
             <div id="histo_grid" class="grid-container"></div>
+          </div>
+          <div id="tab_panel_profiling_histochart"
+               aria-labelledby="tab_panel_profiling_histochart_tab"
+               class="tab-pane negative-space p-2 fade"
+               role="tabpanel">
+            <canvas id="histochart_grid" class="grid-container"></canvas>
           </div>
         </div>
       </div>

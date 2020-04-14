@@ -11,7 +11,4 @@ class XdProfiling(object):
     """ dbX Profiling.
     """
 
-    COLUMNT_SFXS = ('pattern', 'histo', 'rank', 'topn')
-    TABLES_SFXS = ('profile',) + COLUMNT_SFXS
-
-    
+    TABLES_SFXS = ('profile', 'pattern', 'histo', 'rank', 'topn')

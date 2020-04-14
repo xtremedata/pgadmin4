@@ -915,7 +915,7 @@ class ColumnsView(PGChildNodeView, DataTypeReader):
 
         tables_res = {}
 
-        for sfx in XdProfiling.COLUMNT_SFXS:
+        for sfx in XdProfiling.TABLES_SFXS:
             # Specific sql to fetch profiling
             SQL = render_template(
                 "/".join([self.template_path, ('profiling_%s.sql' % sfx)]),
