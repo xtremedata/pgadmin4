@@ -325,8 +325,8 @@ define('misc.profiling', [
 
       chart = new CanvasJS.Chart('histochart_canvas', options);
       chart.render();
+      // when jquery.canvasjs.min instead of canvasjs.min
       //$('#histochart_canvas').CanvasJSChart(options);
-      //$('#histochart_canvas').add(chart);
 
       /**
       if (data.histo.length > 1) {
