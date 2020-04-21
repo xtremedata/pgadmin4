@@ -122,6 +122,10 @@ var webpackShimConfig = {
       'deps': ['jquery'],
       'exports': '$.fn.spectrum',
     },
+    'canvasjs': {
+      'deps': ['jquery'],
+      'exports': 'Chart',
+    },
   },
 
   // Map module id to file path used in 'define(['baseurl', 'misc']). It is
@@ -156,6 +160,8 @@ var webpackShimConfig = {
     'spectrum': path.join(__dirname, './node_modules/spectrum-colorpicker/spectrum'),
     'mousetrap': path.join(__dirname, './node_modules/mousetrap'),
     'tablesorter-metric': path.join(__dirname, './node_modules/tablesorter/dist/js/parsers/parser-metric.min'),
+    //'canvasjs': path.join(__dirname, './node_modules/canvasjs/dist/jquery.canvasjs.min'),
+    'canvasjs': path.join(__dirname, './node_modules/canvasjs/dist/canvasjs.min'),
 
     // AciTree
     'jquery.acitree': path.join(__dirname, './node_modules/acitree/js/jquery.aciTree.min'),

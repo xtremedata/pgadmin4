@@ -13,11 +13,13 @@ define('misc.profiling', [
   'sources/size_prettify',
   'sources/utils',
   'sources/url_for',
+  'canvasjs',
 ], function(gettext, _, $, Backbone,
   pgAdmin, pgBrowser, Alertify, Backgrid,
   pgadminUtils,
   sizePrettify,
-  url_for) {
+  url_for,
+  CanvasJS) {
 
   if (pgBrowser.NodeProfiling)
     return pgBrowser.NodeProfiling;
@@ -143,6 +145,7 @@ define('misc.profiling', [
           }],
           columns: {},
           grids: {},
+          chart: null,
         });
 
       // Defining Backbone Model for Profiling.
@@ -296,6 +299,78 @@ define('misc.profiling', [
         'col_name': colName };
     },
 
+    /**
+     * Creates histogram.
+     */
+    __createHistogram: function() {
+      var options = {
+        title: {
+          text: 'Column Chart in jQuery CanvasJS',
+        },
+        data: [              
+          {
+            // Change type to "doughnut", "line", "splineArea", etc.
+            type: 'column',
+            dataPoints: [
+              { label: 'apple',  y: 10  },
+              { label: 'orange', y: 15  },
+              { label: 'banana', y: 25  },
+              { label: 'mango',  y: 30  },
+              { label: 'grape',  y: 28  },
+            ],
+          },
+        ],
+      };
+      var chart = null;
+
+      chart = new CanvasJS.Chart('histochart_canvas', options);
+      chart.render();
+      //$('#histochart_canvas').CanvasJSChart(options);
+      //$('#histochart_canvas').add(chart);
+
+      /**
+      if (data.histo.length > 1) {
+        var ctxHistoChart = $dataContainer.find("#histochart_canvas").getContext('2d');
+        var histoChart = new Chart(ctxHistoChart, {
+          type: 'bar',
+          data: {
+            labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
+            datasets: [{
+              label: '# of Votes',
+              data: [12, 19, 3, 5, 2, 3],
+              backgroundColor: [
+                'rgba(255, 99, 132, 0.2)',
+                'rgba(54, 162, 235, 0.2)',
+                'rgba(255, 206, 86, 0.2)',
+                'rgba(75, 192, 192, 0.2)',
+                'rgba(153, 102, 255, 0.2)',
+                'rgba(255, 159, 64, 0.2)',
+              ],
+              borderColor: [
+                'rgba(255,99,132,1)',
+                'rgba(54, 162, 235, 1)',
+                'rgba(255, 206, 86, 1)',
+                'rgba(75, 192, 192, 1)',
+                'rgba(153, 102, 255, 1)',
+                'rgba(255, 159, 64, 1)',
+              ],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            scales: {
+              yAxes: [{
+                ticks: {
+                  beginAtZero: true
+                }
+              }]
+            }
+          }
+        });
+      }
+      */
+    },
+
     // Process single tab data
     __processSingleData: function(node, data, key) {
       var self = this;
@@ -339,6 +414,12 @@ define('misc.profiling', [
         if (gridContainers[key]) {
           gridContainers[key].empty();
           gridContainers[key].append(self.grids[key].$el);
+        }
+
+        if (key == 'histo') {
+          if (data[key]['rows'].length > 1) {
+            self.__createHistogram();
+          }
         }
       }
 
