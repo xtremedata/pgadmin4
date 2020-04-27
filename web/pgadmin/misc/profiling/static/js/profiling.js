@@ -300,75 +300,188 @@ define('misc.profiling', [
     },
 
     /**
-     * Creates histogram.
+     * Helper function for histogram chart.
      */
-    __createHistogram: function() {
+    __toolTipFormatter: function(e) {
+      var str = '';
+      var total = 0 ;
+      var str3;
+      var str2 ;
+      for (var i = 0; i < e.entries.length; i++){
+        var str1 = '<span style= \'color:'+e.entries[i].dataSeries.color 
+          + '\'>' + e.entries[i].dataSeries.name + '</span>: <strong>' 
+          +  e.entries[i].dataPoint.y + '</strong> <br/>' ;
+        total = e.entries[i].dataPoint.y + total;
+        str = str.concat(str1);
+      }
+      str2 = '<strong>' + e.entries[0].dataPoint.label + '</strong> <br/>';
+      str3 = '<span style = \'color:Tomato\'>Total: </span><strong>' + total + '</strong><br/>';
+      return (str2.concat(str)).concat(str3);
+    },
+
+    /**
+     * Helper function for histogram chart.
+     */
+    __toggleDataSeries: function(e) {
+      e.dataSeries.visible = (typeof (e.dataSeries.visible) !== 'undefined' && !e.dataSeries.visible);
+      e.chart.render();
+    },
+
+    /**
+     * Creates a testing histogram.
+     */
+    __createTestHistogram: function() {
       var options = {
-        title: {
-          text: 'Column Chart in jQuery CanvasJS',
+        animationEnabled: true,
+
+        title:{
+          text:'Fortune 500 Companies by Country',
         },
-        data: [              
-          {
-            // Change type to "doughnut", "line", "splineArea", etc.
-            type: 'column',
-            dataPoints: [
-              { label: 'apple',  y: 10  },
-              { label: 'orange', y: 15  },
-              { label: 'banana', y: 25  },
-              { label: 'mango',  y: 30  },
-              { label: 'grape',  y: 28  },
-            ],
-          },
+        axisX:{
+          interval: 1,
+        },
+        axisY2:{
+          interlacedColor: 'rgba(1,77,101,.2)',
+          gridColor: 'rgba(1,77,101,.1)',
+          title: 'Number of Companies',
+        },
+        data: [],
+      };
+
+      var chart = new CanvasJS.Chart('histochart_canvas', options);
+
+      options.data.push({
+        type: 'bar',
+        name: 'companies',
+        axisYType: 'secondary',
+        color: '#014D65',
+        dataPoints: [
+          { y: 3, label: 'Sweden' },
+          { y: 7, label: 'Taiwan' },
+          { y: 5, label: 'Russia' },
+          { y: 9, label: 'Spain' },
+          { y: 7, label: 'Brazil' },
+          { y: 7, label: 'India' },
+          { y: 9, label: 'Italy' },
+          { y: 8, label: 'Australia' },
+          { y: 11, label: 'Canada' },
+          { y: 15, label: 'South Korea' },
+          { y: 12, label: 'Netherlands' },
+          { y: 15, label: 'Switzerland' },
+          { y: 25, label: 'Britain' },
+          { y: 28, label: 'Germany' },
+          { y: 29, label: 'France' },
+          { y: 52, label: 'Japan' },
+          { y: 103, label: 'China' },
+          { y: 134, label: 'US' },
+        ],
+      });
+      chart.render();
+    },
+
+    /**
+     * Creates histogram data points for a column.
+     */
+    __createColumnHisto: function(column, values) {
+      var data_points = {
+        type: 'bar',
+        name: column,
+        color: '#014D65',
+        showInLegend: true,
+        dataPoints: [
         ],
       };
-      var chart = null;
 
-      chart = new CanvasJS.Chart('histochart_canvas', options);
-      chart.render();
+      values.sort(function(a, b){return a > b;}); 
+      data_points.dataPoints = values;
+
+      return data_points;
+    },
+
+    /**
+     * Creates histogram.
+     */
+    __createHistogram: function(data, table, column) {
+      var chart = null,
+        options = {
+          animationEnabled: true,
+
+          title: {
+            text: 'Profiling histogram',
+          },
+
+          axisX: {
+            interval: 1,
+          },
+          axisY: {
+            interlacedColor: 'rgba(1,77,101,.2)',
+            gridColor: 'rgba(1,77,101,.1)',
+            title: 'Occurance',
+          },
+
+          legend: {
+            cursor: 'pointer',
+            itemclick: this.__toggleDataSeries,
+          },
+          toolTip: {
+            shared: true,
+            content: this.__toolTipFormatter,
+          },
+
+          data: [],
+        },
+        title = ' for ',
+        cols = null,
+        rows = null;
+
+      if (Object.keys(data.topn).length > 1) {
+        var col_dict = {},
+          col_name = null,
+          col_val = null,
+          col_freq = null,
+          row = null;
+
+        chart = new CanvasJS.Chart('histochart_canvas', options);
+        cols = data.topn.columns;
+        rows = data.topn.rows;
+
+        title += (table !== null ? (table + ' table') : '')
+          + (column !== null ? (', ' + column + ' column') : '');
+        if (title.length > 0)
+          options.title.text += title;
+
+        if (column == null) {
+          col_name = cols[0].name;
+          col_val = cols[1].name;
+          col_freq = cols[2].name;
+          for (var key in rows) {
+            row = rows[key];
+            if (!(row[col_name] in col_dict)) {
+              col_dict[row[col_name]] = [];
+            }
+            col_dict[row[col_name]].push({'label': row[col_val], 'y': parseInt(row[col_freq])});
+          }
+        } else {
+          col_name = column;
+          col_val = cols[0].name;
+          col_freq = cols[1].name;
+          var values = [];
+          for (key in rows) {
+            row = rows[key];
+            values.push({'label': row[col_val], 'y': parseInt(row[col_freq])});
+          }
+          col_dict[col_name] = values;
+        }
+
+        for (var col in col_dict) {
+          options.data.push(this.__createColumnHisto(col, col_dict[col]));
+        }
+      }
+
       // when jquery.canvasjs.min instead of canvasjs.min
       //$('#histochart_canvas').CanvasJSChart(options);
 
-      /**
-      if (data.histo.length > 1) {
-        var ctxHistoChart = $dataContainer.find("#histochart_canvas").getContext('2d');
-        var histoChart = new Chart(ctxHistoChart, {
-          type: 'bar',
-          data: {
-            labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
-            datasets: [{
-              label: '# of Votes',
-              data: [12, 19, 3, 5, 2, 3],
-              backgroundColor: [
-                'rgba(255, 99, 132, 0.2)',
-                'rgba(54, 162, 235, 0.2)',
-                'rgba(255, 206, 86, 0.2)',
-                'rgba(75, 192, 192, 0.2)',
-                'rgba(153, 102, 255, 0.2)',
-                'rgba(255, 159, 64, 0.2)',
-              ],
-              borderColor: [
-                'rgba(255,99,132,1)',
-                'rgba(54, 162, 235, 1)',
-                'rgba(255, 206, 86, 1)',
-                'rgba(75, 192, 192, 1)',
-                'rgba(153, 102, 255, 1)',
-                'rgba(255, 159, 64, 1)',
-              ],
-              borderWidth: 1
-            }]
-          },
-          options: {
-            scales: {
-              yAxes: [{
-                ticks: {
-                  beginAtZero: true
-                }
-              }]
-            }
-          }
-        });
-      }
-      */
+      return chart;
     },
 
     // Process single tab data
@@ -393,9 +506,14 @@ define('misc.profiling', [
     },
 
     // Process multiple tabs data
-    __processMultipleData: function($dataContainer, $msgContainer, node, data) {
+    __processMultipleData: function($dataContainer, $msgContainer, node, data, post_data) {
       var self = this,
         gridContainers = {};
+      var table = '',
+        column = null;
+
+      table = post_data.table_name;
+      column = post_data.col_name;
 
       for (var key in data) {
         self.collections[key] = new(Backbone.Collection)(null),
@@ -415,13 +533,11 @@ define('misc.profiling', [
           gridContainers[key].empty();
           gridContainers[key].append(self.grids[key].$el);
         }
-
-        if (key == 'histo') {
-          if (data[key]['rows'].length > 1) {
-            self.__createHistogram();
-          }
-        }
       }
+
+      self.chart = self.__createHistogram(data, table, column);
+      //self.__createTestHistogram();
+      self.chart.render();
 
       if (!$msgContainer.hasClass('d-none')) {
         $msgContainer.addClass('d-none');
@@ -498,7 +614,7 @@ define('misc.profiling', [
                     self.grids = {};
                   }
 
-                  self.__processMultipleData($dataContainer, $msgContainer, node, data);
+                  self.__processMultipleData($dataContainer, $msgContainer, node, data, post_data);
 
                 } else if (res.info) {
                   if (!$dataContainer.hasClass('d-none')) {

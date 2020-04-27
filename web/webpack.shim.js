@@ -160,7 +160,7 @@ var webpackShimConfig = {
     'spectrum': path.join(__dirname, './node_modules/spectrum-colorpicker/spectrum'),
     'mousetrap': path.join(__dirname, './node_modules/mousetrap'),
     'tablesorter-metric': path.join(__dirname, './node_modules/tablesorter/dist/js/parsers/parser-metric.min'),
-    //'canvasjs': path.join(__dirname, './node_modules/canvasjs/dist/jquery.canvasjs.min'),
+    // It cannot be canvasjs.min from "npm install", which is buggy, download from canvasjs.org is needed.
     'canvasjs': path.join(__dirname, './node_modules/canvasjs/dist/canvasjs.min'),
 
     // AciTree

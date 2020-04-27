@@ -574,7 +574,7 @@ module.exports = [{
           minChunks: 2,
           enforce: true,
           test(module) {
-            return webpackShimConfig.matchModules(module, ['wcdocker', 'backbone', 'jquery', 'bootstrap', 'popper', 'canvas']);
+            return webpackShimConfig.matchModules(module, ['wcdocker', 'backbone', 'jquery', 'bootstrap', 'popper', 'canvasjs']);
           },
         },
         vendor_others: {
