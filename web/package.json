@@ -120,5 +120,5 @@
     "auditpy": "safety check --full-report",
     "audit": "yarn run auditjs && yarn run auditpy"
   },
-  "version": "0.0.0"
+  "version": "v1.21.1"
 }
