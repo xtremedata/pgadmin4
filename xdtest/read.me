@@ -1,0 +1,14 @@
+When migrated to python3.8:
+
+Additional packages for virtualenv:
+ boto3-utils,
+ wheel
+ email_validator
+
+
+Fix for werkzeug 1.0.0
+ pip3 list -o | cut -f1 -d' ' | tr " " "\n" | awk '{if(NR>=3)print}' | cut -d' ' -f1 | xargs -n1 pip3 install -U
+ grep -rl "from werkzeug import url_encode" ~/.virtualenvs/pgadmin4/lib64/python3.8/site-packages/
+ # change "from werkzeug import url_encode" to "from werkzeug.urls import url_encode"
+
+

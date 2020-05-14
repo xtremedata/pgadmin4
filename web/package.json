@@ -52,6 +52,7 @@
   "dependencies": {
     "acitree": "git+https://github.com/imsurinder90/jquery-aciTree.git#rc.7",
     "alertifyjs": "1.7.1",
+    "apexcharts": "^3.19.0",
     "axios": "^0.18.1",
     "babel-plugin-transform-es2015-modules-amd": "^6.24.1",
     "babel-preset-es2015-without-strict": "~0.0.4",
@@ -67,7 +68,6 @@
     "bowser": "2.1.2",
     "browserify": "~16.2.3",
     "canvas": "^2.6.1",
-    "canvasjs": "^1.8.3",
     "codemirror": "^5.53.2",
     "css-loader": "2.1.0",
     "cssnano": "^4.1.10",
@@ -119,5 +119,6 @@
     "auditjs": "yarn audit",
     "auditpy": "safety check --full-report",
     "audit": "yarn run auditjs && yarn run auditpy"
-  }
+  },
+  "version": "0.0.0"
 }
