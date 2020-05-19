@@ -128,6 +128,11 @@ define('pgadmin.node.table', [
           applies: ['object', 'context'], callback: 'profile',
           category: 'Profiling', priority: 2, label: gettext('Profile'),
           enable: 'hasProfiling',
+        },{
+          name: 'analyze_profile', node: 'table', module: this,
+          applies: ['object', 'context'], callback: 'analyze_profile',
+          category: 'Profiling', priority: 3, label: gettext('Analyze & Profile'),
+          enable: 'hasProfiling',
         },
         ]);
         pgBrowser.Events.on(
@@ -329,6 +334,34 @@ define('pgadmin.node.table', [
           // Fetch the total rows of a table
           $.ajax({
             url: obj.generate_url(i, 'profile' , d, true),
+            type:'GET',
+          })
+            .done(function(res) {
+              Alertify.success(res.info);
+              t.unload(i);
+              t.setInode(i);
+              t.deselect(i);
+              setTimeout(function() {
+                t.select(i);
+              }, 10);
+            })
+            .fail(function(xhr, status, error) {
+              Alertify.pgRespErrorNotify(xhr, error);
+              t.unload(i);
+            });
+        },
+        analyze_profile: function(args) {
+          var input = args || {},
+            obj = this,
+            t = pgBrowser.tree,
+            i = input.item || t.selected(),
+            d = i && i.length == 1 ? t.itemData(i) : undefined;
+          if (!d)
+            return false;
+
+          // Fetch the total rows of a table
+          $.ajax({
+            url: obj.generate_url(i, 'analyze_profile' , d, true),
             type:'GET',
           })
             .done(function(res) {

@@ -122,9 +122,9 @@ var webpackShimConfig = {
       'deps': ['jquery'],
       'exports': '$.fn.spectrum',
     },
-    'canvasjs': {
+    'apexcharts': {
       'deps': ['jquery'],
-      'exports': 'Chart',
+      'exports': 'ApexCharts',
     },
   },
 
@@ -161,7 +161,8 @@ var webpackShimConfig = {
     'mousetrap': path.join(__dirname, './node_modules/mousetrap'),
     'tablesorter-metric': path.join(__dirname, './node_modules/tablesorter/dist/js/parsers/parser-metric.min'),
     // It cannot be canvasjs.min from "npm install", which is buggy, download from canvasjs.org is needed.
-    'canvasjs': path.join(__dirname, './node_modules/canvasjs/dist/canvasjs.min'),
+    // proprietary: 'canvasjs': path.join(__dirname, './node_modules/canvasjs/dist/canvasjs.min'),
+    'apexcharts': path.join(__dirname, './node_modules/apexcharts/dist/apexcharts.min'),
 
     // AciTree
     'jquery.acitree': path.join(__dirname, './node_modules/acitree/js/jquery.aciTree.min'),

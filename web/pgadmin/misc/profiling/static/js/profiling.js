@@ -13,13 +13,13 @@ define('misc.profiling', [
   'sources/size_prettify',
   'sources/utils',
   'sources/url_for',
-  'canvasjs',
+  'apexcharts',
 ], function(gettext, _, $, Backbone,
   pgAdmin, pgBrowser, Alertify, Backgrid,
   pgadminUtils,
   sizePrettify,
   url_for,
-  CanvasJS) {
+  ApexCharts) {
 
   if (pgBrowser.NodeProfiling)
     return pgBrowser.NodeProfiling;
@@ -328,72 +328,18 @@ define('misc.profiling', [
     },
 
     /**
-     * Creates a testing histogram.
-     */
-    __createTestHistogram: function() {
-      var options = {
-        animationEnabled: true,
-
-        title:{
-          text:'Fortune 500 Companies by Country',
-        },
-        axisX:{
-          interval: 1,
-        },
-        axisY2:{
-          interlacedColor: 'rgba(1,77,101,.2)',
-          gridColor: 'rgba(1,77,101,.1)',
-          title: 'Number of Companies',
-        },
-        data: [],
-      };
-
-      var chart = new CanvasJS.Chart('histochart_canvas', options);
-
-      options.data.push({
-        type: 'bar',
-        name: 'companies',
-        axisYType: 'secondary',
-        color: '#014D65',
-        dataPoints: [
-          { y: 3, label: 'Sweden' },
-          { y: 7, label: 'Taiwan' },
-          { y: 5, label: 'Russia' },
-          { y: 9, label: 'Spain' },
-          { y: 7, label: 'Brazil' },
-          { y: 7, label: 'India' },
-          { y: 9, label: 'Italy' },
-          { y: 8, label: 'Australia' },
-          { y: 11, label: 'Canada' },
-          { y: 15, label: 'South Korea' },
-          { y: 12, label: 'Netherlands' },
-          { y: 15, label: 'Switzerland' },
-          { y: 25, label: 'Britain' },
-          { y: 28, label: 'Germany' },
-          { y: 29, label: 'France' },
-          { y: 52, label: 'Japan' },
-          { y: 103, label: 'China' },
-          { y: 134, label: 'US' },
-        ],
-      });
-      chart.render();
-    },
-
-    /**
      * Creates histogram data points for a column.
      */
     __createColumnHisto: function(column, values) {
       var data_points = {
-        type: 'bar',
         name: column,
         color: '#014D65',
-        showInLegend: true,
-        dataPoints: [
+        data: [
         ],
       };
 
-      values.sort(function(a, b){return a > b;}); 
-      data_points.dataPoints = values;
+      values.sort(function(a, b){return a.x > b.x;}); 
+      data_points.data = values;
 
       return data_points;
     },
@@ -401,7 +347,7 @@ define('misc.profiling', [
     /**
      * Creates histogram.
      */
-    __createHistogram: function(data, table, column) {
+    __createHistogram: function($dataContainer, data, table, column) {
       var chart = null,
         options = {
           animationEnabled: true,
@@ -409,26 +355,55 @@ define('misc.profiling', [
           title: {
             text: 'Profiling histogram',
           },
-
-          axisX: {
-            interval: 1,
+          chart: {
+            type: 'bar',
+            height: '400',
+            width: '100%',
+            animations: {
+              enabled: true,
+            },
           },
-          axisY: {
-            interlacedColor: 'rgba(1,77,101,.2)',
-            gridColor: 'rgba(1,77,101,.1)',
-            title: 'Occurance',
+          plotOptions: {
+            bar: {
+              horizontal: true,
+              dataLabels: {
+                position: 'top',
+              },
+            },
+          },
+          dataLabels: {
+            enabled: true,
+            offsetX: -6,
+            style: {
+              fontSize: '12px',
+              colors: ['#fff'],
+            },
+          },
+          stroke: {
+            show: true,
+            width: 1,
+            colors: ['#fff'],
+          },          
+
+          xaxis: {
+            title: {
+              text: 'Frequency',
+            },
+            type: 'category',
+          },
+          yaxis: {
+            title: {
+              text: 'Top N Values',
+            },
           },
 
           legend: {
-            cursor: 'pointer',
-            itemclick: this.__toggleDataSeries,
-          },
-          toolTip: {
-            shared: true,
-            content: this.__toolTipFormatter,
+            position: 'top',
+            horizontalAlign: 'left',
+            offsetX: 40,
           },
 
-          data: [],
+          series: [],
         },
         title = ' for ',
         cols = null,
@@ -441,7 +416,7 @@ define('misc.profiling', [
           col_freq = null,
           row = null;
 
-        chart = new CanvasJS.Chart('histochart_canvas', options);
+        chart = new ApexCharts(document.querySelector('#histochart_canvas'), options);
         cols = data.topn.columns;
         rows = data.topn.rows;
 
@@ -459,7 +434,7 @@ define('misc.profiling', [
             if (!(row[col_name] in col_dict)) {
               col_dict[row[col_name]] = [];
             }
-            col_dict[row[col_name]].push({'label': row[col_val], 'y': parseInt(row[col_freq])});
+            col_dict[row[col_name]].push({'x': row[col_val], 'y': parseInt(row[col_freq])});
           }
         } else {
           col_name = column;
@@ -468,13 +443,13 @@ define('misc.profiling', [
           var values = [];
           for (key in rows) {
             row = rows[key];
-            values.push({'label': row[col_val], 'y': parseInt(row[col_freq])});
+            values.push({'x': row[col_val], 'y': parseInt(row[col_freq])});
           }
           col_dict[col_name] = values;
         }
 
         for (var col in col_dict) {
-          options.data.push(this.__createColumnHisto(col, col_dict[col]));
+          options.series.push(this.__createColumnHisto(col, col_dict[col]));
         }
       }
 
@@ -535,8 +510,7 @@ define('misc.profiling', [
         }
       }
 
-      self.chart = self.__createHistogram(data, table, column);
-      //self.__createTestHistogram();
+      self.chart = self.__createHistogram($dataContainer, data, table, column);
       self.chart.render();
 
       if (!$msgContainer.hasClass('d-none')) {

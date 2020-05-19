@@ -249,6 +249,9 @@ class TableView(BaseTableView, DataTypeReader, VacuumSettings,
 
     * profile(gid, sid, did, scid, tid)
       - Generate profiling data for the table
+
+    * analyze_profile(gid, sid, did, scid, tid)
+      - Analyzes and generates profiling data for the table
 """
 
     node_type = blueprint.node_type
@@ -301,7 +304,8 @@ class TableView(BaseTableView, DataTypeReader, VacuumSettings,
         'count_rows': [{'get': 'count_rows'}],
         'compare': [{'get': 'compare'}, {'get': 'compare'}],
         'analyze': [{'get': 'analyze'}],
-        'profile': [{'get': 'profile'}]
+        'profile': [{'get': 'profile'}],
+        'analyze_profile': [{'get': 'analyze_profile'}]
     })
 
     @BaseTableView.check_precondition
@@ -1754,6 +1758,43 @@ class TableView(BaseTableView, DataTypeReader, VacuumSettings,
         return make_json_response(
             status=200,
             info=gettext("Generated profile data for table %s" % table_name),
+            data={}
+        )
+
+    @BaseTableView.check_precondition
+    def analyze_profile(self, gid, sid, did, scid, tid):
+        """
+        Analyzes and generates table profile data.
+        Args:
+            gid: Server Group Id
+            sid: Server Id
+            did: Database Id
+            scid: Schema Id
+            tid: Table Id
+
+        """
+        schema_name, table_name = \
+            super(TableView, self).get_schema_and_table_name(tid)
+        prof_table_name = "prof_%s" % table_name
+        data = { \
+                'schema_name': schema_name, \
+                'table_name': table_name, \
+                'prof_table_name': prof_table_name}
+
+        SQL = render_template(
+            "/".join(
+                [self.table_template_path, 'analyze_profile_table.sql']
+            ), **data
+        )
+
+        status, count = self.conn.execute_scalar(SQL)
+
+        if not status:
+            return internal_server_error(errormsg=count)
+
+        return make_json_response(
+            status=200,
+            info=gettext("Analyzed and generated profile data for table %s" % table_name),
             data={}
         )
 
