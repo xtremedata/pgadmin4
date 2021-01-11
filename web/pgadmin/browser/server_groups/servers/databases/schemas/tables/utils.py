@@ -12,6 +12,7 @@
 import re
 import copy
 from functools import wraps
+from fnmatch import fnmatch
 import simplejson as json
 from flask import render_template, jsonify, request
 from flask_babelex import gettext
@@ -442,9 +443,15 @@ class BaseTableView(PGChildNodeView, BasePartitionTable):
                 **data)
 
             status, res = self.conn.execute_dict(SQL)
-            if not status:
+            #print("stat:", str(status), ", res:", str(res))
+            if status:
+                tables_res[sfx] = res
+            elif fnmatch(res, ("relation *%s* does not exist" % prof_table_name)):
+                return make_json_response(
+                        info=gettext("No profiling data found"),
+                        status=204)
+            else:
                 return internal_server_error(errormsg=res)
-            tables_res[sfx] = res
 
         return make_json_response(
                 data=tables_res,
