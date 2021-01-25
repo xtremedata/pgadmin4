@@ -188,8 +188,8 @@ def check_utility_exists (sid):
     manager = driver.connection_manager(server.id)
 
     utility = manager.utility('import_export')
-    current_app.logger.info("###### ver:%s, server_type:%s, sid:%s, utility:%s" \
-            % (manager.version, str(manager.server_type), str(server.id), utility))
+    ## current_app.logger.info("###### ver:%s, server_type:%s, sid:%s, utility:%s" \
+    ##        % (manager.version, str(manager.server_type), str(server.id), utility))
     ret_val = does_utility_exist(utility)
     # todo: temporarily for tests of remote load !!!
     if False and ret_val:

@@ -443,10 +443,10 @@ class BaseTableView(PGChildNodeView, BasePartitionTable):
                 **data)
 
             status, res = self.conn.execute_dict(SQL)
-            #print("stat:", str(status), ", res:", str(res))
+            #print("stat:", str(status), ", res:", str(res), "relation:", prof_table_name)
             if status:
                 tables_res[sfx] = res
-            elif fnmatch(res, ("relation *%s* does not exist" % prof_table_name)):
+            elif fnmatch(str(res), ("*relation *%s* does not exist*" % prof_table_name)):
                 return make_json_response(
                         info=gettext("No profiling data found"),
                         status=204)

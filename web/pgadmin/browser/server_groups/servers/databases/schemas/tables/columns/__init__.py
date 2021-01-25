@@ -11,6 +11,7 @@
 
 import simplejson as json
 from functools import wraps
+from fnmatch import fnmatch
 
 import pgadmin.browser.server_groups.servers.databases as database
 from flask import render_template, request, jsonify
@@ -924,9 +925,14 @@ class ColumnsView(PGChildNodeView, DataTypeReader):
                 **data)
 
             status, res = self.conn.execute_dict(SQL)
-            if not status:
+            if status:
+                tables_res[sfx] = res
+            elif fnmatch(str(res), ("*relation *%s* does not exist*" % prof_table_name)):
+                return make_json_response(
+                        info=gettext("No profiling data found"),
+                        status=204)
+            else:
                 return internal_server_error(errormsg=res)
-            tables_res[sfx] = res
 
         return make_json_response(
             data=tables_res,

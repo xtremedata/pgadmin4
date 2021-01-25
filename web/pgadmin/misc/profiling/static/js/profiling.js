@@ -526,105 +526,113 @@ define('misc.profiling', [
         $dataContainer = $container.find('.pg-panel-profiling-container'),
         panel = this.profilingPanel,
         self = this,
+        node_types = ['table', 'column'],
         msg = gettext('Please select an object in the tree view.'),
         n_type = node_type;
 
       if (node) {
         msg = gettext('No profiling are available for the selected object.');
-        /* We fetch the profiling only for those node who set the parameter
+        /* We fetch the profiling only for those nodes which set the parameter
          * showProfiling function.
          */
 
-        // Avoid unnecessary reloads
-        var treeHierarchy = node.getTreeNodeHierarchy(item);
-        var cache_flag = {
-          node_type: node_type,
-          url: url,
-        };
-        if (_.isEqual($(panel[0]).data('node-prof'), cache_flag)) {
-          return;
-        }
-        // Cache the current IDs for next time
-        $(panel[0]).data('node-prof', cache_flag);
+        // Avoid unncessary action for not Profiling node
+        if (node_types.includes(node_type)) {
 
-        var post_data = this.__collectProfilingData(node, item);
-
-        if (post_data && post_data['has_profiling']) {
-
-          // Hide message container and show grid container.
-          $msgContainer.addClass('d-none');
-          $dataContainer.removeClass('d-none');
-
-          var timer = '';
-          // Set the url, fetch the data and update the collection
-          var ajaxHook = function() {
-            $.ajax({
-              url: url,
-              type: 'POST',
-              data: post_data,
-              beforeSend: function(xhr) {
-                xhr.setRequestHeader(
-                  pgAdmin.csrf_token_header, pgAdmin.csrf_token
-                );
-                // Generate a timer for the request
-                timer = setTimeout(function() {
-                  // notify user if request is taking longer than 1 second
-
-                  $msgContainer.text(gettext('Fetching profiling information from the server...'));
-                  $msgContainer.removeClass('d-none');
-                  msg = '';
-                }, 1000);
-              },
-            })
-              .done(function(res) {
-                // clear timer and reset message.
-                clearTimeout(timer);
-                $msgContainer.text('');
-                if (res.data) {
-                  var data = self.profilingData = res.data;
-
-                  if (self.grids && Object.keys(self.grids).length) {
-                    delete self.grids;
-                    self.grids = {};
-                  }
-
-                  self.__processMultipleData($dataContainer, $msgContainer, node, data, post_data);
-
-                } else if (res.info) {
-                  if (!$dataContainer.hasClass('d-none')) {
-                    $dataContainer.addClass('d-none');
-                  }
-                  $msgContainer.text(res.info);
-                  $msgContainer.removeClass('d-none');
-                }
-              })
-              .fail(function(xhr, error, message) {
-                var _label = treeHierarchy[n_type].label;
-                pgBrowser.Events.trigger(
-                  'pgadmin:node:retrieval:error', 'profiling', xhr, error, message, item
-                );
-                if (!Alertify.pgHandleItemError(xhr, error, message, {
-                  item: item,
-                  info: treeHierarchy,
-                })) {
-                  Alertify.pgNotifier(
-                    error, xhr,
-                    gettext('Error retrieving the information - %s', message || _label),
-                    function(msg) {
-                      if(msg === 'CRYPTKEY_SET') {
-                        ajaxHook();
-                      } else {
-                        console.warn(arguments);
-                      }
-                    }
-                  );
-                }
-                // show failed message.
-                $msgContainer.text(gettext('Failed to retrieve data from the server.'));
-              });
+          // Avoid unnecessary reloads
+          var treeHierarchy = node.getTreeNodeHierarchy(item);
+          var cache_flag = {
+            node_type: node_type,
+            url: url,
           };
+          if (_.isEqual($(panel[0]).data('node-prof'), cache_flag)) {
+            return;
+          }
+          // Cache the current IDs for next time
+          $(panel[0]).data('node-prof', cache_flag);
 
-          ajaxHook();
+          var post_data = this.__collectProfilingData(node, item);
+
+          if (post_data && post_data['has_profiling']) {
+
+            // Hide message container and show grid container.
+            $msgContainer.addClass('d-none');
+            $dataContainer.removeClass('d-none');
+
+            var timer = '';
+            // Set the url, fetch the data and update the collection
+            var ajaxHook = function() {
+              $.ajax({
+                url: url,
+                type: 'POST',
+                data: post_data,
+                beforeSend: function(xhr) {
+                  xhr.setRequestHeader(
+                    pgAdmin.csrf_token_header, pgAdmin.csrf_token
+                  );
+                  // Generate a timer for the request
+                  timer = setTimeout(function() {
+                    // notify user if request is taking longer than 1 second
+                    $msgContainer.text(gettext('Fetching profiling information from the server...'));
+                    $msgContainer.removeClass('d-none');
+                  }, 1000);
+                },
+              })
+                .done(function(res) {
+                  // clear timer and reset message.
+                  clearTimeout(timer);
+                  $msgContainer.text('');
+                  if (res == null) {
+                    if (!$dataContainer.hasClass('d-none')) {
+                      $dataContainer.addClass('d-none');
+                    }
+                    $msgContainer.text(msg);
+                    $msgContainer.removeClass('d-none');
+                  } else if (res.info) {
+                    if (!$dataContainer.hasClass('d-none')) {
+                      $dataContainer.addClass('d-none');
+                    }
+                    $msgContainer.text(res.info);
+                    $msgContainer.removeClass('d-none');
+                  } else if (res.data) {
+                    var data = self.profilingData = res.data;
+
+                    if (self.grids && Object.keys(self.grids).length) {
+                      delete self.grids;
+                      self.grids = {};
+                    }
+
+                    self.__processMultipleData($dataContainer, $msgContainer, node, data, post_data);
+                  }
+                })
+                .fail(function(xhr, error, message) {
+                  var _label = treeHierarchy[n_type].label;
+                  pgBrowser.Events.trigger(
+                    'pgadmin:node:retrieval:error', 'profiling', xhr, error, message, item
+                  );
+                  if (!Alertify.pgHandleItemError(xhr, error, message, {
+                    item: item,
+                    info: treeHierarchy,
+                  })) {
+                    Alertify.pgNotifier(
+                      error, xhr,
+                      gettext('Error retrieving the information - %s', message || _label),
+                      function(msg) {
+                        if(msg === 'CRYPTKEY_SET') {
+                          ajaxHook();
+                        } else {
+                          console.warn(arguments);
+                        }
+                      }
+                    );
+                  }
+                  // show failed message.
+                  $msgContainer.text(gettext('Failed to retrieve data from the server.'));
+                });
+            };
+
+            ajaxHook();
+          }
         }
       }
       if (msg != '') {
