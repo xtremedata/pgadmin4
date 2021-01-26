@@ -409,16 +409,17 @@ define('misc.profiling', [
         cols = null,
         rows = null;
 
-      if (Object.keys(data.topn).length > 1) {
+      if (Object.keys(data).length > 1) {
         var col_dict = {},
           col_name = null,
           col_val = null,
           col_freq = null,
+          key = null,
           row = null;
 
         chart = new ApexCharts(document.querySelector('#histochart_canvas'), options);
-        cols = data.topn.columns;
-        rows = data.topn.rows;
+        cols = data.columns;
+        rows = data.rows;
 
         title += (table !== null ? (table + ' table') : '')
           + (column !== null ? (', ' + column + ' column') : '');
@@ -429,7 +430,7 @@ define('misc.profiling', [
           col_name = cols[0].name;
           col_val = cols[1].name;
           col_freq = cols[2].name;
-          for (var key in rows) {
+          for (key in rows) {
             row = rows[key];
             if (!(row[col_name] in col_dict)) {
               col_dict[row[col_name]] = [];
@@ -459,6 +460,14 @@ define('misc.profiling', [
       return chart;
     },
 
+    // Copies db data
+    __copyData: function(src, dst) {
+      dst = _.clone(src);
+      for (var key in src) {
+        dst[key] = _.extend(true, {}, src[key]);
+      }
+    },
+
     // Process single tab data
     __processSingleData: function(node, data, key) {
       var self = this;
@@ -476,7 +485,7 @@ define('misc.profiling', [
           'pgadmin-browser:panel-profiling:' +
         wcDocker.EVENT.SCROLLED
         );
-        self.__createSingleLineProfiling.call(self, data, key, node.profilingPrettifyFields);
+        self.__createSingleLineProfiling(data, key, node.profilingPrettifyFields);
       }
     },
 
@@ -486,9 +495,13 @@ define('misc.profiling', [
         gridContainers = {};
       var table = '',
         column = null;
+      var histo_data = null;
 
       table = post_data.table_name;
       column = post_data.col_name;
+
+      // self.__copyData.call(self, data.topn, histo_data);
+      histo_data = JSON.parse(JSON.stringify(data.topn));
 
       for (var key in data) {
         self.collections[key] = new(Backbone.Collection)(null),
@@ -510,7 +523,7 @@ define('misc.profiling', [
         }
       }
 
-      self.chart = self.__createHistogram($dataContainer, data, table, column);
+      self.chart = self.__createHistogram($dataContainer, histo_data, table, column);
       self.chart.render();
 
       if (!$msgContainer.hasClass('d-none')) {
