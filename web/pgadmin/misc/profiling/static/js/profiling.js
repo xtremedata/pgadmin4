@@ -184,7 +184,7 @@ define('misc.profiling', [
     __createHistogram: function(subtitle) {
       var chart = null,
         options = {
-          animationEnabled: true,
+          animationEnabled: false,
 
           title: {
             text: 'Profiling top N histogram',
@@ -198,7 +198,7 @@ define('misc.profiling', [
             height: '400',
             width: '100%',
             animations: {
-              enabled: true,
+              enabled: false,
             },
           },
           plotOptions: {
@@ -480,7 +480,7 @@ define('misc.profiling', [
         },
       });
 
-      this.chart.updateSeries(new_series, true);
+      this.chart.updateSeries(new_series, false);
     },
 
     // Copies db data
