@@ -179,6 +179,76 @@ define('misc.profiling', [
     },
 
     /**
+     * Creates histogram.
+     */
+    __createHistogram: function(subtitle) {
+      var chart = null,
+        options = {
+          animationEnabled: true,
+
+          title: {
+            text: 'Profiling top N histogram',
+          },
+          subtitle: {
+            text: subtitle,
+          },
+          chart: {
+            id: 'profileChart',
+            type: 'bar',
+            height: '400',
+            width: '100%',
+            animations: {
+              enabled: true,
+            },
+          },
+          plotOptions: {
+            bar: {
+              horizontal: true,
+              dataLabels: {
+                position: 'top',
+              },
+            },
+          },
+          dataLabels: {
+            enabled: true,
+            offsetX: -6,
+            style: {
+              fontSize: '12px',
+              colors: ['#fff'],
+            },
+          },
+          stroke: {
+            show: true,
+            width: 1,
+            colors: ['#fff'],
+          },          
+
+          xaxis: {
+            title: {
+              text: 'Frequency',
+            },
+            type: 'category',
+          },
+          yaxis: {
+            title: {
+              text: 'Top N Values',
+            },
+          },
+
+          legend: {
+            position: 'top',
+            horizontalAlign: 'left',
+            offsetX: 40,
+          },
+
+          series: [],
+        };
+
+      chart = new ApexCharts(document.querySelector('#histochart_canvas'), options);
+      return chart;
+    },
+
+    /**
      * Initializes Profiling panel based on server template.
      * Profiling contains pills panel presenting various metrics for profiling.
      */
@@ -345,67 +415,11 @@ define('misc.profiling', [
     },
 
     /**
-     * Creates histogram.
+     * Updates histogram.
      */
-    __createHistogram: function($dataContainer, data, table, column) {
-      var chart = null,
-        options = {
-          animationEnabled: true,
-
-          title: {
-            text: 'Profiling histogram',
-          },
-          chart: {
-            type: 'bar',
-            height: '400',
-            width: '100%',
-            animations: {
-              enabled: true,
-            },
-          },
-          plotOptions: {
-            bar: {
-              horizontal: true,
-              dataLabels: {
-                position: 'top',
-              },
-            },
-          },
-          dataLabels: {
-            enabled: true,
-            offsetX: -6,
-            style: {
-              fontSize: '12px',
-              colors: ['#fff'],
-            },
-          },
-          stroke: {
-            show: true,
-            width: 1,
-            colors: ['#fff'],
-          },          
-
-          xaxis: {
-            title: {
-              text: 'Frequency',
-            },
-            type: 'category',
-          },
-          yaxis: {
-            title: {
-              text: 'Top N Values',
-            },
-          },
-
-          legend: {
-            position: 'top',
-            horizontalAlign: 'left',
-            offsetX: 40,
-          },
-
-          series: [],
-        },
-        title = ' for ',
+    __updateHistogram: function(data, table, column) {
+      var title = null,
+        new_series = [],
         cols = null,
         rows = null;
 
@@ -417,14 +431,11 @@ define('misc.profiling', [
           key = null,
           row = null;
 
-        chart = new ApexCharts(document.querySelector('#histochart_canvas'), options);
         cols = data.columns;
         rows = data.rows;
 
-        title += (table !== null ? (table + ' table') : '')
+        title = (table !== null ? (table + ' table') : '')
           + (column !== null ? (', ' + column + ' column') : '');
-        if (title.length > 0)
-          options.title.text += title;
 
         if (column == null) {
           col_name = cols[0].name;
@@ -450,14 +461,26 @@ define('misc.profiling', [
         }
 
         for (var col in col_dict) {
-          options.series.push(this.__createColumnHisto(col, col_dict[col]));
+          new_series.push(this.__createColumnHisto(col, col_dict[col]));
         }
       }
 
       // when jquery.canvasjs.min instead of canvasjs.min
       //$('#histochart_canvas').CanvasJSChart(options);
+      if (this.chart != null) {
+        this.chart.destroy();
+      }
 
-      return chart;
+      this.chart = this.__createHistogram(title);
+      this.chart.render();
+
+      this.chart.updateOptions({
+        subtitle: {
+          text: title,
+        },
+      });
+
+      this.chart.updateSeries(new_series, true);
     },
 
     // Copies db data
@@ -523,8 +546,7 @@ define('misc.profiling', [
         }
       }
 
-      self.chart = self.__createHistogram($dataContainer, histo_data, table, column);
-      self.chart.render();
+      self.__updateHistogram(histo_data, table, column);
 
       if (!$msgContainer.hasClass('d-none')) {
         $msgContainer.addClass('d-none');
