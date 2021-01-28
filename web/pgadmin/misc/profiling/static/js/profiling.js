@@ -217,6 +217,9 @@ define('misc.profiling', [
               colors: ['#fff'],
             },
           },
+          noData: {
+            text: 'Loading...',
+          },
           stroke: {
             show: true,
             width: 1,
@@ -518,13 +521,20 @@ define('misc.profiling', [
         gridContainers = {};
       var table = '',
         column = null;
-      var histo_data = null;
+      var histo_data = null,
+        hist_chart_limit = pgBrowser.get_preference('profiling','hist_chart_limit').value;
 
       table = post_data.table_name;
       column = post_data.col_name;
 
       // self.__copyData.call(self, data.topn, histo_data);
-      histo_data = JSON.parse(JSON.stringify(data.topn));
+      if (hist_chart_limit > 0) {
+        histo_data = JSON.parse(JSON.stringify({
+          'columns': data.topn.columns,
+          'rows': data.topn.rows.slice(0, hist_chart_limit)}));
+      } else {
+        histo_data = JSON.parse(JSON.stringify(data.topn));
+      }
 
       for (var key in data) {
         self.collections[key] = new(Backbone.Collection)(null),

@@ -133,7 +133,7 @@ class S3ImportExport(object):
         utility = 'ssh'
         args = ssh_call
 
-        current_app.logger.debug("#### cmd:%s, args:%s" % (utility, args))
+        #current_app.logger.debug("#### cmd:%s, args:%s" % (utility, args))
 
         try:
             p = BatchProcess(

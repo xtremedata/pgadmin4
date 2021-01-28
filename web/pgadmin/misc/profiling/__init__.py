@@ -12,6 +12,8 @@
 from flask import \
         url_for, \
         render_template
+from flask_babelex import \
+        gettext
 from flask_security import \
         current_user, \
         login_required
@@ -29,6 +31,11 @@ class ProfilingModule(PgAdminModule):
     when profiling panel is active.
     """
 
+    LABEL = gettext("Profiling")
+
+    hist_chart_limit = 10
+    rows_per_page = 50
+
     def get_own_javascripts(self):
         return [{
             'name': 'pgadmin.browser.object_profiling',
@@ -44,6 +51,19 @@ class ProfilingModule(PgAdminModule):
         return [
             'profiling.index'
             ]
+    
+    def register_preferences(self):
+        # Register 'profiling' preferences
+        self.hist_chart_limit = self.preference.register(
+            'options', 'hist_chart_limit',
+            gettext("Histogram chart values limit"), 'integer', self.hist_chart_limit,
+            category_label=gettext('Options')
+        )
+        self.rows_per_page = self.preference.register(
+            'options', 'rows_per_page',
+            gettext("Rows per page"), 'integer', self.rows_per_page,
+            category_label=gettext('Options')
+        )
 
 
 # Initialise the module

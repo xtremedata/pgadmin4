@@ -12,3 +12,5 @@ Fix for werkzeug 1.0.0
  # change "from werkzeug import url_encode" to "from werkzeug.urls import url_encode"
 
 
+Before release remove temp logs:
+grep -r "logger.*(\"##" $(find ./web/pgadmin -name "*.py" -a -not -path "*generated*")
